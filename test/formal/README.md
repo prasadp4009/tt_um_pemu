@@ -73,7 +73,7 @@ smtbmc/z3). BOUNDED(n) = BMC to depth n, no failure. Zero failures anywhere.
 | pin_effect_pset_d3 | PSET commits pin_drv=0xA5 | 30 | BOUNDED(30) * |
 | sample_pget_d3 | PGET samples to regs[3] | 30 | PROVEN |
 | wait_entry | WAIT entry hit/no-hit | 30 | PROVEN |
-| wait_loop | WAIT 256-cycle timeout, sticky[0] | 275 | see note ** |
+| wait_loop | WAIT 256-cycle timeout, sticky[0] | 275 | BOUNDED(275) ** |
 | nostall_seq | Sequential d=0 has no stall | 25 | PROVEN |
 | nostall_jmp | JMP d=0 has no stall | 25 | PROVEN |
 | cap_atomic | CAP atomic commit | 30 | PROVEN |
@@ -96,8 +96,9 @@ smtbmc/z3). BOUNDED(n) = BMC to depth n, no failure. Zero failures anywhere.
 * pin_effect_pset_d3 is a bounded-temporal property (commit exactly N cycles
   after issue) - not inductive from an arbitrary state, so induction correctly
   reports UNKNOWN; BMC to 30 covers the full PSET d=3 window (4 cycles).
-** wait_loop induction was still running at last update; BMC BOUNDED(275)
-  covers the full 256-cycle WAIT timeout window.
+** wait_loop induction does not converge (900 s timeout, temporal property
+  over a 256-cycle window - not inductive); BMC BOUNDED(275) covers the full
+  timeout window including timeout at cycle 256 and sticky[0] set.
 
 ## Note on X-freedom (no_x)
 
