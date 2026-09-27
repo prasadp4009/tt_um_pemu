@@ -411,8 +411,11 @@ for name, depth, wmark, props in [("obs_wm", 70, 5, OBS_WM_PROPS),
         f.write(make_sby(name, OBS_DUT, "tt_um_pemu_observer", [], depth))
     NEW.append(name)
 
-with open(f"{OUTDIR}/run_all.sh", "a") as f:
+_sh = f"{OUTDIR}/run_all.sh"
+_existing = open(_sh).read() if os.path.exists(_sh) else ""
+with open(_sh, "a") as f:
     for name in NEW:
-        f.write(f'bash -c "source /home/jarvis/asic/activate && timeout 900 sby -f {name}.sby" 2>&1 | grep -E "DONE.*(PASS|FAIL|ERROR)"\n')
+        if f"{name}.sby" not in _existing:
+            f.write(f'bash -c "source /home/jarvis/asic/activate && timeout 900 sby -f {name}.sby" 2>&1 | grep -E "DONE.*(PASS|FAIL|ERROR)"\n')
 
 print(f"Generated {len(NEW)} extended proofs in {OUTDIR}: {NEW}")
