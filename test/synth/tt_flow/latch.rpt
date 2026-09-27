@@ -1,0 +1,3 @@
+
+20. Executing PROC_DLATCH pass (convert process syncs to latches).
+No latch inferred for signal `\tt_um_pemu_pe.\sreg_read' from process `\tt_um_pemu_pe.$proc$src/tt_um_pemu_pe.v:356$609'.
