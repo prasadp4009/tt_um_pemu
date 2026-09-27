@@ -836,15 +836,15 @@ module tt_um_pemu_pe (
     // ------------------------------------------------------------------
     // Run mode: single read port, address = branch-resolved next PC during
     // the base cycle (the macro latches it for the following cycle).
-    // During ST_DELAY/ST_WAIT/ST_SLEEP the architectural PC is held, but
-    // the exit advances to pc+1, so prefetch pc_plus1 (otherwise the macro
-    // would still hold the multi-cycle instruction on the exit edge,
-    // corrupting the fetch). Halted: hold pc. Prog mode: loader writes.
+    // ST_WAIT: pc NOT advanced at entry (polls the WAIT insn); exit does
+    // pc<=pc_plus1, so prefetch pc_plus1.
+    // ST_DELAY/ST_SLEEP: pc ALREADY advanced (pc<=pc_plus1) at entry;
+    // exit holds pc, so prefetch pc (pc_plus1 would skip an instruction).
+    // Halted: hold pc. Prog mode: loader writes.
     assign imem_addr = prog_mode ? ((prog_wen || prog_ren) ? prog_addr : 8'd0) :
                        (state == ST_PRIME) ? 8'd0 :
                        ((state == ST_BASE) && !halted) ? next_pc_addr :
-                       ((state == ST_DELAY) || (state == ST_WAIT) ||
-                        (state == ST_SLEEP)) ? pc_plus1 : pc;
+                       (state == ST_WAIT) ? pc_plus1 : pc;
     assign imem_men  = 8'hFF;
     assign imem_wen  = (prog_mode && prog_wen) ? 8'hFF : 8'h00;
     // [AMD-A] prog_ren selects the address; REN itself is kept high in
