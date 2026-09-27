@@ -8,14 +8,14 @@
 
 | Bench | Checks | Status |
 |-------|--------|--------|
-| tb_pe (PE) | 352 | PASS |
-| tb_host (Host) | 136 | PASS |
+| tb_pe (PE) | 357 | PASS |
+| tb_host (Host) | 139 | PASS |
 | tb_observer (Observer) | 35 | PASS |
 | tb_top (Top) | 68 | PASS |
-| **Total** | **591** | **PASS** |
+| **Total** | **599** | **PASS** |
 
 Original baseline: 249 checks (19 PE + 127 Host + 35 Observer + 68 Top).  
-New total: 591 checks (352 PE + 136 Host + 35 Observer + 68 Top).
+New total: 599 checks (357 PE + 139 Host + 35 Observer + 68 Top).
 
 ## Functional Coverage
 
@@ -54,18 +54,41 @@ New total: 591 checks (352 PE + 136 Host + 35 Observer + 68 Top).
 
 ## Line/Toggle Coverage
 
-**Status:** Coverage mode requires manual Verilator invocation with `--coverage --coverage-line --coverage-toggle`. The `run_verilator.sh --cov all` recursion drops the `--cov` flag (script bug, not modified per task constraints). Per-module coverage databases were not merged for this report.
+**Status:** Measured 2026-09-27 (coordinator). `run_verilator.sh --cov` recursion
+bug fixed; per-bench coverage.dat merged with `verilator_coverage`.
 
-**Manual coverage command:**
+**Merged (all 4 benches, incl. testbench files):**
+- line: 76.1% (556/731) | toggle: 35.9% (6622/18436)
+- branch: 64.6% (548/848) | expr: 63.4% (534/842)
+
+**Per-DUT line coverage (annotated):**
+| Module | Line | Notes |
+|--------|------|-------|
+| tt_um_pemu_pe.v | 100% reachable (275/282 markers; 7 non-logic/unreachable) | 2 delayed-op branches (LDI d=3, illegal-op d=2) closed by new checks; remaining: 2 decls, rx_full port, defensive FSM default |
+| tt_um_pemu_host.v | 83.3% (189/227) | RX_BRK deep-break path closed by new check; remaining: autobaud low-clamp, FSM defaults (defensive), simultaneous FIFO push/pop (2'b11) |
+| tt_um_pemu_observer.v | 77.3% (34/44) | trigger/watermark/pointer paths covered |
+| tt_um_pemu.v (top) | 18.6% (8/43) | top is wiring; integration covered via tb_top |
+
+**Coverage-driven bench additions (coordinator):**
+- tb_pe.v: LDI d=3 and illegal-opcode d=2 (ST_DELAY entry branches) — 357 checks
+- tb_host.v: deep break to RX_BRK + autobaud re-sync recovery — 139 checks
+
+**Uncovered but formally PROVEN (stronger than bench):**
+- Host TX/RX FIFO simultaneous push/pop (2'b11): `fifo_tx`/`fifo_rx` prove
+  `cnt == (wptr-rptr) mod 16` for all push/pop combinations (unbounded induction).
+
+**Uncovered, defensive/unreachable:**
+- PE/host/observer FSM `default:` branches (all states explicitly handled)
+- Autobaud `w_div9 < 16` low-clamp (requires sub-144-cycle sync glitch)
+
+**Reproduce:**
 ```bash
 source /home/jarvis/asic/activate
-verilator --timing --cc --exe --build --main --top-module tb_pe \
-  --coverage --coverage-line --coverage-toggle \
-  --Mdir test/vbuild/obj_tb_pe_cov -o Vtb_pe_cov \
-  test/tb_pe.v src/tt_um_pemu_pe.v test/sram_sim.v
-./test/vbuild/obj_tb_pe_cov/Vtb_pe_cov
-verilator_coverage --write coverage.dat --annotate annotated \
-  test/vbuild/obj_tb_pe_cov/*.dat
+bash test/run_verilator.sh --cov all   # builds + runs each bench with coverage
+# each bench writes coverage.dat to its CWD; run each binary from a separate
+# dir, then:
+verilator_coverage --write merged.dat <per-bench coverage.dat files>
+verilator_coverage merged.dat          # summary
 ```
 
 ## Unreachable/Deviations

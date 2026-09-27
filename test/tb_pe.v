@@ -514,6 +514,12 @@ module tb_pe;
         check(dut.regs[4] === 16'hFFFF, "LDI imm16 max");
         check(dut.regs[5] === 16'h0000, "LDI imm16 zero");
 
+        // ---- LDI with delay d=3: ST_DELAY entry (dly!=0 branch) ----
+        prog[0]  = enc(6'd10, 5'd3, {4'd6, 16'hBEEF, 1'b0});
+        prog[1]  = i_hlt();
+        load_prog(2); go(); wait_halt(2000);
+        check(dut.regs[6] === 16'hBEEF, "LDI d=3: delayed write commits");
+
         // ---- DJNZ loop + single-iteration fallthrough ----
         prog[0] = i_ldi(4'd5, 16'd3);
         prog[1] = i_ldi(4'd6, 16'd0);
@@ -594,6 +600,13 @@ module tb_pe;
         load_prog(4); go(); wait_halt(2000);
         check(config_err === 1'b1, "illegal opcode 24 -> CONFIG_ERR");
         check(dut.regs[1] === 16'h1234, "illegal opcode: pc advanced past it");
+
+        // ---- illegal opcode with delay d=2: ST_DELAY entry (dly!=0 branch) ----
+        prog[0] = enc(6'd24, 5'd2, 21'd0);
+        prog[1] = i_hlt();
+        load_prog(2); go(); wait_halt(2000);
+        check(config_err === 1'b1, "illegal opcode d=2 -> CONFIG_ERR");
+        check(dut.pe_halted === 1'b1, "illegal opcode d=2: HLT reached after delay");
 
         // ---- AND/OR/XOR fn=11: CONFIG_ERR, still computes AND ----
         prog[0] = i_ldi(4'd1, 16'h00FF);

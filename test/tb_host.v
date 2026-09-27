@@ -562,6 +562,17 @@ module tb_host;
         expect_ack(8'hA5, "RD_STATUS after break (recovered)");
         recv_byte(rb);
 
+        // ---- 24. Deep break: long idle (re-arm autobaud) then 131071+ low -> RX_BRK ----
+        send_level(1, 70000);   // idle_cnt max -> sync_armed=1
+        send_level(0, 131100);  // falling edge -> RX_SYNL, low_cnt max -> RX_BRK
+        check(dut.rx_st === 3'd5, "RX_BRK reached after 131071-cycle low");
+        send_level(1, 70000);   // release: RX_BRK->RX_IDLE; re-arm autobaud
+        check(dut.rx_st === 3'd0, "RX_IDLE after deep break released");
+        send_byte(8'h00);       // autobaud re-sync (t_bit was forced to 4096)
+        send_frame(8'h08, 0);
+        expect_ack(8'hA5, "RD_STATUS after deep break re-sync");
+        recv_byte(rb);
+
         $display("done: %0d checks, %0s", nchecks, fail ? "FAIL" : "PASS");
         $finish;
     end
