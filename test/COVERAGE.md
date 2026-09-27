@@ -73,11 +73,28 @@ verilator_coverage --write coverage.dat --annotate annotated \
 ### T17 (Open — ISA Owner Decision Pending)
 **WAIT overflow:** tsel=2 (65,536 cycles) and tsel=3 (1,048,576 cycles) set CONFIG_ERR instead of implementing large timeouts. Behavior: tsel[1]=1 → sticky[ST_CONFIG_ERR]=1, timeout forced to 256/4096 based on tsel[0]. Awaiting ISA lead decision: saturate at 0xFFFF, wrap, or sticky flag.
 
-### RTL Deviations (Reported, Not Fixed — RTL Frozen)
-1. **MSR to PMASK/PDIR/PMODE (0x06/0x07/0x08) ignored:** Writes have no effect. MRS reads work. (By design? Documented as ignored.)
-2. **SLEEP 8191 counts 8190 ST_SLEEP cycles:** Off-by-one in RTL or TB counting. WAIT 256 counts correctly (256). Documented in test expectation.
-3. **Observer pin_sel tied to 3'b0:** Integration deviation, observer only sees pin 0.
-4. **pmode_out unused:** Open-drain behavior not applied to uio_oe.
+### Apparent Deviations — All Resolved (Coordinator Review 2026-09-27)
+1. **MSR to PMASK/PDIR/PMODE (0x06/0x07/0x08) ignored: ISA-CORRECT.** ISA v0.2
+   special_registers specifies PMASKR/PIDRR/PMODER as access "RO" with "MSR
+   writes ignored." Pin config is written via the PMASK/PDIR/PMODE
+   *instructions* (opcodes 3/4/5), not MSR. Not a deviation.
+2. **SLEEP 8191 "counts 8190 ST_SLEEP cycles": BENCH COUNTING ARTIFACT, RTL exact.**
+   RTL: entry loads scnt<=imm, ST_SLEEP decrements and exits when scnt==1, so
+   ST_SLEEP is occupied exactly imm cycles and total = 1+imm. Formal proofs
+   sleep_imm0/2/7 are PROVEN (unbounded induction) for exact 1+imm timing; the
+   13-bit counter handles imm=8191 (0x1FFF, max 13-bit) with no wrap or
+   special case. The bench's 8190 is a sampling artifact (missed entry/exit
+   cycle in its state counter).
+3. **Observer pin_sel tied to 3'b0: DOCUMENTED INTEGRATION SCOPE.**
+   tt_um_pemu.v header (lines 31-36): the PE's committed port list does not
+   expose pin_sel_r, so pin_sel is tied 0 at the top; PULSE-mode triggering is
+   therefore pin-0-only at the integrated level. Documented with a
+   recommendation to add the pin_sel_r port for full contract coverage.
+4. **pmode_out not gated into uio_oe: DOCUMENTED INTEGRATION SCOPE.**
+   tt_um_pemu.v header (lines 42-44): pmode_out is TB-use-only per coordinator
+   scope; testbenches resolve pad state from pe.pins_out/pe.pins_oe/pmode_out
+   directly. ISA v0.2 specifies PMODE only as a firmware-visible mode register
+   (readback via PMODER); it does not mandate pad-level open-drain gating.
 
 ## Bugs Found (Fixed in RTL — Regression Tests Added)
 1. **ST_DELAY/ST_SLEEP IMEM prefetch** (commit 6352084): Prefetch dropped during delay/sleep states.
