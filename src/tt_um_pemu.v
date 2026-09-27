@@ -81,10 +81,6 @@ module tt_um_pemu (
     wire [7:0]  imem_men, imem_wen, imem_ren;
 /* verilator lint_on UNUSEDSIGNAL */
     wire [31:0] imem_din, imem_dout;
-    /* verilator lint_off UNUSEDSIGNAL */
-    wire [31:0] imem_bist_dout_nc; // BIST disabled; macro output unused
-    wire [7:0]  tmem_bist_dout_nc; // BIST disabled; macro output unused
-    /* verilator lint_on UNUSEDSIGNAL */
     wire [31:0] imem_bm;
 
     // ------------------------------------------------------------------
@@ -318,8 +314,7 @@ module tt_um_pemu (
         .A_BIST_REN (1'b0),
         .A_BIST_ADDR(8'b0),
         .A_BIST_DIN (32'b0),
-        .A_BIST_BM  (32'b0),
-        .A_BIST_DOUT(imem_bist_dout_nc)
+        .A_BIST_BM  (32'b0)
     );
 
     // ------------------------------------------------------------------
@@ -342,8 +337,7 @@ module tt_um_pemu (
         .A_BIST_REN (1'b0),
         .A_BIST_ADDR(10'b0),
         .A_BIST_DIN (8'b0),
-        .A_BIST_BM  (8'b0),
-        .A_BIST_DOUT(tmem_bist_dout_nc)
+        .A_BIST_BM  (8'b0)
     );
 
 endmodule

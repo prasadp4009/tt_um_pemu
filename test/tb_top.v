@@ -58,34 +58,58 @@ module tb_top;
     );
 
     // ---------------- UART tasks ----------------
-    task uart_tx(input [7:0] b);
-        integer i;
+    // TX bits are driven on negedge clk (half-cycle setup margin) so the
+    // host's autobaud measures exactly T clocks/bit (no posedge race).
+    task send_level(input v, input integer nclks);
         begin
-            ui_in[0] = 1'b0; repeat (T) @(posedge clk);       // start
-            for (i = 0; i < 8; i = i + 1) begin
-                ui_in[0] = b[i]; repeat (T) @(posedge clk);   // data LSB-first
-            end
-            ui_in[0] = 1'b1; repeat (T) @(posedge clk);       // stop
+            @(negedge clk); ui_in[0] = v;
+            repeat (nclks) @(posedge clk);
         end
     endtask
 
-    task uart_rx(output reg [7:0] b);
-        integer i, to;
+    task uart_tx(input [7:0] b);
+        integer i;
         begin
-            // wait for falling edge (start), timeout 200k clocks
+            send_level(0, T);                                  // start
+            for (i = 0; i < 8; i = i + 1) send_level(b[i], T); // data LSB-first
+            send_level(1, T);                                  // stop
+        end
+    endtask
+
+    // Always-on host RX monitor: catches every DUT byte even if the DUT
+    // starts transmitting while uart_tx is still holding its last stop bit
+    // (the host answers fast; a wait-for-edge-then-sample uart_rx starts
+    // counting ~45 clocks late and samples every byte near bit edges).
+    // Bytes are queued in arrival order; uart_rx pops.
+    reg [7:0] rx_queue [0:255];
+    integer rx_qw = 0, rx_qr = 0;
+    always begin
+        reg [7:0] bmon;
+        integer kmon;
+        @(negedge uo_out[0]);
+        #(T * 20 * 1.5);   // to bit0 center (20 ns/clock at this timescale)
+        for (kmon = 0; kmon < 8; kmon = kmon + 1) begin
+            bmon[kmon] = uo_out[0];
+            #(T * 20);
+        end
+        // NOTE: no trailing stop-bit wait; re-arm must precede the next
+        // start bit. Framing is checked at the byte level (ACK/status).
+        rx_queue[rx_qw[7:0]] = bmon;
+        rx_qw = rx_qw + 1;
+    end
+
+    task uart_rx(output reg [7:0] b);
+        integer to;
+        begin
             to = 0;
-            while (uo_out[0] !== 1'b0 && to < 200000) begin
-                @(posedge clk); to = to + 1;
+            while (rx_qw == rx_qr && to < 30000) begin #1000; to = to + 1; end
+            if (rx_qw == rx_qr) begin
+                $display("FAIL: uart_rx timeout waiting for DUT byte");
+                nchecks = nchecks + 1; fail = 1; b = 8'hxx;
+            end else begin
+                b = rx_queue[rx_qr[7:0]];
+                rx_qr = rx_qr + 1;
             end
-            check(uo_out[0] === 1'b0, "uart_rx start bit");
-            repeat (T + T/2) @(posedge clk);                  // to bit0 center
-            for (i = 0; i < 8; i = i + 1) begin
-                b[i] = uo_out[0];
-                repeat (T) @(posedge clk);
-            end
-            // stop bit should be high
-            check(uo_out[0] === 1'b1, "uart_rx stop bit");
-            repeat (T/2) @(posedge clk);
         end
     endtask
 
@@ -97,7 +121,7 @@ module tb_top;
         end
     endtask
 
-    reg [31:0] img [0:31];
+    reg [31:0] img [0:63];
     reg [7:0]  rbyte;
     integer i, to;
 
@@ -154,18 +178,18 @@ module tb_top;
         rst_n = 0; repeat (20) @(posedge clk); rst_n = 1;
         repeat (10) @(posedge clk);
         uart_tx(8'h00);                              // autobaud sync
-        // LOAD_IMEM: 19 words
-        uart_tx(8'h01); uart_tx(8'h4E); uart_tx(8'h00); uart_tx(8'h00);
-        for (i = 0; i < 19; i = i + 1) begin
+        // LOAD_IMEM: 33 words
+        uart_tx(8'h01); uart_tx(8'h86); uart_tx(8'h00); uart_tx(8'h00);
+        for (i = 0; i < 33; i = i + 1) begin
             uart_tx(img[i][31:24]); uart_tx(img[i][23:16]);
             uart_tx(img[i][15:8]); uart_tx(img[i][7:0]);
         end
         expect_ack();
         $display("  info: Phase B LOAD_IMEM done");
         // VERIFY_IMEM readback
-        uart_tx(8'h02); uart_tx(8'h03); uart_tx(8'h00); uart_tx(8'h00); uart_tx(8'd19);
+        uart_tx(8'h02); uart_tx(8'h03); uart_tx(8'h00); uart_tx(8'h00); uart_tx(8'd33);
         uart_rx(rbyte); check(rbyte === 8'hA5, "B: VERIFY ack");
-        for (i = 0; i < 19; i = i + 1) begin
+        for (i = 0; i < 33; i = i + 1) begin
             reg [31:0] w;
             uart_rx(rbyte); w[31:24] = rbyte;
             uart_rx(rbyte); w[23:16] = rbyte;
@@ -174,23 +198,32 @@ module tb_top;
             check(w === img[i], "B: VERIFY word");
         end
         $display("  info: Phase B VERIFY_IMEM done");
-        // WR_RXFIFO: 7 words {1,1,1,3, 1,2,3}
-        uart_tx(8'h05); uart_tx(8'h0E);
-        uart_tx(8'h00); uart_tx(8'h01);
-        uart_tx(8'h00); uart_tx(8'h01);
-        uart_tx(8'h00); uart_tx(8'h01);
-        uart_tx(8'h00); uart_tx(8'h03);
-        uart_tx(8'h00); uart_tx(8'h01);
-        uart_tx(8'h00); uart_tx(8'h02);
-        uart_tx(8'h00); uart_tx(8'h03);
-        expect_ack();
-        $display("  info: Phase B WR_RXFIFO done");
-        // GO + pin echo monitor
+        // Resync: VERIFY's 133-byte response idles the RX line >65k clocks,
+        // re-arming autobaud (sync_armed). The next byte is consumed as the
+        // 0x00 sync (not a command) and t_bit is re-measured. Send 0x00,
+        // wait for it to retire, then GO.
+        repeat (3000) @(posedge clk);
+        uart_tx(8'h00);
+        repeat (2000) @(posedge clk);
+        // GO first (enter RUN), then WR_RXFIFO: WR_RXFIFO is RUN-only per
+        // ISA (PROG -> NACK_ERR). Firmware spins on RXNE before each PULL,
+        // so the PE waits for the TB's data (no fill-vs-pull race).
         pin_n = 0;
         fork
             begin
                 uart_tx(8'h09); uart_tx(8'h00);
                 expect_ack();
+                // WR_RXFIFO: 7 words {1,1,1,3, 1,2,3}
+                uart_tx(8'h05); uart_tx(8'h0E);
+                uart_tx(8'h00); uart_tx(8'h01);
+                uart_tx(8'h00); uart_tx(8'h01);
+                uart_tx(8'h00); uart_tx(8'h01);
+                uart_tx(8'h00); uart_tx(8'h03);
+                uart_tx(8'h00); uart_tx(8'h01);
+                uart_tx(8'h00); uart_tx(8'h02);
+                uart_tx(8'h00); uart_tx(8'h03);
+                expect_ack();
+                $display("  info: Phase B WR_RXFIFO done");
             end
             begin
                 reg [7:0] last; last = 8'hxx;

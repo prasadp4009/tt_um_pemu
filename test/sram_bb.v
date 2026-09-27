@@ -23,7 +23,6 @@ module RM_IHPSG13_1P_256x32_c2_bm_bist (
     input  wire        A_BIST_REN,
     input  wire [7:0]  A_BIST_ADDR,
     input  wire [31:0] A_BIST_DIN,
-    output wire [31:0] A_BIST_DOUT,
     input  wire [31:0] A_BIST_BM,
     input  wire        A_BIST_EN
 );
@@ -45,7 +44,6 @@ module RM_IHPSG13_1P_1024x8_c2_bm_bist (
     input  wire        A_BIST_REN,
     input  wire [9:0]  A_BIST_ADDR,
     input  wire [7:0]  A_BIST_DIN,
-    output wire [7:0]  A_BIST_DOUT,
     input  wire [7:0]  A_BIST_BM,
     input  wire        A_BIST_EN
 );
