@@ -50,6 +50,15 @@
  *    cfg_dirty_set, tx_empty, rx_full, prog_dout, timeout_sticky, config_err.
  *    (A dedicated `go` input was removed: GO is defined as the prog_mode
  *    1->0 transition per the coordinator's HALT_REQ amendment.)
+ *  - [AMD-A] Worker D: `prog_ren` input for host VERIFY_IMEM. In prog_mode,
+ *    imem_addr = prog_addr when prog_wen|prog_ren. prog-mode REN is NOT
+ *    gated by prog_ren (deliberate deviation from D8's literal
+ *    imem_ren={8{prog_ren}}): gating REN low in prog_mode would leave the
+ *    macro DOUT unprimed, so the first fetch after a LOAD->GO with no
+ *    VERIFY_IMEM would execute the STALE write-through word of the last
+ *    program write -- a silent mis-execution. Keeping REN=1 in prog_mode
+ *    (write cycles excepted) preserves the D8 intent (host-driven IMEM
+ *    reads) and the fetch-prime invariant (GO fetches word 0).
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -64,6 +73,7 @@ module tt_um_pemu_pe (
     input  wire [7:0]  prog_addr,
     input  wire [31:0] prog_din,
     input  wire        prog_wen,
+    input  wire        prog_ren,       // [AMD-A] host VERIFY_IMEM read enable
     output wire [31:0] prog_dout,     // IMEM readback for host VERIFY_IMEM
     // IMEM macro port (RM_IHPSG13_1P_256x32_c2_bm_bist). men/ren/wen are
     // 8-bit per the dictated interface; all 8 bits carry the same enable.
@@ -830,13 +840,17 @@ module tt_um_pemu_pe (
     // the exit advances to pc+1, so prefetch pc_plus1 (otherwise the macro
     // would still hold the multi-cycle instruction on the exit edge,
     // corrupting the fetch). Halted: hold pc. Prog mode: loader writes.
-    assign imem_addr = prog_mode ? (prog_wen ? prog_addr : 8'd0) :
+    assign imem_addr = prog_mode ? ((prog_wen || prog_ren) ? prog_addr : 8'd0) :
                        (state == ST_PRIME) ? 8'd0 :
                        ((state == ST_BASE) && !halted) ? next_pc_addr :
                        ((state == ST_DELAY) || (state == ST_WAIT) ||
                         (state == ST_SLEEP)) ? pc_plus1 : pc;
     assign imem_men  = 8'hFF;
     assign imem_wen  = (prog_mode && prog_wen) ? 8'hFF : 8'h00;
+    // [AMD-A] prog_ren selects the address; REN itself is kept high in
+    // prog_mode (except during prog_wen writes) so the ST_PRIME/ST_BASE
+    // fetch always sees a valid, primed DOUT at GO even when no
+    // VERIFY_IMEM was issued (Worker D deviation from D8 literal text).
     assign imem_ren  = (prog_mode && prog_wen) ? 8'h00 : 8'hFF;
     assign imem_din  = prog_din;
     assign imem_bm   = (prog_mode && prog_wen) ? 32'hFFFFFFFF : 32'h0;

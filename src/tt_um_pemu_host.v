@@ -29,10 +29,15 @@
 //   - RD_STATUS byte, event-flag capture (evt_code/evt_pulse).
 //
 // Known spec deviations (all documented in _phase6/intf_host.md):
-//   VERIFY_IMEM/WR_CFG/RD_CFG -> NACK_ERR (write-only loader, no config
-//   interface in the port list); HALT_REQ accepted but not routable (no
-//   halt_req port); RD_STATUS TIMEOUT/CONFIG_ERR bits tied 0 (no inputs);
+//   WR_CFG/RD_CFG -> NACK_ERR (no config interface in the port list);
 //   no host EVTFLAG-clear command exists in v0.2.
+// [AMD-B] Worker D amendments (clear the remaining deviations above):
+//   VERIFY_IMEM 0x02 implemented (PROG-only; {addr_hi,addr_lo,nwords} ->
+//   ACK_OK + nwords*4 bytes MSB-first via prog_ren/prog_dout, 1 read/cycle
+//   + 1 macro latency); HALT_REQ 0x0A now drives `halt_req` to the PE
+//   (high until GO / PROG-entry / reset); GO 0x09 from RUN issues a 2-cycle
+//   prog_mode pulse that restarts the PE at PC=0; RD_STATUS bits 5/0 now
+//   report `timeout_sticky`/`config_err`; tx_empty/rx_full exported.
 // ============================================================================
 
 `default_nettype none
@@ -60,6 +65,8 @@ module tt_um_pemu_host (
     output wire [7:0]  prog_addr,
     output wire [31:0] prog_din,
     output wire        prog_wen,
+    output wire        prog_ren,       // [AMD-B] VERIFY_IMEM read enable -> PE
+    input  wire [31:0] prog_dout,      // [AMD-B] IMEM readback for VERIFY_IMEM
     // trace readout -> Observer
     output wire        host_rd_en,
     output wire [9:0]  host_rd_addr,
@@ -70,7 +77,13 @@ module tt_um_pemu_host (
     input  wire        pe_halted,
     input  wire [7:0]  obs_ptr,
     input  wire        trace_full,
-    input  wire        trace_wm
+    input  wire        trace_wm,
+    // [AMD-B] PE control / status
+    output wire        halt_req,       // [AMD-B] -> PE: halt at next boundary
+    output wire        tx_empty,       // [AMD-B] -> PE (T7) + RD_STATUS bit4
+    output wire        rx_full,        // [AMD-B] -> PE (T7) + RD_STATUS bit3
+    input  wire        timeout_sticky, // [AMD-B] -> RD_STATUS bit5
+    input  wire        config_err      // [AMD-B] -> RD_STATUS bit0
 );
 
     // ------------------------------------------------------------------
@@ -333,38 +346,50 @@ module tt_um_pemu_host (
     // ------------------------------------------------------------------
     // Main command FSM
     // ------------------------------------------------------------------
-    localparam [4:0]
-        S_IDLE  = 5'd0,   // wait CMD byte
-        S_LEN   = 5'd1,   // wait LEN byte, dispatch
-        S_DISC  = 5'd2,   // discard LEN bytes, no response (NOP)
-        S_DISCN = 5'd3,   // discard LEN bytes, then NACK_ERR
-        S_LDP   = 5'd4,   // LOAD_IMEM: validate LEN
-        S_LDA   = 5'd5,   // LOAD_IMEM: 2 addr bytes
-        S_LDD   = 5'd6,   // LOAD_IMEM: stream data bytes
-        S_LDW   = 5'd7,   // LOAD_IMEM: assert prog_wen 1 cycle
-        S_WRX   = 5'd8,   // WR_RXFIFO: stream bytes -> words
-        S_RTMC  = 5'd9,   // RD_TXFIFO: get max_count
-        S_RTSB  = 5'd10,  // RD_TXFIFO: send ret_count
-        S_RTSP  = 5'd11,  // RD_TXFIFO: pop word
-        S_RTSH  = 5'd12,  // RD_TXFIFO: send hi byte
-        S_RTSL  = 5'd13,  // RD_TXFIFO: send lo byte
-        S_RSI   = 5'd14,  // RD_TRACE: get start_idx
-        S_RCT   = 5'd15,  // RD_TRACE: get count
-        S_RPRE  = 5'd16,  // RD_TRACE: latch PTR_SNAP, compute ret
-        S_RTRC  = 5'd17,  // RD_TRACE: send ret_count
-        S_RTRD  = 5'd18,  // RD_TRACE: SRAM read + wait ack
-        S_RTRN  = 5'd19,  // RD_TRACE: next byte/entry bookkeeping
-        S_RTRP  = 5'd20,  // RD_TRACE: send OBS_PTR
-        S_ST1   = 5'd21,  // RD_STATUS: send status byte
-        S_TXB   = 5'd22,  // byte-sender: present byte, start TX
-        S_TXW   = 5'd23;  // byte-sender: wait tx_done -> snd_ret
+    localparam [5:0]
+        S_IDLE  = 6'd0,   // wait CMD byte
+        S_LEN   = 6'd1,   // wait LEN byte, dispatch
+        S_DISC  = 6'd2,   // discard LEN bytes, no response (NOP)
+        S_DISCN = 6'd3,   // discard LEN bytes, then NACK_ERR
+        S_LDP   = 6'd4,   // LOAD_IMEM: validate LEN
+        S_LDA   = 6'd5,   // LOAD_IMEM: 2 addr bytes
+        S_LDD   = 6'd6,   // LOAD_IMEM: stream data bytes
+        S_LDW   = 6'd7,   // LOAD_IMEM: assert prog_wen 1 cycle
+        S_WRX   = 6'd8,   // WR_RXFIFO: stream bytes -> words
+        S_RTMC  = 6'd9,   // RD_TXFIFO: get max_count
+        S_RTSB  = 6'd10,  // RD_TXFIFO: send ret_count
+        S_RTSP  = 6'd11,  // RD_TXFIFO: pop word
+        S_RTSH  = 6'd12,  // RD_TXFIFO: send hi byte
+        S_RTSL  = 6'd13,  // RD_TXFIFO: send lo byte
+        S_RSI   = 6'd14,  // RD_TRACE: get start_idx
+        S_RCT   = 6'd15,  // RD_TRACE: get count
+        S_RPRE  = 6'd16,  // RD_TRACE: latch PTR_SNAP, compute ret
+        S_RTRC  = 6'd17,  // RD_TRACE: send ret_count
+        S_RTRD  = 6'd18,  // RD_TRACE: SRAM read + wait ack
+        S_RTRN  = 6'd19,  // RD_TRACE: next byte/entry bookkeeping
+        S_RTRP  = 6'd20,  // RD_TRACE: send OBS_PTR
+        S_ST1   = 6'd21,  // RD_STATUS: send status byte
+        S_TXB   = 6'd22,  // byte-sender: present byte, start TX
+        S_TXW   = 6'd23,  // byte-sender: wait tx_done -> snd_ret
+        // [AMD-B] VERIFY_IMEM states
+        S_VFAD  = 6'd24,  // VERIFY: addr_hi byte
+        S_VFAD2 = 6'd25,  // VERIFY: addr_lo byte
+        S_VFNW  = 6'd26,  // VERIFY: nwords byte + range check
+        S_VF0   = 6'd27,  // VERIFY: present addr, assert prog_ren
+        S_VF1   = 6'd28,  // VERIFY: macro latch cycle
+        S_VF2   = 6'd29,  // VERIFY: sample prog_dout
+        S_VF3   = 6'd30,  // VERIFY: send byte[31:24]
+        S_VF4   = 6'd31,  // VERIFY: send byte[23:16]
+        S_VF5   = 6'd32,  // VERIFY: send byte[15:8]
+        S_VF6   = 6'd33,  // VERIFY: send byte[7:0]
+        S_GOP   = 6'd34;  // GO: 2-cycle prog_mode pulse (RUN restart)
 
     localparam [7:0] ACK_OK = 8'hA5, NACK_ERR = 8'h5B;
     // NOTE: NACK_BUSY (8'h5A) is defined by the ISA but this block never
     // sends it: the dictated observer interface exposes no writer-side
     // saturation condition to NACK on (documented deviation).
 
-    reg [4:0]  m_st, snd_ret;
+    reg [5:0]  m_st, snd_ret;
     reg [7:0]  cmd_r, len_r, snd_byte;
     reg [10:0] dcnt;          // discard / data byte counter
     // LOAD_IMEM
@@ -391,6 +416,13 @@ module tt_um_pemu_host (
     reg [7:0]  prog_addr_r;
     reg [31:0] prog_din_r;
     reg        prog_wen_r;
+    // [AMD-B] VERIFY_IMEM / HALT_REQ / GO-pulse
+    reg        prog_ren_r;
+    reg        halt_req_r;
+    reg [1:0]  go_cnt;
+    reg [7:0]  vaddr_hi, vaddr_lo, vnwords, vcur, vrem;
+    reg [31:0] vwacc;
+    reg        vmore;
     reg        host_rd_en_r;
     reg [9:0]  host_rd_addr_r;
 
@@ -398,13 +430,18 @@ module tt_um_pemu_host (
     assign prog_addr    = prog_addr_r;
     assign prog_din     = prog_din_r;
     assign prog_wen     = prog_wen_r;
+    assign prog_ren     = prog_ren_r;
+    assign halt_req     = halt_req_r;
+    assign tx_empty     = tx_empty_f;
+    assign rx_full      = rx_full_f;
     assign host_rd_en   = host_rd_en_r;
     assign host_rd_addr = host_rd_addr_r;
 
-    wire [7:0] status_byte = {pe_running, pe_halted, 1'b0,   // TIMEOUT: no input (deviation)
+    // [AMD-B] TIMEOUT/CONFIG_ERR now come from PE status inputs
+    wire [7:0] status_byte = {pe_running, pe_halted, timeout_sticky,
                               tx_empty_f, rx_full_f,
                               trace_wm, trace_full,
-                              1'b0};                        // CONFIG_ERR: no input (deviation)
+                              config_err};
 
     // (WR_RXFIFO space check is computed inline in S_LEN from rx_byte.)
 
@@ -422,6 +459,9 @@ module tt_um_pemu_host (
             prog_mode_r <= 1'b1;   // power-on = PROG (PE held in reset)
             ena_d <= 1'b1;
             prog_addr_r <= 8'd0; prog_din_r <= 32'd0; prog_wen_r <= 1'b0;
+            prog_ren_r <= 1'b0; halt_req_r <= 1'b0; go_cnt <= 2'd0;
+            vaddr_hi <= 8'd0; vaddr_lo <= 8'd0; vnwords <= 8'd0;
+            vcur <= 8'd0; vrem <= 8'd0; vwacc <= 32'd0; vmore <= 1'b0;
             host_rd_en_r <= 1'b0; host_rd_addr_r <= 10'd0;
             tx_start <= 1'b0; tx_byte <= 8'd0;
             tx_rd_en <= 1'b0; rx_fw_en <= 1'b0; rx_fw_data <= 16'd0;
@@ -431,6 +471,7 @@ module tt_um_pemu_host (
             tx_rd_en   <= 1'b0;
             rx_fw_en   <= 1'b0;
             prog_wen_r <= 1'b0;
+            prog_ren_r <= 1'b0;   // re-asserted by S_VF0/S_VF1 when needed
             host_rd_en_r <= 1'b0;
             ena_d <= ena;
 
@@ -460,7 +501,14 @@ module tt_um_pemu_host (
                                     end
                                 end else m_st <= S_LDP;
                             end
-                            8'h02, 8'h03, 8'h04: begin  // VERIFY/WR_CFG/RD_CFG: unsupported
+                            8'h02: begin  // [AMD-B] VERIFY_IMEM: PROG-only readback
+                                // NOTE: rejections must consume the payload via S_DISCN
+                                // before NACKing, or the byte stream desynchronizes.
+                                if (!prog_mode_r || rx_byte != 8'd3) begin
+                                    dcnt <= {3'd0, rx_byte}; m_st <= S_DISCN;
+                                end else m_st <= S_VFAD;
+                            end
+                            8'h03, 8'h04: begin  // WR_CFG/RD_CFG: unsupported
                                 if (rx_byte == 8'd0) begin
                                     snd_byte <= NACK_ERR; snd_ret <= S_IDLE; m_st <= S_TXB;
                                 end else begin
@@ -512,15 +560,23 @@ module tt_um_pemu_host (
                                     dcnt <= {3'd0, rx_byte}; m_st <= S_DISCN;
                                 end
                             end
-                            8'h09: begin  // GO
+                            8'h09: begin  // GO (+ [AMD-B] RUN-restart pulse)
                                 if (rx_byte == 8'd0) begin
-                                    prog_mode_r <= 1'b0;  // release PE reset, PC<-0 (integrator)
-                                    snd_byte <= ACK_OK; snd_ret <= S_IDLE; m_st <= S_TXB;
+                                    halt_req_r <= 1'b0;  // [AMD-B] GO drops HALT_REQ
+                                    if (prog_mode_r) begin
+                                        prog_mode_r <= 1'b0;  // PROG->RUN: release reset, PC<-0
+                                        snd_byte <= ACK_OK; snd_ret <= S_IDLE; m_st <= S_TXB;
+                                    end else begin
+                                        // RUN->RUN: 2-cycle prog_mode pulse restarts PE at PC=0
+                                        prog_mode_r <= 1'b1;
+                                        go_cnt <= 2'd2;
+                                        m_st <= S_GOP;
+                                    end
                                 end else begin
                                     dcnt <= {3'd0, rx_byte}; m_st <= S_DISCN;
                                 end
                             end
-                            8'h0A: begin  // HALT_REQ: accepted, not routable (deviation)
+                            8'h0A: begin  // [AMD-B] HALT_REQ: drives halt_req
                                 if (prog_mode_r || rx_byte != 8'd0) begin
                                     if (rx_byte == 8'd0) begin
                                         snd_byte <= NACK_ERR; snd_ret <= S_IDLE; m_st <= S_TXB;
@@ -528,6 +584,7 @@ module tt_um_pemu_host (
                                         dcnt <= {3'd0, rx_byte}; m_st <= S_DISCN;
                                     end
                                 end else begin
+                                    halt_req_r <= 1'b1;  // stays high until GO/PROG-entry/rst
                                     snd_byte <= ACK_OK; snd_ret <= S_IDLE; m_st <= S_TXB;
                                 end
                             end
@@ -738,6 +795,71 @@ module tt_um_pemu_host (
                     snd_byte <= status_byte; snd_ret <= S_IDLE; m_st <= S_TXB;
                 end
                 // --------------------------------------------------
+                // [AMD-B] VERIFY_IMEM: one IMEM read per cycle + macro latency
+                S_VFAD: begin
+                    if (rx_valid) begin vaddr_hi <= rx_byte; m_st <= S_VFAD2; end
+                end
+                S_VFAD2: begin
+                    if (rx_valid) begin vaddr_lo <= rx_byte; m_st <= S_VFNW; end
+                end
+                S_VFNW: begin
+                    if (rx_valid) begin
+                        vnwords <= rx_byte;
+                        // range check: high addr byte must be 0 and the span
+                        // [addr_lo, addr_lo+nwords) must fit 256 words
+                        if (vaddr_hi != 8'd0 ||
+                            ({1'b0, vaddr_lo} + {1'b0, rx_byte}) > 9'd256) begin
+                            snd_byte <= NACK_ERR; snd_ret <= S_IDLE; m_st <= S_TXB;
+                        end else begin
+                            vcur <= vaddr_lo; vrem <= rx_byte;
+                            snd_byte <= ACK_OK;
+                            snd_ret <= (rx_byte == 8'd0) ? S_IDLE : S_VF0;
+                            m_st <= S_TXB;
+                        end
+                    end
+                end
+                S_VF0: begin
+                    prog_addr_r <= vcur;   // present read address
+                    prog_ren_r  <= 1'b1;   // macro latches it at this edge
+                    m_st <= S_VF1;
+                end
+                S_VF1: begin
+                    prog_ren_r <= 1'b1;    // hold through the latch edge
+                    m_st <= S_VF2;
+                end
+                S_VF2: begin
+                    vwacc <= prog_dout;    // DOUT valid: addr latched 2 edges ago
+                    if (vrem == 8'd1) begin
+                        vmore <= 1'b0;
+                    end else begin
+                        vcur <= vcur + 8'd1; vrem <= vrem - 8'd1; vmore <= 1'b1;
+                    end
+                    m_st <= S_VF3;
+                end
+                S_VF3: begin
+                    snd_byte <= vwacc[31:24]; snd_ret <= S_VF4; m_st <= S_TXB;
+                end
+                S_VF4: begin
+                    snd_byte <= vwacc[23:16]; snd_ret <= S_VF5; m_st <= S_TXB;
+                end
+                S_VF5: begin
+                    snd_byte <= vwacc[15:8];  snd_ret <= S_VF6; m_st <= S_TXB;
+                end
+                S_VF6: begin
+                    snd_byte <= vwacc[7:0];
+                    snd_ret <= vmore ? S_VF0 : S_IDLE; m_st <= S_TXB;
+                end
+                // --------------------------------------------------
+                // [AMD-B] GO from RUN: hold prog_mode high 2 cycles, then drop
+                S_GOP: begin
+                    if (go_cnt == 2'd0) begin
+                        prog_mode_r <= 1'b0;   // PE sees 1->0 -> GO, PC<-0
+                        snd_byte <= ACK_OK; snd_ret <= S_IDLE; m_st <= S_TXB;
+                    end else begin
+                        go_cnt <= go_cnt - 2'd1;
+                    end
+                end
+                // --------------------------------------------------
                 // byte-sender subroutine
                 S_TXB: begin
                     tx_byte  <= snd_byte;
@@ -751,7 +873,10 @@ module tt_um_pemu_host (
             endcase
 
             // ena 1->0 re-enters PROG (wins over GO in the same cycle)
-            if (ena_d && !ena) prog_mode_r <= 1'b1;
+            if (ena_d && !ena) begin
+                prog_mode_r <= 1'b1;
+                halt_req_r  <= 1'b0;   // [AMD-B] PROG-entry drops HALT_REQ
+            end
         end
     end
 

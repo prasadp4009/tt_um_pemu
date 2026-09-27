@@ -1,7 +1,11 @@
 // tb_host.v — Worker C self-check testbench (NOT for synthesis).
 // Host bit-bang model framing commands on hp_rx and checking responses on
-// hp_tx; exercises PROG LOAD, GO, FIFO pack/unpack + sticky/never-stall
-// behavior, and RD_TRACE against a stub observer.
+// hp_tx; exercises PROG LOAD, VERIFY_IMEM readback, GO (+RUN-restart pulse),
+// HALT_REQ routing, FIFO pack/unpack + sticky/never-stall behavior, and
+// RD_TRACE against a stub observer.
+// [AMD-B] Worker D: updated for the amended host contract (VERIFY_IMEM
+// ACKs with readback data; RD_STATUS bits 5/0 live; HALT_REQ drives
+// halt_req; GO in RUN issues a 2-cycle prog_mode pulse).
 `default_nettype none
 `timescale 1ns / 1ps
 
@@ -32,6 +36,11 @@ module tb_host;
     wire [7:0]  prog_addr;
     wire [31:0] prog_din;
     wire        prog_wen;
+    wire        prog_ren;                      // [AMD-B]
+    wire [31:0] prog_dout;                     // [AMD-B] TB stub IMEM model
+    assign prog_dout = {8'hA5, 16'h0000, prog_addr};
+    wire        halt_req;                      // [AMD-B]
+    wire        tx_empty_w, rx_full_w;         // [AMD-B]
 
     // trace port (stub observer)
     wire       host_rd_en;
@@ -42,6 +51,10 @@ module tb_host;
     // status
     reg       pe_running = 0;
     reg       pe_halted = 0;
+    reg       timeout_sticky = 0;              // [AMD-B] -> RD_STATUS bit5
+    reg       config_err = 0;                  // [AMD-B] -> RD_STATUS bit0
+    // [AMD-B] GO-pulse monitor: set while a GO-in-RUN frame is in flight
+    reg       go_pulse_armed = 0, go_pulse_seen = 0;
     reg [7:0] obs_ptr = 0;
     reg       trace_full = 0;
     reg       trace_wm = 0;
@@ -58,11 +71,17 @@ module tb_host;
         .evt_code(evt_code), .evt_pulse(evt_pulse),
         .prog_mode(prog_mode), .prog_addr(prog_addr),
         .prog_din(prog_din), .prog_wen(prog_wen),
+        .prog_ren(prog_ren), .prog_dout(prog_dout),
         .host_rd_en(host_rd_en), .host_rd_addr(host_rd_addr),
         .host_rd_data(host_rd_data), .host_rd_ack(host_rd_ack),
         .pe_running(pe_running), .pe_halted(pe_halted),
-        .obs_ptr(obs_ptr), .trace_full(trace_full), .trace_wm(trace_wm)
+        .obs_ptr(obs_ptr), .trace_full(trace_full), .trace_wm(trace_wm),
+        .halt_req(halt_req), .tx_empty(tx_empty_w), .rx_full(rx_full_w),
+        .timeout_sticky(timeout_sticky), .config_err(config_err)
     );
+
+    // [AMD-B] GO-pulse monitor
+    always @(posedge clk) if (go_pulse_armed && prog_mode) go_pulse_seen <= 1'b1;
 
     // ------------------------------------------------------------------
     // Stub observer: 2-cycle ack; entry i byte j of addr=5*i+j:
@@ -235,6 +254,16 @@ module tb_host;
         send_frame(8'h08, 0);
         expect_ack(8'hA5, "RD_STATUS ack");
         recv_byte(rb); check(rb === 8'h10, "RD_STATUS=0x10 (tx_empty)");
+        // [AMD-B] TIMEOUT / CONFIG_ERR bits now live
+        timeout_sticky = 1;
+        send_frame(8'h08, 0);
+        expect_ack(8'hA5, "RD_STATUS timeout ack");
+        recv_byte(rb); check(rb === 8'h30, "RD_STATUS=0x30 (timeout_sticky)");
+        config_err = 1;
+        send_frame(8'h08, 0);
+        expect_ack(8'hA5, "RD_STATUS cfgerr ack");
+        recv_byte(rb); check(rb === 8'h31, "RD_STATUS=0x31 (config_err)");
+        timeout_sticky = 0; config_err = 0;
 
         // ---- 4. WR_RXFIFO in PROG -> NACK_ERR ----
         fdata[0] = 8'hAA; fdata[1] = 8'hBB;
@@ -269,8 +298,26 @@ module tb_host;
         send_frame(8'h01, 10); expect_ack(8'h5B, "LOAD addr+len overflow NACK");
 
         // ---- 7. unsupported / unknown / bad-len ----
-        fdata[0]=8'h00; fdata[1]=8'h00; fdata[2]=8'h00;
-        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY_IMEM NACK (no read port)");
+        // [AMD-B] VERIFY_IMEM: addr=2, nwords=2 -> ACK + 8 bytes MSB-first.
+        // TB stub IMEM returns {A5,00,00,addr}.
+        fdata[0]=8'h00; fdata[1]=8'h02; fdata[2]=8'h02;
+        send_frame(8'h02, 3); expect_ack(8'hA5, "VERIFY_IMEM ack");
+        recv_byte(rb); check(rb===8'hA5,"vrf w2 b3"); recv_byte(rb); check(rb===8'h00,"vrf w2 b2");
+        recv_byte(rb); check(rb===8'h00,"vrf w2 b1"); recv_byte(rb); check(rb===8'h02,"vrf w2 b0");
+        recv_byte(rb); check(rb===8'hA5,"vrf w3 b3"); recv_byte(rb); check(rb===8'h00,"vrf w3 b2");
+        recv_byte(rb); check(rb===8'h00,"vrf w3 b1"); recv_byte(rb); check(rb===8'h03,"vrf w3 b0");
+        // nwords=0 -> ACK_OK, no data bytes
+        fdata[0]=8'h00; fdata[1]=8'h05; fdata[2]=8'h00;
+        send_frame(8'h02, 3); expect_ack(8'hA5, "VERIFY_IMEM nwords=0 ack");
+        // addr_hi != 0 -> NACK_ERR
+        fdata[0]=8'h01; fdata[1]=8'h00; fdata[2]=8'h01;
+        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY_IMEM addr_hi NACK");
+        // addr+len overflow (255+2) -> NACK_ERR
+        fdata[0]=8'h00; fdata[1]=8'hFF; fdata[2]=8'h02;
+        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY_IMEM overflow NACK");
+        // bad LEN -> NACK_ERR
+        fdata[0]=8'h00; fdata[1]=8'h00;
+        send_frame(8'h02, 2); expect_ack(8'h5B, "VERIFY_IMEM bad LEN NACK");
         fdata[0]=8'h10; fdata[1]=8'h01;
         send_frame(8'h03, 2); expect_ack(8'h5B, "WR_CFG NACK (no cfg iface)");
         fdata[0]=8'h10;
@@ -285,8 +332,14 @@ module tb_host;
         expect_ack(8'hA5, "GO ack");
         repeat (5) @(posedge clk);
         check(prog_mode === 1'b0, "prog_mode=0 after GO");
+        // [AMD-B] GO in RUN: 2-cycle prog_mode pulse (restart), still ACKs
+        go_pulse_armed = 1; go_pulse_seen = 0;
         send_frame(8'h09, 0);
-        expect_ack(8'hA5, "GO no-op ack");
+        expect_ack(8'hA5, "GO in RUN ack");
+        go_pulse_armed = 0;
+        check(go_pulse_seen === 1'b1, "GO in RUN: prog_mode pulsed");
+        repeat (5) @(posedge clk);
+        check(prog_mode === 1'b0, "prog_mode=0 after RUN GO pulse");
 
         // ---- 10. WR_RXFIFO odd byte count ----
         fdata[0]=8'h41; fdata[1]=8'h42; fdata[2]=8'h43;  // "ABC"
@@ -400,16 +453,35 @@ module tb_host;
         recv_byte(rb); check(rb===8'h96, "RD_STATUS=0x96 (run,tx_empty,wm,full)");
         pe_running = 0; trace_wm = 0; trace_full = 0;
 
-        // ---- 16. HALT_REQ accepted ----
+        // ---- 16. HALT_REQ accepted -> halt_req high (RUN) ----
         send_frame(8'h0A, 0);
         expect_ack(8'hA5, "HALT_REQ ack");
+        repeat (3) @(posedge clk);
+        check(halt_req === 1'b1, "halt_req=1 after HALT_REQ");
+        // [AMD-B] VERIFY_IMEM in RUN -> NACK_ERR
+        fdata[0]=8'h00; fdata[1]=8'h00; fdata[2]=8'h01;
+        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY_IMEM in RUN NACK");
+        // [AMD-B] GO in RUN drops halt_req (+ pulse)
+        go_pulse_armed = 1; go_pulse_seen = 0;
+        send_frame(8'h09, 0);
+        expect_ack(8'hA5, "GO drops halt_req ack");
+        go_pulse_armed = 0;
+        repeat (3) @(posedge clk);
+        check(halt_req === 1'b0, "halt_req=0 after GO");
+        check(go_pulse_seen === 1'b1, "GO pulse seen (halt_req test)");
 
         // ---- 17. ena re-entry to PROG ----
         @(negedge clk); ena = 0;
         repeat (5) @(posedge clk);
         check(prog_mode === 1'b1, "ena fall -> prog_mode=1");
+        check(halt_req === 1'b0, "halt_req=0 in PROG");
         @(negedge clk); ena = 1;
         repeat (3) @(posedge clk);
+        // [AMD-B] HALT_REQ in PROG -> NACK_ERR
+        send_frame(8'h0A, 0);
+        expect_ack(8'h5B, "HALT_REQ in PROG NACK");
+        repeat (3) @(posedge clk);
+        check(halt_req === 1'b0, "halt_req stays 0 (PROG NACK)");
 
         // ---- 18. autobaud at T=64 after reset ----
         rst_n = 0; #100; rst_n = 1;
