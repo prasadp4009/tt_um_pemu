@@ -1,0 +1,15 @@
+[options]
+mode bmc
+depth 40
+[engines]
+smtbmc z3
+[script]
+read_verilog -sv /home/jarvis/asic/projects/js-pemu/src/tt_um_pemu_host.v
+hierarchy -top tt_um_pemu_host
+proc
+memory_map
+expose tt_um_pemu_host/tx_cnt tt_um_pemu_host/tx_wptr tt_um_pemu_host/tx_rptr tt_um_pemu_host/tx_push_ok tt_um_pemu_host/tx_pop_ok tt_um_pemu_host/rx_cnt tt_um_pemu_host/rx_wptr tt_um_pemu_host/rx_rptr tt_um_pemu_host/rx_fw_en tt_um_pemu_host/rx_fw_data tt_um_pemu_host/rx_push_ok tt_um_pemu_host/rx_pop_ok tt_um_pemu_host/tx_mem[0] tt_um_pemu_host/tx_mem[1] tt_um_pemu_host/tx_mem[2] tt_um_pemu_host/tx_mem[3] tt_um_pemu_host/tx_mem[4] tt_um_pemu_host/tx_mem[5] tt_um_pemu_host/tx_mem[6] tt_um_pemu_host/tx_mem[7] tt_um_pemu_host/tx_mem[8] tt_um_pemu_host/tx_mem[9] tt_um_pemu_host/tx_mem[10] tt_um_pemu_host/tx_mem[11] tt_um_pemu_host/tx_mem[12] tt_um_pemu_host/tx_mem[13] tt_um_pemu_host/tx_mem[14] tt_um_pemu_host/tx_mem[15] tt_um_pemu_host/rx_mem[0] tt_um_pemu_host/rx_mem[1] tt_um_pemu_host/rx_mem[2] tt_um_pemu_host/rx_mem[3] tt_um_pemu_host/rx_mem[4] tt_um_pemu_host/rx_mem[5] tt_um_pemu_host/rx_mem[6] tt_um_pemu_host/rx_mem[7] tt_um_pemu_host/rx_mem[8] tt_um_pemu_host/rx_mem[9] tt_um_pemu_host/rx_mem[10] tt_um_pemu_host/rx_mem[11] tt_um_pemu_host/rx_mem[12] tt_um_pemu_host/rx_mem[13] tt_um_pemu_host/rx_mem[14] tt_um_pemu_host/rx_mem[15]
+read_verilog -formal -sv /home/jarvis/asic/projects/js-pemu/test/formal/gen/fifo_tx.sv
+prep -top formal_top
+[files]
+/home/jarvis/asic/projects/js-pemu/test/formal/gen/fifo_tx.sv

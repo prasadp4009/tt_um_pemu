@@ -1,0 +1,15 @@
+[options]
+mode bmc
+depth 20
+[engines]
+smtbmc z3
+[script]
+read_verilog /home/jarvis/asic/projects/js-pemu/src/tt_um_pemu_pe.v
+hierarchy -top tt_um_pemu_pe
+proc
+memory_map
+expose tt_um_pemu_pe/exec_active tt_um_pemu_pe/opcode tt_um_pemu_pe/dly tt_um_pemu_pe/instr tt_um_pemu_pe/state tt_um_pemu_pe/pc tt_um_pemu_pe/tick_en tt_um_pemu_pe/sync0 tt_um_pemu_pe/sync1 tt_um_pemu_pe/pin_drv tt_um_pemu_pe/pmask tt_um_pemu_pe/ts tt_um_pemu_pe/cts_hi tt_um_pemu_pe/cts_pins tt_um_pemu_pe/ecnt tt_um_pemu_pe/wait_hit tt_um_pemu_pe/w_entry_hit tt_um_pemu_pe/sticky tt_um_pemu_pe/regs[3] tt_um_pemu_pe/regs[6] tt_um_pemu_pe/regs[7]
+read_verilog -formal -sv /home/jarvis/asic/projects/js-pemu/test/formal/gen/lat_sub_d1.sv
+prep -top formal_top
+[files]
+/home/jarvis/asic/projects/js-pemu/test/formal/gen/lat_sub_d1.sv

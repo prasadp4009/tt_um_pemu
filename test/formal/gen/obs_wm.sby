@@ -1,0 +1,14 @@
+[options]
+mode bmc
+depth 70
+[engines]
+smtbmc z3
+[script]
+read_verilog -sv /home/jarvis/asic/projects/js-pemu/src/tt_um_pemu_observer.v
+hierarchy -top tt_um_pemu_observer
+proc
+memory_map
+read_verilog -formal -sv /home/jarvis/asic/projects/js-pemu/test/formal/gen/obs_wm.sv
+prep -top formal_top
+[files]
+/home/jarvis/asic/projects/js-pemu/test/formal/gen/obs_wm.sv
