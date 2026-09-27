@@ -23,6 +23,10 @@ module tb ();
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
 
+  // Convenience scalar for the cocotb test: cocotb 2.x edge triggers need a
+  // scalar object, and packed vectors cannot be bit-indexed for triggers.
+  wire hp_tx = uo_out[0];
+
   // Replace tt_um_pemu with your module name:
   tt_um_pemu user_project (
       .ui_in  (ui_in),    // Dedicated inputs

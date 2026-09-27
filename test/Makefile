@@ -6,7 +6,7 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v
+PROJECT_SOURCES = tt_um_pemu.v tt_um_pemu_pe.v tt_um_pemu_host.v tt_um_pemu_observer.v
 
 ifneq ($(GATES),yes)
 
@@ -34,6 +34,10 @@ COMPILE_ARGS 		+= -I$(SRC_DIR)
 
 # Include the testbench sources:
 VERILOG_SOURCES += $(PWD)/tb.v
+# Functional models of the two IHP SRAM macros (simulation only)
+VERILOG_SOURCES += $(PWD)/sram_sim.v
+# The RTL uses SystemVerilog-2012 constructs
+COMPILE_ARGS += -g2012
 TOPLEVEL = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
