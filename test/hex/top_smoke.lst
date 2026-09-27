@@ -1,0 +1,19 @@
+   0  pdir 0xFF
+   1  pull r10
+   2  msr r10, TRIG_MODE
+   3  pull r10
+   4  msr r10, EDGE_MASK
+   5  pull r10
+   6  msr r10, EDGE_CFG0
+   7  pull r10
+   8  msr r10, OBS_CTL
+   9  pull r0
+  10  psetr r0
+  11  push r0
+  12  pull r0
+  13  psetr r0
+  14  push r0
+  15  pull r0
+  16  psetr r0
+  17  push r0
+  18  hlt 

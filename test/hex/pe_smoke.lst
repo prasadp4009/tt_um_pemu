@@ -1,0 +1,10 @@
+   0  pset 0xA5
+   1  pdir 0xFF
+   2  pget r1
+   3  ldi r2, 0x1234
+   4  add r3, r2, r2
+   5  push r3
+   6  pull r4
+   7  evt 3
+   8  wait 1, 1, level, 0, r5
+   9  hlt 

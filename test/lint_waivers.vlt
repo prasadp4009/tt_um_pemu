@@ -1,0 +1,16 @@
+// lint_waivers.vlt -- Verilator lint waivers for COMMITTED files.
+//
+// Worker D cannot modify src/tt_um_pemu_pe.v, src/tt_um_pemu_observer.v, or
+// src/tt_um_pemu_host.v beyond the authorized amendments. The warnings below
+// are in those files, have been reviewed, and are accepted:
+//
+// - UNUSEDSIGNAL 'vnwords' (tt_um_pemu_host.v): leftover readback-count reg
+//   from the VERIFY_IMEM implementation; never read, harmless.
+// - SYNCASYNCNET 'rst_n': intended reset topology -- the host uses
+//   async-assert/sync-deassert (rst_sync), the PE samples rst_n synchronously
+//   (rst_n_d). Not a bug.
+//
+// Usage: verilator --lint-only -Wall ... test/lint_waivers.vlt ...
+`verilator_config
+lint_off -rule UNUSEDSIGNAL -match "vnwords"
+lint_off -rule SYNCASYNCNET
