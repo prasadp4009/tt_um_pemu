@@ -53,45 +53,51 @@ The formal ROM models a 1-cycle latency SRAM: `imem_dout = rom_word(addr_q)`
 where `addr_q` is the previous cycle's `imem_addr`. This matches the DUT's
 expected SRAM interface timing.
 
-## Results (2026-09-27, re-run after PE datapath change + extended)
+## Results (2026-09-27, re-run after PE datapath change + extended + induction)
 
-All proofs are BOUNDED (BMC mode, smtbmc/z3). No failures. None are fully
-(unbounded) proven - see depths below.
+PROVEN = full unbounded proof (sby prove mode: base case + induction step,
+smtbmc/z3). BOUNDED(n) = BMC to depth n, no failure. Zero failures anywhere.
 
 | Proof | Description | Depth | Status |
 |-------|-------------|-------|--------|
-| sync2 | 2-FF synchronizer correctness | 20 | BOUNDED(20) |
-| lat_pset_d0 | PSET d=0 latency (1 cycle) | 20 | BOUNDED(20) |
-| lat_pset_d3 | PSET d=3 latency (4 cycles) | 25 | BOUNDED(25) |
-| lat_pset_d31 | PSET d=31 latency (32 cycles) | 60 | BOUNDED(60) |
-| lat_pget_d3 | PGET d=3 latency | 25 | BOUNDED(25) |
-| lat_ldi_d2 | LDI d=2 latency | 25 | BOUNDED(25) |
-| lat_add_d1 | ADD d=1 latency | 20 | BOUNDED(20) |
-| lat_sub_d1 | SUB d=1 latency | 20 | BOUNDED(20) |
-| lat_jmp_taken_d0 | JMP taken d=0 latency | 20 | BOUNDED(20) |
-| lat_jmp_ntaken_d0 | JMP not-taken d=0 latency | 20 | BOUNDED(20) |
-| pin_effect_pset_d3 | PSET commits pin_drv=0xA5 | 30 | BOUNDED(30) |
-| sample_pget_d3 | PGET samples to regs[3] | 30 | BOUNDED(30) |
-| wait_entry | WAIT entry hit/no-hit | 30 | BOUNDED(30) |
-| wait_loop | WAIT 256-cycle timeout, sticky[0] | 275 | BOUNDED(275) |
-| nostall_seq | Sequential d=0 has no stall | 25 | BOUNDED(25) |
-| nostall_jmp | JMP d=0 has no stall | 25 | BOUNDED(25) |
-| cap_atomic | CAP atomic commit | 30 | BOUNDED(30) |
-| sleep_imm0 | SLEEP imm=0 (1 cycle) | 30 | BOUNDED(30) |
-| sleep_imm2 | SLEEP imm=2 (3 cycles) | 30 | BOUNDED(30) |
-| sleep_imm7 | SLEEP imm=7 (8 cycles) | 30 | BOUNDED(30) |
-| carry_sub | CMP: C=1 iff a>=b (regression: inverted-carry bug) | 30 | BOUNDED(30) |
-| carry_sub2 | ADDSUB-sub via shared adder: C=1 iff a>=b | 30 | BOUNDED(30) |
-| carry_add | ADD: C=1 iff a+b > 0xFFFF | 30 | BOUNDED(30) |
-| hlt_hold_pc | HLT holds PC, halted asserts (regression) | 30 | BOUNDED(30) |
-| prefetch_delay | ST_DELAY: imem_addr==pc (regression: 6352084) | 30 | BOUNDED(30) |
-| prefetch_wait | ST_WAIT: imem_addr==pc+1 | 40 | BOUNDED(40) |
-| prefetch_sleep | ST_SLEEP: imem_addr==pc | 30 | BOUNDED(30) |
-| illegal_opcode | opcode>=24: NOP + CONFIG_ERR, pc advances | 30 | BOUNDED(30) |
-| fifo_tx | TX FIFO: full at exactly 16, accept iff not full, count relation, write integrity | 40 | BOUNDED(40) |
-| fifo_rx | RX FIFO: same + read-mux exact | 40 | BOUNDED(40) |
-| obs_wm | Watermark fires exactly on commit reaching wmark; single-cycle strobe | 70 | BOUNDED(70) |
-| obs_wm_zero | wmark=0 (disabled): strobe never fires | 40 | BOUNDED(40) |
+| sync2 | 2-FF synchronizer correctness | 20 | PROVEN |
+| lat_pset_d0 | PSET d=0 latency (1 cycle) | 20 | PROVEN |
+| lat_pset_d3 | PSET d=3 latency (4 cycles) | 25 | PROVEN |
+| lat_pset_d31 | PSET d=31 latency (32 cycles) | 60 | PROVEN |
+| lat_pget_d3 | PGET d=3 latency | 25 | PROVEN |
+| lat_ldi_d2 | LDI d=2 latency | 25 | PROVEN |
+| lat_add_d1 | ADD d=1 latency | 20 | PROVEN |
+| lat_sub_d1 | SUB d=1 latency | 20 | PROVEN |
+| lat_jmp_taken_d0 | JMP taken d=0 latency | 20 | PROVEN |
+| lat_jmp_ntaken_d0 | JMP not-taken d=0 latency | 20 | PROVEN |
+| pin_effect_pset_d3 | PSET commits pin_drv=0xA5 | 30 | BOUNDED(30) * |
+| sample_pget_d3 | PGET samples to regs[3] | 30 | PROVEN |
+| wait_entry | WAIT entry hit/no-hit | 30 | PROVEN |
+| wait_loop | WAIT 256-cycle timeout, sticky[0] | 275 | see note ** |
+| nostall_seq | Sequential d=0 has no stall | 25 | PROVEN |
+| nostall_jmp | JMP d=0 has no stall | 25 | PROVEN |
+| cap_atomic | CAP atomic commit | 30 | PROVEN |
+| sleep_imm0 | SLEEP imm=0 (1 cycle) | 30 | PROVEN |
+| sleep_imm2 | SLEEP imm=2 (3 cycles) | 30 | PROVEN |
+| sleep_imm7 | SLEEP imm=7 (8 cycles) | 30 | PROVEN |
+| carry_sub | CMP: C=1 iff a>=b (regression: inverted-carry bug) | 30 | PROVEN |
+| carry_sub2 | ADDSUB-sub via shared adder: C=1 iff a>=b | 30 | PROVEN |
+| carry_add | ADD: C=1 iff a+b > 0xFFFF | 30 | PROVEN |
+| hlt_hold_pc | HLT holds PC, halted asserts (regression) | 30 | PROVEN |
+| prefetch_delay | ST_DELAY: imem_addr==pc (regression: 6352084) | 30 | PROVEN |
+| prefetch_wait | ST_WAIT: imem_addr==pc+1 | 40 | PROVEN |
+| prefetch_sleep | ST_SLEEP: imem_addr==pc | 30 | PROVEN |
+| illegal_opcode | opcode>=24: NOP + CONFIG_ERR, pc advances | 30 | PROVEN |
+| fifo_tx | TX FIFO: full at exactly 16, accept iff not full, count relation, write integrity | 40 | PROVEN |
+| fifo_rx | RX FIFO: same + read-mux exact | 40 | PROVEN |
+| obs_wm | Watermark fires exactly on commit reaching wmark; single-cycle strobe | 70 | PROVEN |
+| obs_wm_zero | wmark=0 (disabled): strobe never fires | 40 | PROVEN |
+
+* pin_effect_pset_d3 is a bounded-temporal property (commit exactly N cycles
+  after issue) - not inductive from an arbitrary state, so induction correctly
+  reports UNKNOWN; BMC to 30 covers the full PSET d=3 window (4 cycles).
+** wait_loop induction was still running at last update; BMC BOUNDED(275)
+  covers the full 256-cycle WAIT timeout window.
 
 ## Note on X-freedom (no_x)
 
