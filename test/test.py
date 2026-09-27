@@ -205,26 +205,43 @@ async def test_project(dut):
     assert st == 0x10, f"RD_STATUS in PROG: expected 0x10, got 0x{st:02X}"
     dut._log.info("RD_STATUS in PROG = 0x10 (tx_empty) as specified")
 
-    # ---- LOAD_IMEM the SPI firmware ----
+    # ---- LOAD_IMEM the SPI firmware, chunked into <=63-word frames ----
+    # TEST-INFRA LIMIT (not a design bug): the host protocol LEN field
+    # is 8 bits, so one LOAD_IMEM frame carries at most 255 payload
+    # bytes = 2 addr bytes + 63 words (254 bytes). Images larger than
+    # 63 words are loaded in 60-word frames (margin under the wire
+    # limit); IMEM is word-addressed and consecutive frames are
+    # contiguous.
     words = load_hex_words("hex/spi.hex")
     assert len(words) > 0, "spi.hex is empty"
+    assert len(words) <= 256, f"image {len(words)} words exceeds 256-word IMEM"
     dut._log.info(f"loading SPI image: {len(words)} words")
-    payload = [0x00, 0x00]          # addr[15:8], addr[7:0]
-    for w in words:
-        payload += [(w >> 24) & 0xFF, (w >> 16) & 0xFF,
-                    (w >> 8) & 0xFF, w & 0xFF]
-    await hp.send_frame(0x01, payload)   # LOAD_IMEM
-    await hp.expect_ack("LOAD_IMEM")
+    IMEM_CHUNK = 60
+    for base in range(0, len(words), IMEM_CHUNK):
+        chunk = words[base:base + IMEM_CHUNK]
+        payload = [(base >> 8) & 0xFF, base & 0xFF]   # word addr hi/lo
+        for w in chunk:
+            payload += [(w >> 24) & 0xFF, (w >> 16) & 0xFF,
+                        (w >> 8) & 0xFF, w & 0xFF]
+        assert len(payload) <= 255, "LOAD_IMEM frame exceeds 8-bit LEN"
+        await hp.send_frame(0x01, payload)   # LOAD_IMEM
+        await hp.expect_ack(f"LOAD_IMEM[{base}:{base + len(chunk)}]")
+    dut._log.info(f"LOAD_IMEM done: {len(words)} words in "
+                  f"{(len(words) + IMEM_CHUNK - 1) // IMEM_CHUNK} frames")
 
-    # ---- VERIFY_IMEM readback must match the image bit-exact ----
-    await hp.send_frame(0x02, [0x00, 0x00, len(words)])
-    await hp.expect_ack("VERIFY_IMEM")
-    for i, want in enumerate(words):
-        got = 0
-        for _ in range(4):
-            got = (got << 8) | await hp.recv_byte()
-        assert got == want, \
-            f"VERIFY_IMEM word {i}: expected 0x{want:08X}, got 0x{got:08X}"
+    # ---- VERIFY_IMEM readback, same chunking, must match bit-exact ----
+    for base in range(0, len(words), IMEM_CHUNK):
+        n = min(IMEM_CHUNK, len(words) - base)
+        await hp.send_frame(0x02, [(base >> 8) & 0xFF, base & 0xFF, n])
+        await hp.expect_ack(f"VERIFY_IMEM[{base}:{base + n}]")
+        for i in range(n):
+            want = words[base + i]
+            got = 0
+            for _ in range(4):
+                got = (got << 8) | await hp.recv_byte()
+            assert got == want, \
+                f"VERIFY_IMEM word {base + i}: expected 0x{want:08X}, " \
+                f"got 0x{got:08X}"
     dut._log.info(f"VERIFY_IMEM: all {len(words)} words match the image")
 
     # ---- GO: PE starts; status must show PE_RUNNING ----
