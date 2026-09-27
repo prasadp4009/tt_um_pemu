@@ -246,16 +246,45 @@ module tt_um_pemu_pe (
                           !(exec_active && opcode == OP_HLT);
 
     // ALU operands (CMP uses the [20:17]/[16:13] lanes)
-    wire [15:0] alu_a = (opcode == OP_CMP) ? regs[instr[20:17]] : regs[instr[16:13]];
-    wire [15:0] alu_b = (opcode == OP_CMP) ? regs[instr[16:13]] : regs[instr[12:9]];
-    wire [16:0] add_r = alu_a + alu_b;
-    wire [16:0] sub_r = alu_a - alu_b;
+    // Area opt: shared GPR read ports. The ISA never reads more than 3 distinct
+    // GPR addresses in one cycle; all [20:17] reads share one physical port.
+    wire [15:0] rf_rd0 = regs[instr[20:17]];
+    wire [15:0] rf_rd1 = regs[instr[16:13]];
+    wire [15:0] rf_rd2 = regs[instr[12:9]];
+    wire [15:0] alu_a = (opcode == OP_CMP) ? rf_rd0 : rf_rd1;
+    wire [15:0] alu_b = (opcode == OP_CMP) ? rf_rd1 : rf_rd2;
+    // Area opt: shared add/sub. sub_op=1 computes a-b as a+~b+1; the 17-bit
+    // carry-out is exact for both (C=carry for ADD, C=~borrow for SUB/CMP).
+    wire sub_op = (opcode == OP_CMP) || ((opcode == OP_ADDSUB) && instr[8]);
+    wire [16:0] addsub_r = {1'b0, alu_a} + (sub_op ? {1'b0, ~alu_b} : {1'b0, alu_b}) + (sub_op ? 17'd1 : 17'd0);
+    wire [16:0] add_r = addsub_r;
+    wire [16:0] sub_r = addsub_r;
     wire [15:0] and_r = alu_a & alu_b;
     wire [15:0] or_r  = alu_a | alu_b;
     wire [15:0] xor_r = alu_a ^ alu_b;
     wire [3:0]  shamt = alu_b[3:0];
-    wire [15:0] shl_r = alu_a << shamt;
-    wire [15:0] shr_r = alu_a >> shamt;
+    // Area opt: shared barrel shifter via bit-reversal.
+    // shr(a,n) = rev(rev(a) << n); reversal is free (wires).
+    // shl_r/shr_r are only consumed by OP_SHIFT, where shr_op selects
+    // the correct data path, so values are exact whenever used.
+    wire [15:0] alu_a_rev;
+    genvar gv_i;
+    generate
+        for (gv_i = 0; gv_i < 16; gv_i = gv_i + 1) begin : g_rev_a
+            assign alu_a_rev[gv_i] = alu_a[15-gv_i];
+        end
+    endgenerate
+    wire        shr_op = (opcode == OP_SHIFT) && instr[8];
+    wire [15:0] sh_in = shr_op ? alu_a_rev : alu_a;
+    wire [15:0] sh_out = sh_in << shamt;
+    wire [15:0] sh_out_rev;
+    generate
+        for (gv_i = 0; gv_i < 16; gv_i = gv_i + 1) begin : g_rev_o
+            assign sh_out_rev[gv_i] = sh_out[15-gv_i];
+        end
+    endgenerate
+    wire [15:0] shl_r = sh_out;
+    wire [15:0] shr_r = sh_out_rev;
 
     // JMP condition decode
     wire [3:0] cond4 = instr[11:8];
@@ -271,7 +300,7 @@ module tt_um_pemu_pe (
     wire jmp_cond_reserved = (cond4 > 4'd7);
 
     // DJNZ take: test NEW (post-decrement) Rs
-    wire [15:0] djnz_new = regs[instr[20:17]] - 16'd1;
+    wire [15:0] djnz_new = rf_rd0 - 16'd1;
     wire djnz_take = (djnz_new != 16'd0);
 
     // WAIT entry check (T8 adopted interpretation): compare post-base-cycle
@@ -304,7 +333,7 @@ module tt_um_pemu_pe (
 
     // Pin drive (combinational — see header note re T5/sim-exactness)
     wire [7:0] pset_new  = (pin_drv & ~pmask) | (instr[20:13] & pmask);
-    wire [7:0] psetr_new = (pin_drv & ~pmask) | (regs[instr[20:17]][7:0] & pmask);
+    wire [7:0] psetr_new = (pin_drv & ~pmask) | (rf_rd0[7:0] & pmask);
     wire [7:0] pins_out_comb =
         (!exec_active) ? pin_drv :
         (opcode == OP_PSET)  ? pset_new :
@@ -314,7 +343,7 @@ module tt_um_pemu_pe (
         (opcode == OP_PDIR) ? instr[20:13] : pdir;
     wire [15:0] pmode_out_comb =
         (!exec_active) ? pmode :
-        (opcode == OP_PMODE) ? regs[instr[20:17]] : pmode;
+        (opcode == OP_PMODE) ? rf_rd0 : pmode;
 
     // Prescaler divide value
     wire [12:0] div_val = (prescaler_r == 2'd0) ? 13'd1 :
@@ -505,7 +534,7 @@ module tt_um_pemu_pe (
                                 end else if (halt_req) halted <= 1'b1;
                             end
                             OP_PMODE: begin
-                                pmode <= regs[instr[20:17]];
+                                pmode <= rf_rd0;
                                 pc <= pc_plus1;
                                 if (dly != 5'd0) begin
                                     state <= ST_DELAY; dcnt <= dly;
@@ -551,7 +580,7 @@ module tt_um_pemu_pe (
                                 end else if (halt_req) halted <= 1'b1;
                             end
                             OP_MOV: begin
-                                regs[rd] <= regs[instr[16:13]];
+                                regs[rd] <= rf_rd1;
                                 pc <= pc_plus1;
                                 if (dly != 5'd0) begin
                                     state <= ST_DELAY; dcnt <= dly;
@@ -568,7 +597,7 @@ module tt_um_pemu_pe (
                                 if (tx_full) begin
                                     sticky[ST_TX_OVERRUN] <= 1'b1;
                                 end else begin
-                                    tx_data_r <= regs[instr[20:17]];
+                                    tx_data_r <= rf_rd0;
                                     tx_push_r <= 1'b1;
                                 end
                                 pc <= pc_plus1;
@@ -598,30 +627,30 @@ module tt_um_pemu_pe (
                             end
                             OP_MSR: begin
                                 case (instr[16:11])
-                                    6'h00: sticky <= sticky & ~regs[instr[20:17]][4:0];
+                                    6'h00: sticky <= sticky & ~rf_rd0[4:0];
                                     6'h09: begin
-                                        trig_mode_r      <= regs[instr[20:17]][1:0];
+                                        trig_mode_r      <= rf_rd0[1:0];
                                         obs_en_r         <= 1'b0;  // any write disarms
                                         trig_wr_strobe_r <= 1'b1;
                                     end
-                                    6'h0A: pin_sel_r   <= regs[instr[20:17]][2:0];
-                                    6'h0B: obs_mask_r  <= regs[instr[20:17]][7:0];
-                                    6'h0C: obs_value_r <= regs[instr[20:17]][7:0];
-                                    6'h0D: edge_mask_r <= regs[instr[20:17]][7:0];
-                                    6'h0E: edge_cfg0_r <= regs[instr[20:17]][7:0];
-                                    6'h0F: edge_cfg1_r <= regs[instr[20:17]][7:0];
-                                    6'h10: wmark_r     <= regs[instr[20:17]][7:0];
-                                    6'h11: prescaler_r <= regs[instr[20:17]][1:0];
+                                    6'h0A: pin_sel_r   <= rf_rd0[2:0];
+                                    6'h0B: obs_mask_r  <= rf_rd0[7:0];
+                                    6'h0C: obs_value_r <= rf_rd0[7:0];
+                                    6'h0D: edge_mask_r <= rf_rd0[7:0];
+                                    6'h0E: edge_cfg0_r <= rf_rd0[7:0];
+                                    6'h0F: edge_cfg1_r <= rf_rd0[7:0];
+                                    6'h10: wmark_r     <= rf_rd0[7:0];
+                                    6'h11: prescaler_r <= rf_rd0[1:0];
                                     6'h12: begin
-                                        if (regs[instr[20:17]][2]) begin
+                                        if (rf_rd0[2]) begin
                                             obs_clr_r       <= 1'b1;
                                             sticky_trace_wm <= 1'b0;
                                         end
-                                        if (regs[instr[20:17]][0])
+                                        if (rf_rd0[0])
                                             obs_en_r <= 1'b1;
                                         // OBS_ARM is set-only (T4 open),
                                         // matching sim.py's golden model.
-                                        if (regs[instr[20:17]][1])
+                                        if (rf_rd0[1])
                                             obs_arm_r <= 1'b1;
                                     end
                                     // 0x13 EVTFLAG: MSR ignored (host clears).
@@ -641,7 +670,7 @@ module tt_um_pemu_pe (
                                     flag_n   <= add_r[15];
                                 end else begin
                                     regs[rd] <= sub_r[15:0];
-                                    flag_c   <= ~sub_r[16];
+                                    flag_c   <= sub_r[16];
                                     flag_z   <= (sub_r[15:0] == 16'd0);
                                     flag_n   <= sub_r[15];
                                 end
@@ -704,7 +733,7 @@ module tt_um_pemu_pe (
                             OP_CMP: begin
                                 flag_z <= (sub_r[15:0] == 16'd0);
                                 flag_n <= sub_r[15];
-                                flag_c <= ~sub_r[16];
+                                flag_c <= sub_r[16];
                                 pc <= pc_plus1;
                                 if (dly != 5'd0) begin
                                     state <= ST_DELAY; dcnt <= dly;
@@ -754,8 +783,10 @@ module tt_um_pemu_pe (
                             end
                             OP_HLT: begin
                                 // dly reserved_zero: ignored
+                                // BUG FIX (pre-existing): ISA golden model (sim.py) does NOT
+                                // increment PC on HLT; the halted PC points AT the HLT
+                                // instruction. Removed pc_plus1 to match golden.
                                 halted <= 1'b1;
-                                pc <= pc_plus1;
                             end
                             OP_EVT: begin
                                 // explicit whole-reg update: host clear applies,
