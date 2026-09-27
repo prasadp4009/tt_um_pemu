@@ -493,6 +493,75 @@ module tb_host;
         expect_ack(8'hA5, "RD_STATUS ack at T=64");
         recv_byte(rb); check(rb===8'h10, "RD_STATUS=0x10 at T=64");
 
+        // ---- 19. FIFO occupancy: 15/16/17 pushes (TX direction) ----
+        // Fill TX FIFO via PE side (tx_push), check full at 16, stays full at 17
+        begin
+            integer j;
+            // Drain first
+            repeat (20) @(posedge clk);
+            for (j = 0; j < 15; j = j + 1) begin
+                @(negedge clk); tx_data = j; tx_push = 1;
+                @(posedge clk); #1; tx_push = 0;
+            end
+            repeat (2) @(posedge clk);
+            check(tx_full === 1'b0, "TX FIFO: not full at 15");
+            @(negedge clk); tx_data = 15; tx_push = 1;
+            @(posedge clk); #1; tx_push = 0;
+            repeat (2) @(posedge clk);
+            check(tx_full === 1'b1, "TX FIFO: full at 16");
+            @(negedge clk); tx_data = 16; tx_push = 1;
+            @(posedge clk); #1; tx_push = 0;
+            repeat (2) @(posedge clk);
+            check(tx_full === 1'b1, "TX FIFO: stays full at 17th push (no overflow)");
+        end
+
+        // ---- 20. LOAD_IMEM: one word, zero words, odd length ----
+        // One word (len=6: 2 hdr + 4 data)
+        fdata[0]=8'h00; fdata[1]=8'h00; fdata[2]=8'hDE; fdata[3]=8'hAD;
+        fdata[4]=8'hBE; fdata[5]=8'hEF;
+        send_frame(8'h01, 6);
+        expect_ack(8'hA5, "LOAD_IMEM one word ack");
+        // Zero words (len=2: header only) - ACKed as no-op (not malformed)
+        send_frame(8'h01, 2);
+        expect_ack(8'hA5, "LOAD_IMEM zero words ACK (no-op)");
+        // Odd length (len=5: malformed, not 2+4*N)
+        fdata[0]=8'h00; fdata[1]=8'h00; fdata[2]=8'h11; fdata[3]=8'h22; fdata[4]=8'h33;
+        send_frame(8'h01, 5);
+        expect_ack(8'h5B, "LOAD_IMEM odd length NACK");
+
+        // ---- 21. VERIFY_IMEM: one word, odd count ----
+        fdata[0]=8'h00; fdata[1]=8'h00; fdata[2]=8'h01;
+        send_frame(8'h02, 3);
+        expect_ack(8'hA5, "VERIFY_IMEM one word ack");
+        recv_byte(rb); // data byte 0
+        recv_byte(rb); // data byte 1
+        recv_byte(rb); // data byte 2
+        recv_byte(rb); // data byte 3
+
+        // ---- 22. UART framing error: bad stop bit dropped ----
+        begin
+            integer k;
+            // Send byte with stop bit = 0 (framing error)
+            @(negedge clk); hp_rx = 0; repeat (T_host) @(posedge clk); // start
+            for (k = 0; k < 8; k = k + 1) begin
+                @(negedge clk); hp_rx = 1; repeat (T_host) @(posedge clk);
+            end
+            @(negedge clk); hp_rx = 0; repeat (T_host) @(posedge clk); // bad stop (0)
+            @(negedge clk); hp_rx = 1; repeat (T_host*2) @(posedge clk);
+            // No ACK should arrive (framing error dropped)
+            // (We verify by sending a good frame after and checking it works)
+            send_frame(8'h08, 0);
+            expect_ack(8'hA5, "RD_STATUS after framing error (recovered)");
+            recv_byte(rb);
+        end
+
+        // ---- 23. Break: long low then recovery ----
+        send_level(0, T_host*20);  // break: 20 bit-times low
+        send_level(1, T_host*2);
+        send_frame(8'h08, 0);
+        expect_ack(8'hA5, "RD_STATUS after break (recovered)");
+        recv_byte(rb);
+
         $display("done: %0d checks, %0s", nchecks, fail ? "FAIL" : "PASS");
         $finish;
     end
