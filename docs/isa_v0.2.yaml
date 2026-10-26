@@ -1,0 +1,624 @@
+# TEMPO-32 ISA v0.2 — machine-readable single source of truth
+# ============================================================================
+# This file is the ENCODING authority for the TEMPO-32 ISA (v0.2).
+# Semantics source: ~/workspace/janestreet-pemu/ARCHITECTURE.md (v0.1 proposal).
+# Human-readable companion: ~/workspace/janestreet-pemu/ISA_v0.2.md
+#
+# Single-source discipline (ARCHITECTURE.md 7.1): this YAML generates the
+# SystemVerilog decode package, the assembler, the C golden model, the ISA
+# spec docs, and the formal timing table. CI regenerates all artifacts and
+# fails on any diff -- including hand-edited drift.
+#
+# Fixed by ISA contract (NOT repurposable): [31:26] opcode, [25:21] delay.
+# All fields below live in [20:0]. No instruction semantics or mnemonics
+# were changed between v0.1 and v0.2 -- this file is ENCODING ONLY.
+#
+# Merge notes (Phase-1 coordinator): this file merges Worker A (encoding map),
+# Worker B (timing contract), Worker C (observer interface). Three merge
+# conflicts were adjudicated; see `merge_decisions` (M1/M2/M3).
+# ============================================================================
+isa_version: "0.2"
+word_bits: 32
+opcode_bits: [31, 26]
+delay_bits: [25, 21]
+operand_bits: [20, 0]
+regs: { count: 16, width: 16 }
+flags: ["Z", "N", "C"]
+stickies: ["TIMEOUT", "TX_OVERRUN", "RX_UNDERRUN", "TRACE_FULL", "CONFIG_ERR"]
+
+# ---------------------------------------------------------------------------
+# Instruction encodings
+# Field convention: uniform register lanes where possible.
+#   Rd  -> [20:17]      (destination register)
+#   Rs  -> [20:17]      (single source register; MRS: Rd lane, MSR: Rs lane)
+#   Rs1 -> [20:17], Rs2 -> [16:13]  (two-source: CMP)
+#   Rd  -> [20:17], Rs1 -> [16:13], Rs2 -> [12:9]  (ALU)
+#   imm8 byte lane -> [20:13]
+# delay: applies | reserved_zero. reserved_zero = must be zero (assembler
+#   rejects nonzero; hardware ignores nonzero bits).
+# ---------------------------------------------------------------------------
+instructions:
+  - name: PSET
+    number: 0
+    fields:
+      - { name: imm8, msb: 20, lsb: 13 }
+      - { name: reserved, msb: 12, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Pin effect at end of base cycle; delay cycles run with pins stable."
+
+  - name: PSETR
+    number: 1
+    fields:
+      - { name: rs, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "pins <- (pins & ~PMASK) | (Rs[7:0] & PMASK), effect end of cycle 0."
+
+  - name: PGET
+    number: 2
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Rd <- {8'b0, sync_pins[7:0]} sampled at end of base cycle."
+
+  - name: PMASK
+    number: 3
+    fields:
+      - { name: imm8, msb: 20, lsb: 13 }
+      - { name: reserved, msb: 12, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "PMASK <- imm8. Reset value 0xFF (from ARCHITECTURE.md)."
+
+  - name: PDIR
+    number: 4
+    fields:
+      - { name: imm8, msb: 20, lsb: 13 }
+      - { name: reserved, msb: 12, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "1=drive, 0=Hi-Z per pin. Readback via PDIRR (MRS 0x07)."
+
+  - name: PMODE
+    number: 5
+    fields:
+      - { name: rs, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Rs[15:0] = 8x 2-bit {open_drain, pull_up} per pin, pin-major: pin i = Rs[2i+1:2i]. Readback via PMODER (MRS 0x08)."
+
+  - name: SLEEP
+    number: 6
+    fields:
+      - { name: imm13, msb: 20, lsb: 8 }
+      - { name: reserved, msb: 7, lsb: 0 }
+    delay: reserved_zero
+    cycles: "1+imm13"
+    flags_written: []
+    notes: >-
+      v0.1 semantics: exactly 1+imm13 cycles, imm13 <= 8191. Delay field is
+      RESERVED, must be zero (assembler rejects nonzero; hardware ignores
+      nonzero delay bits). KNOWN TENSION: the cycle-exact contract
+      (contract point 1) states every instruction occupies exactly 1+delay
+      cycles, but SLEEP's semantics are 1+imm13 independent of delay.
+      Resolving this (e.g. cycles = 1+d+imm13, or folding d into the count)
+      is a SEMANTICS CHANGE and is NOT adopted here. See open_tbd T2 and
+      proposals_needing_semantics_change P1.
+
+  - name: WAIT
+    number: 7
+    fields:
+      - { name: cfg8, msb: 20, lsb: 13 }
+      - { name: rd, msb: 12, lsb: 9 }
+      - { name: reserved, msb: 8, lsb: 0 }
+    delay: reserved_zero
+    cycles: "1..1+timeout"
+    flags_written: ["TIMEOUT (sticky, set iff timeout expired)"]
+    notes: >-
+      Delay field is RESERVED, must be zero (assembler rejects nonzero;
+      hardware ignores nonzero delay bits) -- WAIT is already
+      data-dependent and bounded; the 5-bit delay would double-count.
+      cfg8 bit layout (msb->lsb): cfg8[7:5]=pin[2:0], cfg8[4]=pol,
+      cfg8[3:2]=mode[1:0], cfg8[1:0]=tsel[1:0].
+      mode: 00=level, 01=rising, 10=falling, 11=either.
+      pol: for level mode, 1=wait-for-high, 0=wait-for-low; ignored by
+      edge modes. tsel: 0->256, 1->4096, 2->65536, 3->1048576 cycles.
+      Rd <- elapsed cycles (elapsed = core cycles from end of base cycle
+      until condition first true; 0 if true at entry -- ADOPTED
+      INTERPRETATION, see timing_contract T8); TIMEOUT sticky iff timeout
+      expired.
+
+  - name: CAP
+    number: 8
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Atomic latch of {timestamp[31:0], pins[7:0]} at end of base cycle; Rd <- ts[15:0]; full snapshot in CTS_HI / CTS_PINS (MRS). Delay applies."
+
+  - name: MOV
+    number: 9
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: rs, msb: 16, lsb: 13 }
+      - { name: reserved, msb: 12, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Rd <- Rs."
+
+  - name: LDI
+    number: 10
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: imm16, msb: 16, lsb: 1 }
+      - { name: reserved, msb: 0, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Rd <- imm16. Single-word 16-bit immediate; bit [0] reserved (must be zero)."
+
+  - name: PUSH
+    number: 11
+    fields:
+      - { name: rs, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: ["TX_OVERRUN (sticky, set iff TX FIFO full at push; data dropped)"]
+    notes: "Non-blocking: full FIFO never stalls; drop + TX_OVERRUN."
+
+  - name: PULL
+    number: 12
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: ["RX_UNDERRUN (sticky, set iff RX FIFO empty at pull; Rd <- 0)"]
+    notes: "Non-blocking: empty FIFO never stalls; Rd <- 0 + RX_UNDERRUN."
+
+  - name: MRS
+    number: 13
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: sreg, msb: 16, lsb: 11 }
+      - { name: reserved, msb: 10, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Rd <- special register addressed by 6-bit sreg. Same field layout as MSR (Rd/Rs lane + sreg lane)."
+
+  - name: MSR
+    number: 14
+    fields:
+      - { name: rs, msb: 20, lsb: 17 }
+      - { name: sreg, msb: 16, lsb: 11 }
+      - { name: reserved, msb: 10, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: >-
+      Special reg <- Rs[15:0]. For sreg=STATUS (0x00), a 1-bit in Rs
+      clears the corresponding sticky (W1C); 1-bits in live-bit or
+      reserved positions are ignored. Observer config and prescaler are
+      plain RW writes. MSR to EVTFLAG (0x13) is ignored (host clears).
+
+  - name: ADD/SUB
+    number: 15
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: rs1, msb: 16, lsb: 13 }
+      - { name: rs2, msb: 12, lsb: 9 }
+      - { name: fn, msb: 8, lsb: 8 }
+      - { name: reserved, msb: 7, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: ["Z", "N", "C"]
+    notes: "fn=0: ADD (Rd <- Rs1 + Rs2); fn=1: SUB (Rd <- Rs1 - Rs2)."
+
+  - name: AND/OR/XOR
+    number: 16
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: rs1, msb: 16, lsb: 13 }
+      - { name: rs2, msb: 12, lsb: 9 }
+      - { name: fn, msb: 8, lsb: 7 }
+      - { name: reserved, msb: 6, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: ["Z", "N"]
+    notes: "fn=00: AND; fn=01: OR; fn=10: XOR; fn=11: RESERVED (assembler rejects; hardware behavior TBD -- see open_tbd T7)."
+
+  - name: SHL/SHR
+    number: 17
+    fields:
+      - { name: rd, msb: 20, lsb: 17 }
+      - { name: rs1, msb: 16, lsb: 13 }
+      - { name: rs2, msb: 12, lsb: 9 }
+      - { name: fn, msb: 8, lsb: 8 }
+      - { name: reserved, msb: 7, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: ["Z", "N", "C"]
+    notes: "fn=0: SHL; fn=1: SHR. Shift amount = Rs2[3:0]; C <- last bit shifted out."
+
+  - name: CMP
+    number: 18
+    fields:
+      - { name: rs1, msb: 20, lsb: 17 }
+      - { name: rs2, msb: 16, lsb: 13 }
+      - { name: reserved, msb: 12, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: ["Z", "N", "C"]
+    notes: "Rs1 - Rs2; set flags, discard result."
+
+  - name: JMP
+    number: 19
+    fields:
+      - { name: target9, msb: 20, lsb: 12 }
+      - { name: cond4, msb: 11, lsb: 8 }
+      - { name: reserved, msb: 7, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: >-
+      PC <- target9[7:0] iff cond4 true (target9[8] reserved, must be zero --
+      assembler rejects; hardware implements an 8-bit PC and ignores
+      target9[8]; merge decision M3; reserved for future IMEM-512, Q1).
+      Taken or not, exactly 1+d cycles: branch takes effect at end of base
+      cycle, the d delay cycles execute as NOP-equivalent (ADOPTED
+      INTERPRETATION, see timing_contract T13). No predictor, no prefetch.
+      cond4 codes: 0000=AL, 0001=Z, 0010=NZ, 0011=C, 0100=NC,
+      0101=TMO (TIMEOUT sticky set), 0110=RXNE (RX FIFO not empty),
+      0111=TXNF (TX FIFO not full); 1000-1111 RESERVED.
+
+  - name: DJNZ
+    number: 20
+    fields:
+      - { name: rs, msb: 20, lsb: 17 }
+      - { name: target9, msb: 16, lsb: 8 }
+      - { name: reserved, msb: 7, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Rs <- Rs - 1; if NEW Rs != 0, PC <- target9[7:0] (target9[8]: see M3). Taken or not, exactly 1+d cycles. Does not write flags."
+
+  - name: CALL/RET
+    number: 21
+    fields:
+      - { name: target9, msb: 20, lsb: 12 }
+      - { name: is_ret, msb: 11, lsb: 11 }
+      - { name: reserved, msb: 10, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: >-
+      is_ret=0: CALL -- push PC+1 to 4-deep hardware return stack,
+      PC <- target9[7:0] (target9[8]: see M3). is_ret=1: RET -- pop return
+      stack to PC; target9 must be zero (ignored by hardware). 4-deep return
+      stack (32 DFFs). Stack overflow/underflow sticky is a SEMANTICS GAP in
+      v0.1 ("overflow sets sticky" but no sticky defined) -- see
+      proposals_needing_semantics_change P2; STATUS[6] held reserved as the
+      CALL_OVF candidate.
+
+  - name: HLT
+    number: 22
+    fields:
+      - { name: reserved, msb: 20, lsb: 0 }
+    delay: reserved_zero
+    cycles: "indefinite (until host GO or reset)"
+    flags_written: []
+    notes: >-
+      Halts the PE (clocks gated; Observer/timestamp keep running).
+      Delay field RESERVED, must be zero (assembler rejects nonzero;
+      hardware ignores). A delay-before-halt semantic would be a semantics
+      change and is NOT adopted.
+
+  - name: EVT
+    number: 23
+    fields:
+      - { name: imm4, msb: 20, lsb: 17 }
+      - { name: reserved, msb: 16, lsb: 0 }
+    delay: applies
+    cycles: "1+d"
+    flags_written: []
+    notes: "Raise host event flag EVTFLAG[imm4] (sticky; host clears via host port). Event raised at end of base cycle; delay applies."
+
+# ---------------------------------------------------------------------------
+# Special-register map (MRS/MSR). 6-bit sreg address at operand bits [16:11].
+# 64 addresses; 0x00-0x13 assigned, 0x14-0x3F unallocated.
+# ---------------------------------------------------------------------------
+special_registers:
+  address_width_bits: 6
+  sreg_field: { msb: 16, lsb: 11 }
+  regs:
+    - { addr: 0x00, name: STATUS, width: 16, access: "RO/W1C",
+        reset: "0x0000",
+        desc: "Live status bits (RO) + sticky flags (W1C via MSR write-1-to-clear). Full bit layout in status_bits below. NOTE: distinct from the 8-bit host-port RD_STATUS byte (ARCHITECTURE.md 3.6); the 16-bit STATUS is the firmware-visible superset. TRACE_WM here is STICKY (merge decision M2); the host-port status byte's TRACE_WM bit is LIVE." }
+    - { addr: 0x01, name: CYCLES_LO, width: 16, access: "RO",
+        reset: "0x0000", desc: "Timestamp[15:0], 32-bit free-running counter @50MHz (prescaled). MSR writes ignored." }
+    - { addr: 0x02, name: CYCLES_HI, width: 16, access: "RO",
+        reset: "0x0000", desc: "Timestamp[31:16]. MSR writes ignored." }
+    - { addr: 0x03, name: CTS_HI, width: 16, access: "RO",
+        reset: "0x0000", desc: "CAP snapshot: timestamp[31:16] at last CAP latch. MSR writes ignored." }
+    - { addr: 0x04, name: CTS_PINS, width: 16, access: "RO",
+        reset: "0x0000", desc: "CAP snapshot: {8'b0, sync_pins[7:0]} at last CAP latch. MSR writes ignored." }
+    - { addr: 0x05, name: OBS_PTR, width: 16, access: "RO",
+        reset: "0x0000", desc: "Observer trace write pointer: number of valid entries, 0..204, saturates at 204 (never wraps). Cleared by OBS_CTL[2] strobe and by global rst_n. PE reads the pointer only (Q4 decision: no PE trace-data read). MSR writes ignored." }
+    - { addr: 0x06, name: PMASKR, width: 16, access: "RO",
+        reset: "0x00FF", desc: "PMASK readback: {8'b0, PMASK}. MSR writes ignored." }
+    - { addr: 0x07, name: PDIRR, width: 16, access: "RO",
+        reset: "0x0000", desc: "PDIR readback: {8'b0, PDIR}. Reset 0x00 (all Hi-Z) is an ENCODING decision -- architecture does not specify PDIR reset; all-Hi-Z is the safe power-on default. MSR writes ignored." }
+    - { addr: 0x08, name: PMODER, width: 16, access: "RO",
+        reset: "0x0000", desc: "PMODE readback: full 8x2-bit pin modes, pin i = [2i+1:2i]. One 16-bit register covers all 8 pins. MSR writes ignored." }
+    - { addr: 0x09, name: TRIG_MODE, width: 16, access: "RW",
+        reset: "0x0000", desc: "Observer trigger mode, bits [1:0]: 00=DISABLED, 01=EDGE, 10=PATTERN, 11=PULSE (merge decision M1: reset = DISABLED, the safe power-on default). Bits [15:2] reserved. ANY write to TRIG_MODE clears OBS_CTL[0] (OBS_EN): configure-then-arm discipline; mode switches are never live." }
+    - { addr: 0x0A, name: PIN_SEL, width: 16, access: "RW",
+        reset: "0x0000", desc: "PULSE-mode arm pin, bits [2:0]. Bits [15:3] reserved." }
+    - { addr: 0x0B, name: MASK, width: 16, access: "RW",
+        reset: "0x0000", desc: "PATTERN-mode mask, bits [7:0]. Bits [15:8] reserved." }
+    - { addr: 0x0C, name: VALUE, width: 16, access: "RW",
+        reset: "0x0000", desc: "PATTERN-mode value, bits [7:0]. Bits [15:8] reserved." }
+    - { addr: 0x0D, name: EDGE_MASK, width: 16, access: "RW",
+        reset: "0x0000", desc: "EDGE-mode quick enable mask, bits [7:0] (one per pin). Bits [15:8] reserved." }
+    - { addr: 0x0E, name: EDGE_CFG0, width: 16, access: "RW",
+        reset: "0x0000", desc: "Per-pin 2-bit edge select for pins 0-3: pin i -> [2i+1:2i], i=0..3. Codes: 00=disabled, 01=rising, 10=falling, 11=either. Bits [15:8] reserved (must be zero on write, read-as-zero)." }
+    - { addr: 0x0F, name: EDGE_CFG1, width: 16, access: "RW",
+        reset: "0x0000", desc: "Per-pin 2-bit edge select for pins 4-7: pin i -> [2(i-4)+1:2(i-4)], i=4..7. Same codes as EDGE_CFG0. Bits [15:8] reserved." }
+    - { addr: 0x10, name: WMARK, width: 16, access: "RW",
+        reset: "0x0000", desc: "Observer trace watermark, bits [7:0] (entry count). 0 = disabled; 1..204 arm normally; 204 fires on the final commit; >204 unreachable (documented, not faulted). Watermark reached -> TRACE_WM sticky event. Bits [15:8] reserved." }
+    - { addr: 0x11, name: PRESCALER, width: 16, access: "RW",
+        reset: "0x0000", desc: "SHARED prescaler for timestamp counter AND Observer timestamping, bits [1:0]: 00=div1, 01=div16, 10=div256, 11=div4096. One prescaled tick drives both the CYCLES counter and the Observer's latched ts, so Observer entries and CAP snapshots are directly comparable. Bits [15:2] reserved." }
+    - { addr: 0x12, name: OBS_CTL, width: 16, access: "RW",
+        reset: "0x0000", desc: "Observer control. Bit [0] OBS_EN: trace writes enabled -- set LAST after config (configure-then-arm); cleared by any TRIG_MODE write. Bit [1] OBS_ARM: semantics TBD (see open_tbd T4). Bit [2] OBS_CLR: W1C self-clearing strobe; resets OBS_PTR to 0 and auto-clears TRACE_WM (does NOT clear TRACE_FULL sticky -- that is STATUS W1C). OBS_CLR|OBS_EN may be set in one write = clear-then-enable. Bits [15:3] reserved." }
+    - { addr: 0x13, name: EVTFLAG, width: 16, access: "RO",
+        reset: "0x0000", desc: "16 host event flags; PE raises via EVT imm4. HOST clears via host port. MSR writes to 0x13 are IGNORED (firmware cannot clear; clearing is host-owned per v0.1 semantics)." }
+    - { addr: "0x14-0x3F", name: "(unallocated)", width: 16, access: "-",
+        reset: "-", desc: "Unallocated sreg addresses. MRS reads as zero; MSR writes ignored (whether an access sets CONFIG_ERR is TBD -- see open_tbd T5)." }
+
+# STATUS (sreg 0x00) full bit layout. W1C = write-1-to-clear via MSR.
+status_bits:
+  - { bit: 0, name: TIMEOUT, kind: "sticky/W1C", desc: "WAIT timed out (set iff timeout expired)." }
+  - { bit: 1, name: TX_OVERRUN, kind: "sticky/W1C", desc: "PUSH to full TX FIFO (data dropped)." }
+  - { bit: 2, name: RX_UNDERRUN, kind: "sticky/W1C", desc: "PULL from empty RX FIFO (Rd <- 0)." }
+  - { bit: 3, name: TRACE_FULL, kind: "sticky/W1C", desc: "Observer trace SRAM full; capture stopped." }
+  - { bit: 4, name: CONFIG_ERR, kind: "sticky/W1C", desc: "Illegal pin-mux mapping (resolved to GND) or other configuration fault." }
+  - { bit: 5, name: "(reserved)", kind: "reserved", desc: "Must be zero on W1C writes (ignored); reads zero." }
+  - { bit: 6, name: "(reserved)", kind: "reserved", desc: "CANDIDATE for CALL_OVF in a future revision -- see proposals_needing_semantics_change P2. Until assigned: must-be-zero/reads-zero." }
+  - { bit: 7, name: "(reserved)", kind: "reserved", desc: "Must be zero on W1C writes (ignored); reads zero." }
+  - { bit: 8, name: PE_RUNNING, kind: "live/RO", desc: "1 while the PE is fetching/executing (not in HLT, not in PROG reset)." }
+  - { bit: 9, name: PE_HALTED, kind: "live/RO", desc: "1 while the PE is halted (HLT executed; clocks gated)." }
+  - { bit: 10, name: TX_EMPTY, kind: "live/RO", desc: "1 when TX FIFO is empty." }
+  - { bit: 11, name: RX_FULL, kind: "live/RO", desc: "1 when RX FIFO is full." }
+  - { bit: 12, name: TRACE_WM, kind: "sticky/W1C", desc: "Watermark reached (OBS_PTR == WMARK on a commit). Set once per arming; W1C via MSR; auto-cleared by OBS_CLR strobe. Merge decision M2: this IS the v0.1 'host event' -- pollable via RD_STATUS. (The 8-bit host-port status byte's TRACE_WM bit is LIVE: OBS_PTR >= WMARK, combinational.)" }
+  - { bit: 13, name: CFG_DIRTY, kind: "live/RO", desc: "1 when host WR_CFG modified config while PE was running (RUN-mode live reconfig). Set by host port only (never by firmware MSR). Clear condition TBD (see open_tbd T3)." }
+  - { bit: 14, name: "(reserved)", kind: "reserved", desc: "Reads zero." }
+  - { bit: 15, name: "(reserved)", kind: "reserved", desc: "Reads zero." }
+
+# ---------------------------------------------------------------------------
+# Observer EDGE packing (resolves ARCHITECTURE.md 3.5 "exact packing TBD")
+# ---------------------------------------------------------------------------
+observer_edge_packing:
+  decision: "Pins 0-3 in EDGE_CFG0, pins 4-7 in EDGE_CFG1, pin-major, 2 bits per pin."
+  codes: { "00": "disabled", "01": "rising", "10": "falling", "11": "either" }
+  edge_cfg0:
+    - { pins: "0", bits: "[1:0]" }
+    - { pins: "1", bits: "[3:2]" }
+    - { pins: "2", bits: "[5:4]" }
+    - { pins: "3", bits: "[7:6]" }
+    - { pins: "(reserved)", bits: "[15:8]", note: "must be zero on write, read-as-zero" }
+  edge_cfg1:
+    - { pins: "4", bits: "[1:0]" }
+    - { pins: "5", bits: "[3:2]" }
+    - { pins: "6", bits: "[5:4]" }
+    - { pins: "7", bits: "[7:6]" }
+    - { pins: "(reserved)", bits: "[15:8]", note: "must be zero on write, read-as-zero" }
+  edge_mask_note: "EDGE_MASK[7:0] (sreg 0x0D) remains the quick enable mask; a pin fires in EDGE mode only if EDGE_MASK[i]=1 AND EDGE_CFG edge-select[i]!=00."
+
+# ---------------------------------------------------------------------------
+# Host port (ARCHITECTURE.md 3.6 as encoded for v0.2)
+# Frame: [CMD(8b)] [LEN(8b)] [DATA...] -> [ACK(8b)] [DATA...]. ~10 host clocks/byte.
+# ---------------------------------------------------------------------------
+host_port:
+  frame: "[CMD(8b)] [LEN(8b)] [DATA...] -> [ACK(8b)] [DATA...]; LEN = request DATA byte count"
+  ack_codes:
+    - { code: 0xA5, name: ACK_OK, meaning: "accepted; response DATA follows per command" }
+    - { code: 0x5A, name: NACK_BUSY, meaning: "transient -- observer-write collision window / port busy; host retries with bounded backoff, then RD_STATUS poll" }
+    - { code: 0x5B, name: NACK_ERR, meaning: "rejected -- bad CMD, bad LEN, out-of-range params, or command illegal in current mode; do not blind-retry" }
+  commands:
+    - { cmd: LOAD_IMEM, value: 0x01, prog: "write IMEM", run: "rejected (NACK_ERR)",
+        req: "{addr[15:8], addr[7:0], data...} -- whole 32-bit words, MSB-first", resp: "ACK_OK" }
+    - { cmd: VERIFY_IMEM, value: 0x02, prog: "read IMEM", run: "rejected (NACK_ERR)",
+        req: "{addr[15:8], addr[7:0], nwords[7:0]}", resp: "ACK_OK + nwords x 4 bytes, MSB-first per word" }
+    - { cmd: WR_CFG, value: 0x03, prog: "pin-mux, observer, prescaler", run: "allowed; sets CFG_DIRTY note",
+        req: "{CFG_ID(8b), VALUE...} -- VALUE width per CFG_ID", resp: "ACK_OK" }
+    - { cmd: RD_CFG, value: 0x04, prog: "read config", run: "allowed",
+        req: "{CFG_ID(8b)}", resp: "ACK_OK + VALUE bytes" }
+    - { cmd: WR_RXFIFO, value: 0x05, prog: "rejected (NACK_ERR)", run: "push bytes to RX FIFO",
+        req: "{data...}", resp: "ACK_OK; all-or-nothing: insufficient space -> NACK_ERR, nothing pushed" }
+    - { cmd: RD_TXFIFO, value: 0x06, prog: "rejected (NACK_ERR)", run: "pop bytes from TX FIFO",
+        req: "{max_count[7:0]}", resp: "ACK_OK + {ret_count[7:0], bytes...}" }
+    - { cmd: RD_TRACE, value: 0x07, prog: "rejected (NACK_ERR)", run: "read trace entries + OBS_PTR",
+        req: "{start_idx[7:0], count[7:0]}", resp: "ACK_OK + {ret_count[7:0], entries..., OBS_PTR[7:0]}; see read_trace below" }
+    - { cmd: RD_STATUS, value: 0x08, prog: "status byte", run: "status byte",
+        req: "none (LEN=0)", resp: "ACK_OK + {status[7:0]}; bits {PE_RUNNING,PE_HALTED,TIMEOUT,TX_EMPTY,RX_FULL,TRACE_WM(live),TRACE_FULL,CONFIG_ERR} = bit7->bit0" }
+    - { cmd: GO, value: 0x09, prog: "release PE reset, PC<-0", run: "ACK_OK no-op (already running)",
+        req: "none", resp: "ACK_OK; never disturbs observer state" }
+    - { cmd: HALT_REQ, value: 0x0A, prog: "rejected (NACK_ERR)", run: "request PE halt (clean stop at instruction boundary)",
+        req: "none", resp: "ACK_OK (request registered; host polls RD_STATUS for PE_HALTED); never disturbs observer state" }
+  reserved_cmd: "0x00 = NOP (no response bytes; keeps line synchronizable); 0x0B-0x0F, 0xFF reserved; unknown CMD -> NACK_ERR"
+  cfg_ids:
+    - { id: 0x10, reg: TRIG_MODE, width_bytes: 1, note: "2-bit value in [1:0]; M1 values" }
+    - { id: 0x11, reg: PIN_SEL, width_bytes: 1 }
+    - { id: 0x12, reg: MASK, width_bytes: 1 }
+    - { id: 0x13, reg: VALUE, width_bytes: 1 }
+    - { id: 0x14, reg: EDGE_MASK, width_bytes: 1 }
+    - { id: 0x15, reg: EDGE_CFG0, width_bytes: 1 }
+    - { id: 0x16, reg: EDGE_CFG1, width_bytes: 1 }
+    - { id: 0x17, reg: WMARK, width_bytes: 1 }
+    - { id: 0x18, reg: PRESCALER, width_bytes: 1, note: "2-bit value in [1:0]" }
+    - { id: 0x19, reg: OBS_CTL, width_bytes: 1, note: "OBS_EN / OBS_CLR bits" }
+    - { id: 0x1A, reg: STATUS, width_bytes: 1, note: "W1C bits only (TRACE_FULL clear); full readback" }
+    - { id: "0x00-0x0F", reg: "(pin-mux block)", width_bytes: 0, note: "reserved for the pin-mux worker" }
+  read_trace:
+    request: "CMD=0x07, LEN=0x02, DATA={start_idx[7:0], count[7:0]}"
+    response: "[0xA5][ret_count[7:0]][entry_0 ... entry_{n-1}][OBS_PTR[7:0]}, n = ret_count"
+    entry_wire_format: "5 bytes per 40-bit {ts[31:0],pins[7:0]}, MSB-first: {ts[31:24], ts[23:16], ts[15:8], ts[7:0], pins[7:0]}"
+    count_zero: "legal -- returns ACK_OK, ret_count=0, no entry bytes, plus current OBS_PTR (cheap pointer poll)"
+    max_count_per_frame: 16
+    count_gt_16: "NACK_ERR (host bug; fail loud)"
+    start_idx_ge_obs_ptr: "CLAMP, not error: ret_count = min(count, max(0, OBS_PTR - start_idx)); zero -> ACK_OK, ret_count=0, OBS_PTR"
+    busy_rule: "Trace SRAM is append-only with immutable committed entries; host port latches OBS_PTR at decode (PTR_SNAP) and reads only indices < PTR_SNAP, so entry data can never tear. Writer has strict priority per R4 (host-port FSM waits idle cycles). NACK_BUSY (0x5A) returned ONLY under sustained writer saturation (>=1 entry/5 cycles through the whole frame); host retries bounded (recommended 3 attempts), then RD_STATUS poll."
+    obs_clr_during_read: "impossible -- the 2-wire port is strictly sequential; host-side ordering is the host's own program order"
+
+# ---------------------------------------------------------------------------
+# Observer programming model (machine-readable summary; full prose in ISA_v0.2.md)
+# ---------------------------------------------------------------------------
+observer:
+  q4_decision: "NO PE trace-data read in v0.2 -- host-only read stands (v0.1 unchanged). Writer-priority arbitration would inject unbounded pin-activity-dependent stalls into PE reads, breaking contract 2.2.1/2.2.5/2.2.6 and F1; dual-port macro unproven in TT CMOS5L flow (R1). Q4 stays open, owner = firmware phase; reopens only if a written, cycle-counted stretch firmware needs PE-side trace consumption AND the host-mailbox fallback (RD_TRACE -> RX FIFO -> PULL) is shown insufficient."
+  trig_modes: { DISABLED: 0b00, EDGE: 0b01, PATTERN: 0b10, PULSE: 0b11 }
+  trig_mode_write_disarms: true
+  edge_subfields: { IGN: 0b00, RIS: 0b01, FAL: 0b10, ETH: 0b11 }
+  pattern_semantics: "level-triggered: fires per cycle while (pins & MASK) == VALUE"
+  pulse_semantics: "rising edge on PIN_SEL commits entry and arms; falling edge commits entry and disarms; second rising while armed restarts measurement (latest wins); orphaned arm entry stays in trace"
+  trace_entry: "{ts[31:0], pins[7:0]} = 40 bits = 5 SRAM bytes; 1024x8 macro = 204 entries"
+  commit_bound_k_cycles: 6
+  sustained_trigger_rate: "1 per 5 core cycles; faster bursts coalesce latest-wins (1-deep pending latch)"
+  timestamp_ordering: "non-decreasing across committed entries (prescaler may stamp equal values)"
+  obs_ptr: "8-bit, counts valid entries 0..204, saturates at 204 (never wraps), cleared by OBS_CLR strobe and rst_n; single-cycle atomic update between commits; PE reads pointer via MRS only"
+  trace_full: "stop (no overwrite, no wrap) + TRACE_FULL sticky; triggers while full are ignored"
+  rearm_sequence: ["MSR OBS_CTL, OBS_CLR (W1C: OBS_PTR <- 0; TRACE_FULL untouched)",
+                   "MSR STATUS, TRACE_FULL (W1C: clear sticky)",
+                   "MSR OBS_CTL, OBS_EN (re-arm, LAST; may combine with step 1 as clear-then-enable)"]
+  watermark: "WMARK=0 disables; 1..204 arm; 204 fires on final commit; >204 unreachable (documented, not faulted); TRACE_WM sticky event (M2)"
+  status_pin: "mux-selectable status source, default disabled (zero pin-budget cost)"
+  hlt_interaction: "Observer independent of PE HLT (timestamp/trigger/writer/SRAM keep running); host WR_CFG allowed during HLT/RUN and sets CFG_DIRTY note (never by firmware MSR); GO/HALT_REQ never disturb observer state"
+  cfg_dirty: "note, not fault; set by host WR_CFG to observer/pin-mux/prescaler CFG_IDs; clear condition TBD (T3)"
+
+# ---------------------------------------------------------------------------
+# Timing contract (machine-readable index; normative prose in ISA_v0.2.md)
+# ---------------------------------------------------------------------------
+timing_contract:
+  note: "Full normative text: ISA_v0.2.md section 4. T1-T17 feed SymbiYosys proofs F1-F4 (ARCHITECTURE.md 7.4)."
+  properties:
+    - { id: T1, text: "Every instruction with opcode != 7 (WAIT) occupies exactly 1+d cycles.", contract: "2.2.1", formal: "F1" }
+    - { id: T2, text: "WAIT occupies c cycles with 1 <= c <= 1+timeout, timeout in {256,4096,65536,1048576} per tsel.", contract: "2.2.1", formal: "F1" }
+    - { id: T3, text: "PSET/PSETR/PDIR/PMODE commit pin (or pin-control) effect at end of cycle 0; d delay cycles run pins stable.", contract: "2.2.2", formal: "F2" }
+    - { id: T4, text: "PGET returns the synchronized pin vector captured at end of cycle 0.", contract: "2.2.3", formal: "F3" }
+    - { id: T5, text: "2-FF synchronizer is architectural: PGET/CAP/Observer see physical pins exactly 2 core cycles earlier.", contract: "2.2.4", formal: "F3" }
+    - { id: T6, text: "No hidden cycles: single-cycle IMEM fetch; loader writes IMEM only in PROG mode with PE in reset.", contract: "2.2.5", formal: "F1" }
+    - { id: T7, text: "WAIT always writes elapsed to Rd and sets TIMEOUT iff the timeout expired (and only then).", contract: "2.2.6", formal: "F4" }
+    - { id: T8, text: "WAIT elapsed = core cycles from end of base cycle until condition first true; 0 if true at entry. ADOPTED-INTERPRETATION.", contract: "2.2.6", formal: "F4" }
+    - { id: T9, text: "SLEEP occupies exactly 1+imm13 cycles, d reserved_zero. KNOWN TENSION with T1/2.2.1 -- flagged, not resolved (T2).", contract: "2.2.1-as-specified", formal: "F1" }
+    - { id: T10, text: "CAP latches {timestamp[31:0], pins[7:0]} atomically; Rd <- ts[15:0]; CTS_HI/CTS_PINS hold the full snapshot.", contract: "instr-table", formal: "F3/F4-adjacent" }
+    - { id: T11, text: "Pin effect committed end of cycle 0 visible at physical pins <= 1 cycle after cycle 0; PGET reads back driven pins post-sync.", contract: "2.2.2", formal: "F2" }
+    - { id: T12, text: "PUSH-full drops + TX_OVERRUN; PULL-empty returns 0 + RX_UNDERRUN; stickies set end of base cycle.", contract: "instr-table", formal: "F7" }
+    - { id: T13, text: "Branches (JMP/DJNZ/CALL/RET) occupy exactly 1+d; branch takes effect end of base cycle; d delay cycles are NOP-equivalent. DJNZ tests NEW Rs. ADOPTED-INTERPRETATION.", contract: "2.2.1", formal: "F1" }
+    - { id: T14, text: "EVT raises EVTFLAG[imm4] at end of base cycle; d delay cycles run after.", contract: "instr-table", formal: "F1" }
+    - { id: T15, text: "ALU/CMP/MOV/LDI/PMASK/MSR results commit at end of base cycle.", contract: "2.2.2-ordering", formal: "F1" }
+    - { id: T16, text: "HLT stops the PE cycle counter (clocks gated); wake only on host GO or reset.", contract: "instr-table", formal: "-" }
+    - { id: T17, text: "Observer adjacency: trigger->trace-commit <= K=6 cycles; timestamps non-decreasing. TEMPO properties assume only this bound.", contract: "7.4-F5", formal: "F5" }
+  sva_schemas: ["p_LAT(d)", "p_PIN_EFFECT(d)", "p_PIN_VIS", "p_SAMPLE(d)", "p_SYNC2", "p_NO_STALL", "p_WAIT_REPORT(tsel)", "p_CAP_ATOMIC(d)"]
+  sva_tbd_binds: ["issue", "issue_next", "eff_commit", "dec_op", "wait_elapsed_cycles", "wait_timed_out", "wait_done", "ts_at_commit", "pins_at_commit"]
+  wait_tsel_map: { 0: 256, 1: 4096, 2: 65536, 3: 1048576 }
+  adopted_interpretations:
+    - "WAIT elapsed=0 if condition true at entry (T8)"
+    - "Branch takes effect end of base cycle; d delay cycles NOP-equivalent (T13)"
+    - "DJNZ tests NEW (post-decrement) Rs (T13)"
+    - "PGET reads back output-driven pins post-synchronizer (T11)"
+    - "SLEEP d-field reserved_zero; timing exactly 1+imm13 (T9)"
+    - "MSR PMASK then PSET: commits serialize in program order"
+    - "WAIT condition true exactly at timeout boundary counts as satisfied (elapsed=T, no TIMEOUT)"
+    - "PUSH-full/PULL-empty: delay cycles still execute (1+d total)"
+    - "EVT flag visible end of base cycle"
+
+# ---------------------------------------------------------------------------
+# Reserved opcode slots 24-63 + allocation policy
+# ---------------------------------------------------------------------------
+reserved_opcodes:
+  policy:
+    - "A slot may be claimed ONLY by an ISA revision proposal that (a) names the opcode number, (b) specifies the [20:0] field layout following this file's lane conventions, and (c) demonstrates the need cannot be met in firmware at 50 MHz."
+    - "Claiming a slot REQUIRES review by the ISA owner and a passing CI regeneration of the decode package, assembler, golden model, and formal timing table (single-source discipline, ARCHITECTURE.md 7.1)."
+    - "Claiming any slot forces a version bump to v0.3 (v0.2 is reserved for the v0.1 errata/TBD resolutions documented in this file)."
+    - "Slots may never be claimed for host-port, debug, or trace-reader functions that bypass the PE/host-port arbitration rules (ARCHITECTURE.md R4)."
+  slots:
+    - { number: 24, name: CRC8, status: "reserved", intent: "CRC-8 assist (CAN/USB bit-stuff domains) -- opcode reserved, semantics deferred to claim proposal." }
+    - { number: 25, name: CRC16, status: "reserved", intent: "CRC-16 assist (USB/Ethernet) -- opcode reserved, semantics deferred to claim proposal." }
+    - { number: 26, name: PATMATCH, status: "reserved", intent: "Hardware pattern-match accelerator (protocol state detection beyond Observer PATTERN mode) -- opcode reserved, semantics deferred." }
+    - { number: 27, name: MUL, status: "reserved", intent: "16x16 multiply assist -- opcode reserved, semantics deferred." }
+    - { number: "28-63", name: "(unallocated)", status: "unallocated", intent: "Explicitly unallocated. Assembler rejects; decode treats as illegal instruction (behavior on illegal opcode is a semantics decision -- see open_tbd T6)." }
+
+# ---------------------------------------------------------------------------
+# Merge decisions (Phase-1 coordinator adjudications between worker drafts)
+# ---------------------------------------------------------------------------
+merge_decisions:
+  - { id: M1, what: "TRIG_MODE[1:0]: 00=DISABLED, 01=EDGE, 10=PATTERN, 11=PULSE (Worker C's assignment adopted over Worker A's 00=EDGE draft).",
+      why: "Reset value 0x0000 = DISABLED is the safe power-on default; matches C's configure-then-arm / TRIG_MODE-write-disarms programming model; no code wasted on 'reserved'. Encoding-only change within v0.2 merge authority." }
+  - { id: M2, what: "STATUS[12] TRACE_WM is a STICKY W1C event bit (Worker C's semantics adopted over Worker A's live/RO draft); auto-cleared by OBS_CLR strobe.",
+      why: "v0.1 calls the watermark output a 'host event'; events in this ISA are sticky (cf. EVTFLAG). The 8-bit host-port RD_STATUS byte's TRACE_WM bit remains LIVE (OBS_PTR >= WMARK, combinational in the host port) -- the two views are documented as intentionally different." }
+  - { id: M3, what: "target9[8]: reserved, must be zero (assembler rejects); hardware implements an 8-bit PC and ignores target9[8].",
+      why: "Reconciles Worker A's 'must-be-zero' with Worker B's 'truncated/mod-256' hardware behavior: the ISA contract forbids bit 8, the implementation masks it. Reserved for future IMEM-512 extension (Q1). Resolves open_tbd T1 for v0.2." }
+
+# ---------------------------------------------------------------------------
+# Encoding decisions (from Worker A; rationale trail D-E1..D-E10)
+# ---------------------------------------------------------------------------
+decisions:
+  - { id: D-E1, what: "Uniform register lanes: Rd/Rs at [20:17]; Rs1 [16:13], Rs2 [12:9] on ALU; MRS/MSR share the [20:17]+sreg[16:11] layout.", why: "Uniformity of decode: one register-file read port mapping, minimal decode muxing; 6-bit sreg gives 64 special regs with room for observer growth." }
+  - { id: D-E2, what: "imm8 byte lane at [20:13] for PSET/PMASK/PDIR; LDI = Rd[20:17] + imm16[16:1] + reserved bit [0].", why: "Byte-lane alignment simplifies pin-mask immediate extraction; LDI keeps the full 16-bit immediate in one word while keeping Rd in the standard lane." }
+  - { id: D-E3, what: "fn discriminators: ADD/SUB fn[8] (0=ADD,1=SUB); AND/OR/XOR fn[8:7] (00=AND,01=OR,10=XOR,11=reserved); SHL/SHR fn[8] (0=SHL,1=SHR); CALL/RET is_ret[11] (0=CALL,1=RET).", why: "Single-bit fn where two ops suffice; 2-bit fn where three ops need it with one code held reserved. is_ret at [11] keeps target9 in the JMP-compatible [20:12] lane for a shared 9-bit target bus." }
+  - { id: D-E4, what: "JMP cond4: 0000=AL, 0001=Z, 0010=NZ, 0011=C, 0100=NC, 0101=TMO, 0110=RXNE, 0111=TXNF; 1000-1111 reserved.", why: "ALU flags first (0000-0100), then the sticky/FIFO conditions (0101-0111); upper half reserved for future conditions (e.g. CALL_OVF) without renumbering." }
+  - { id: D-E5, what: "WAIT cfg8 bit order (msb->lsb): pin[2:0] | pol | mode[1:0] | tsel[1:0]; tsel: 0->256, 1->4096, 2->65536, 3->1048576; mode: 00=level, 01=rising, 10=falling, 11=either.", why: "Matches the architecture's stated field order {pin[2:0],pol,mode[1:0],tsel[1:0]} with pin in the high bits. Ascending tsel = firmware-friendly (larger code = longer timeout)." }
+  - { id: D-E6, what: "SLEEP/WAIT/HLT delay field = reserved_zero (must be zero; assembler rejects nonzero; hardware ignores nonzero bits).", why: "SLEEP already carries its full duration in imm13; WAIT is data-dependent/bounded; HLT is indefinite -- in all three the 5-bit delay cannot add meaning without a semantics change. must-be-zero in the assembler keeps the contract auditable." }
+  - { id: D-E7, what: "EVT and CAP: delay APPLIES (1+d); event raised / snapshot latched at end of base cycle, delay cycles follow.", why: "Both are single-point actions at the base-cycle boundary like PSET/PGET; a following delay is the standard way to hold the resulting state, consistent with the pin instructions." }
+  - { id: D-E8, what: "6-bit sreg addresses; single shared PRESCALER (sreg 0x11) for timestamp counter and Observer timestamps; PDIRR reset 0x00 (all Hi-Z); PMODER single 16-bit register; CFG_DIRTY as STATUS bit [13], not a separate register; EVTFLAG MSR-ignored (host clears).", why: "Shared prescaler keeps Observer trace entries and CAP snapshots on the same time base (directly comparable). STATUS-bit CFG_DIRTY matches the host-port note in 3.6 without consuming an address. All-Hi-Z power-on is the safe default." }
+  - { id: D-E9, what: "Observer EDGE packing: pins 0-3 in EDGE_CFG0[7:0], pins 4-7 in EDGE_CFG1[7:0], pin-major 2-bit fields, [15:8] reserved.", why: "Resolves the 3.5 TBD with the recommended split; two 16-bit config writes fit the 16-bit MRS/MSR datapath; upper-byte reserved for future per-pin trigger extensions (e.g. sequence triggers, Q5)." }
+  - { id: D-E10, what: "Reserved opcodes 24-27 named (CRC8, CRC16, PATMATCH, MUL) as intent-only reservations; 28-63 explicitly unallocated; claiming any slot forces a v0.3 bump with ISA-owner review and CI regeneration.", why: "Names the most likely stretch accelerators so firmware/tooling can plan, without inventing semantics; the v0.3 rule protects the frozen v0.1/v0.2 encoding space." }
+
+# ---------------------------------------------------------------------------
+# Open TBDs (unresolved; suggested owner). T1 resolved by merge decision M3.
+# ---------------------------------------------------------------------------
+open_tbd:
+  - { id: T2, what: "SLEEP: 1+imm13 semantics vs contract point 1 (every insn = 1+delay). Cannot be resolved in encoding alone; needs a semantics decision (adopt 1+d+imm13? fold d? make SLEEP delay-ignored-but-allowed?).", owner: "ISA lead + formal (F1 property must encode the resolution)" }
+  - { id: T3, what: "CFG_DIRTY (STATUS[13]) clear condition: cleared on next GO? on next PROG-mode WR_CFG? W1C-able by firmware? (Worker C input: W1C or auto-clear on observer re-arm.)", owner: "Host-port designer" }
+  - { id: T4, what: "OBS_CTL[1] OBS_ARM semantics: one-shot auto-clear on trigger vs sticky-arm? PULSE mode disarm after fire?", owner: "Observer designer" }
+  - { id: T5, what: "MRS/MSR to unallocated sreg addresses (0x14-0x3F): read-as-zero/write-ignored is the encoding default; should an access set CONFIG_ERR?", owner: "ISA lead" }
+  - { id: T6, what: "Illegal opcode (24-63) decode behavior: NOP? trap to fixed vector? set CONFIG_ERR and halt? Needs a semantics decision.", owner: "ISA lead + PE designer" }
+  - { id: T7, what: "AND/OR/XOR fn=11: assembler rejects; hardware behavior when encountered (treat as AND? CONFIG_ERR?) -- confirm.", owner: "PE designer" }
+  - { id: T8, what: "Confirm PDIR reset = all Hi-Z (0x00) with board-level review; confirm PMASK reset 0xFF and PMODE reset 0x0000 match the pin-mux power-on intent.", owner: "Pin-fabric designer" }
+  - { id: T9, what: "Formal team: bind TBD SVA signal names (issue, issue_next, eff_commit, dec_op, wait_elapsed_cycles, wait_timed_out, wait_done, ts_at_commit, pins_at_commit) to RTL before proving.", owner: "Formal / PE designer" }
+  - { id: T10, what: "RET on empty return stack: behavior unspecified in v0.1. Proposal P6 (trap to PC=0 + CONFIG_ERR) needs an owner ruling before CALL/RET proofs.", owner: "ISA lead" }
+  - { id: T11, what: "CALL stack overflow sticky: v0.1 says 'overflow sets sticky' but names none. Proposal P2 (STATUS[6] = CALL_OVF) needs an owner ruling.", owner: "ISA lead" }
+  - { id: T12, what: "ARCHITECTURE.md 2.2.2 pin-effect list names only PSET/PSETR; the instruction table extends the rule to PDIR/PMODE. Make 2.2.2 match (doc fix).", owner: "ISA lead (spec)" }
+  - { id: T13, what: "Q5: sequence triggers (A-then-B) for the Observer -- cost/benefit.", owner: "ISA worker" }
+  - { id: T14, what: "Q4 revisit: PE-side trace read reopens only if a written, cycle-counted stretch firmware needs PE-side trace consumption AND the host-mailbox fallback (RD_TRACE -> RX FIFO -> PULL) is shown insufficient.", owner: "Firmware phase" }
+  - { id: T15, what: "Watermark EVT-style async push (alternative to sticky-poll TRACE_WM) -- proposal only.", owner: "ISA lead" }
+  - { id: T16, what: "HLT/GO wake accounting: confirm that GO arriving during HLT's would-be delay cycles (which never execute) is acceptable for cycle-exact accounting.", owner: "ISA lead" }
+  - { id: T17, what: "WAIT elapsed overflow: elapsed is written to a 16-bit Rd but timeout presets include 65536 and 1048576 cycles. Overflow behavior unspecified -- modulo-16-bit? saturation at 0xFFFF? (TIMEOUT sticky already disambiguates, but the Rd value is undefined for tsel 2/3.)", owner: "ISA lead (needs a semantics decision; do not silently pick)" }
+
+# ---------------------------------------------------------------------------
+# Proposals that would need a SEMANTICS change -- recorded, NEVER adopted here
+# ---------------------------------------------------------------------------
+proposals_needing_semantics_change:
+  - { id: P1, what: "SLEEP cycle count: adopting cycles = 1+d+imm13 (delay adds to SLEEP) or any delay-inclusive SLEEP formula; alternatively rewording 2.2.1 to exempt SLEEP explicitly.", why_change: "v0.1 fixes SLEEP at exactly 1+imm13 AND states every insn = 1+delay; with d reserved_zero these conflict formally. Blocked on ISA-owner decision (see T2). F1 checks SLEEP as specified (1+imm13) until then." }
+  - { id: P2, what: "CALL/RET stack overflow/underflow sticky: assign STATUS[6] = CALL_OVF (W1C), set on push-to-full or pop-from-empty return stack. (Alternative: reuse CONFIG_ERR.)", why_change: "v0.1 says 'overflow sets sticky' but defines no sticky flag; picking one changes observable flag semantics. STATUS[6] is held reserved for exactly this." }
+  - { id: P3, what: "WAIT delay field: allowing nonzero delay to extend the timeout (timeout + d) or pre-delay before arming.", why_change: "v0.1 WAIT timing is 1..1+timeout from the preset table only; any delay interaction is new semantics." }
+  - { id: P4, what: "HLT with delay: interpreting d as 'halt after d cycles'.", why_change: "v0.1 HLT halts immediately; delayed halt is new observable behavior." }
+  - { id: P5, what: "PULL on empty returning something other than 0, or PUSH on full stalling instead of dropping.", why_change: "Non-blocking FIFO semantics are a normative v0.1 contract point (determinism); changing them breaks the timing contract." }
+  - { id: P6, what: "RET on empty return stack: trap to a defined PC (e.g. 0) and set CONFIG_ERR sticky (do not silently no-op).", why_change: "v0.1 is silent on RET-underflow; any defined behavior is new semantics. Needs owner ruling before CALL/RET formal proofs (T10)." }
+  - { id: P7, what: "New STATUS sticky TRACE_OVERRUN for Observer trigger-burst coalescing visibility (bursts faster than 1 trigger/5 cycles coalesce latest-wins with no current visibility).", why_change: "New observable flag; needs a STATUS bit assignment and setter semantics. Parked by Worker C." }
+  - { id: P8, what: "ARCHITECTURE.md 2.2.2: extend the pin-effect-point list to name PDIR and PMODE explicitly (the instruction table already applies the rule to them).", why_change: "Doc-level; no behavioral change intended, but it touches the normative contract text, so it is recorded here rather than silently adopted." }
