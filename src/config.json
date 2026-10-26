@@ -13,7 +13,7 @@
 
   "//": "PL_TARGET_DENSITY_PCT - You can increase this if Global Placement fails with error GPL-0302.",
   "//": "Users have reported that values up to 80 worked well for them.",
-  "PL_TARGET_DENSITY_PCT": 60,
+  "PL_TARGET_DENSITY_PCT": 50,
 
   "//": "CLOCK_PERIOD - Increase this in case you are getting setup time violations.",
   "//": "The value is in nanoseconds, so 20ns == 50MHz.",
@@ -95,7 +95,7 @@
       ],
       "instances": {
         "u_tmem": {
-          "location": [3.36, 3.78],
+          "location": [1127.36, 3.78],
           "orientation": "N"
         }
       }
@@ -113,8 +113,8 @@
   ],
   "FP_PDN_VSPACING": 3.52,
   "FP_PDN_VOFFSET": 6.15,
-  "FP_MACRO_HORIZONTAL_HALO": 2.0,
-  "FP_MACRO_VERTICAL_HALO": 0.48,
+  "FP_MACRO_HORIZONTAL_HALO": 6.0,
+  "FP_MACRO_VERTICAL_HALO": 2.0,
   "ERROR_ON_PDN_VIOLATIONS": 0,
 
   "//": "PDN config without the (empty) per-macro grid - see src/pdn_cfg.tcl.",
