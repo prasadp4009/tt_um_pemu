@@ -1,0 +1,21 @@
+# TEMPO full-chip synthesis: IHP SG13G2, typical corner 1.2V 25C
+# Clock constraint: 50 MHz => 20 ns period => 20000 ps.
+# abc -D <ps> sets ABC's delay target in picoseconds (used by "&nf -D" and "retime -o -D").
+# NOTE: for this liberty abc does NOT map flip-flops (it leaves $_DFF_* generic),
+# and the lib only contains async-reset DFFs (sg13g2_dfrbp*). So the flow is:
+#   combo map -> dfflibmap (runs dfflegalize: every flop type -> $_DFF_PN0_ +
+#   enable/sync-reset mux logic -> sg13g2_dfrbpq_1) -> opt -> abc again to map
+#   the leftover $_MUX_/$_AND_ cells introduced by legalization.
+read_verilog -sv src/tt_um_pemu.v
+read_verilog -sv src/tt_um_pemu_pe.v
+read_verilog -sv src/tt_um_pemu_observer.v
+read_verilog -sv src/tt_um_pemu_host.v
+read_verilog test/sram_bb.v
+hierarchy -check -top tt_um_pemu
+synth -top tt_um_pemu
+abc -liberty /home/jarvis/asic/pdk/ciel/ihp-sg13g2/versions/c4b8b4e5e7a05f375cca3815d51b3a37721fbf5c/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib/sg13g2_stdcell_typ_1p20V_25C.lib -D 20000
+dfflibmap -liberty /home/jarvis/asic/pdk/ciel/ihp-sg13g2/versions/c4b8b4e5e7a05f375cca3815d51b3a37721fbf5c/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib/sg13g2_stdcell_typ_1p20V_25C.lib
+opt -full
+abc -liberty /home/jarvis/asic/pdk/ciel/ihp-sg13g2/versions/c4b8b4e5e7a05f375cca3815d51b3a37721fbf5c/ihp-sg13g2/libs.ref/sg13g2_stdcell/lib/sg13g2_stdcell_typ_1p20V_25C.lib -D 20000 -showtmp
+stat
+write_verilog test/synth/tempo_mapped.v
