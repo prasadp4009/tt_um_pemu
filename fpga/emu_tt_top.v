@@ -85,11 +85,53 @@ module emu_tt_top (
     wire [31:0] tt_dbg0;
     wire [31:0] tt_dbg1;
     wire [31:0] tt_dbg2;
+    // DIAG TAP: DUT internals for HALT debug (hierarchical, FPGA-only)
+    // {uio_oe[7:0], uio_out[7:0], r15[7:0], rx_cnt[4:0], 3'd0}
+    wire [31:0] tt_tap;
+    assign tt_tap = {uio_oe_w, uio_out_w, u_dut.u_pe.regs[15][7:0],
+                     u_dut.u_host.rx_cnt, 3'd0};
+    wire [31:0] tt_tap2;
+    assign tt_tap2 = {u_dut.u_pe.state, u_dut.u_pe.pc, u_dut.u_pe.tick_en,
+                      u_dut.u_pe.halted, u_dut.u_pe.prog_mode_d,
+                      u_dut.u_pe.rx_empty, u_dut.u_pe.imem_dout[31:16], 1'b0};
+    // DIAG SNAPSHOTS (FPGA-only, sticky): PE state at two loader decision points.
+    // snap_go: rising edge of M_RUNNING (loader confirmed PE RUNNING after GO).
+    // snap_ee: entry to T_DG_TX=0x31 (the 0xEE branch: RD_STATUS was not HALTED).
+    // Format {pc[7:0], state[2:0], tick_en, halted, prog_mode_d, rx_empty,
+    //         r15[7:0], uio_oe[7:0], 1'b0} = 32 bits.
+    wire [31:0] snap_bus;
+    assign snap_bus = {u_dut.u_pe.pc, u_dut.u_pe.state, u_dut.u_pe.tick_en,
+                       u_dut.u_pe.halted, u_dut.u_pe.prog_mode_d,
+                       u_dut.u_pe.rx_empty, u_dut.u_pe.regs[15][7:0],
+                       uio_oe_w, 1'b0};
+    reg [31:0] snap_go, snap_ee;
+    reg snap_go_v, snap_ee_v, mrun_d, dg_d;
+    // milestones[7]=M_RUNNING, loader_st 0x31=T_DG_TX: declared below, wired
+    // to the loader instance; forward reference is legal Verilog.
+    always @(posedge test_clk) begin
+        mrun_d <= milestones[7];
+        dg_d   <= (loader_st == 8'h31);
+        if (!snap_go_v && milestones[7] && !mrun_d) begin
+            snap_go <= snap_bus; snap_go_v <= 1'b1;
+        end
+        if (!snap_ee_v && (loader_st == 8'h31) && !dg_d) begin
+            snap_ee <= snap_bus; snap_ee_v <= 1'b1;
+        end
+        if (!loader_rst_n) begin
+            snap_go_v <= 1'b0; snap_ee_v <= 1'b0;
+            snap_go <= 32'd0; snap_ee <= 32'd0;
+            mrun_d <= 1'b0; dg_d <= 1'b0;
+        end
+    end
     vio_dbg u_vio_dbg (
         .clk      (clk125_b),
         .probe_in0(tt_dbg0),
         .probe_in1(tt_dbg1),
-        .probe_in2(tt_dbg2)
+        .probe_in2(tt_dbg2),
+        .probe_in3(tt_tap),
+        .probe_in4(tt_tap2),
+        .probe_in5(snap_go),
+        .probe_in6(snap_ee)
     );
 
     // =====================================================================

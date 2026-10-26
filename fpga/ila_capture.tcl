@@ -35,7 +35,7 @@ set ::pmap $pmap
 
 # ILA
 set ila [lindex [get_hw_ilas -of_objects $dev] 0]
-refresh_hw_ila $ila
+refresh_hw_device $dev  ;# fixed: no refresh_hw_ila cmd
 puts "ILA probes:"
 foreach p [get_hw_probes -of_objects $ila] { puts "  [lindex [split $p /] end]" }
 

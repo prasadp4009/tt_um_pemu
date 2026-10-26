@@ -87,6 +87,29 @@ module emu_top (
         .probe_out2(vio_inject_fault)
     );
 
+    // Debug VIO: DUT host-internals visibility (diagnostic only).
+    wire [31:0] vio_dbg0, vio_dbg1, vio_dbg2;
+    assign vio_dbg0 = {8'b0,
+                       u_dut.u_host.m_st,
+                       u_dut.u_host.rx_st,
+                       u_dut.u_host.tx_st,
+                       u_dut.u_host.prog_mode_r,
+                       u_dut.u_host.sync_armed,
+                       u_dut.u_host.rx_valid,
+                       u_dut.u_host.go_cnt,
+                       u_dut.u_host.snd_ret,
+                       u_dut.u_host.pe_halted,
+                       u_dut.u_host.pe_running};
+    assign vio_dbg1 = {u_dut.u_host.t_bit, u_dut.u_host.idle_cnt};
+    assign vio_dbg2 = {24'b0, u_loader.st_r};
+
+    vio_dbg u_vio_dbg (
+        .clk       (clk125_b),
+        .probe_in0 (vio_dbg0),
+        .probe_in1 (vio_dbg1),
+        .probe_in2 (vio_dbg2)
+    );
+
     // ------------------------------------------------------------------
     // Synchronizers into the test-clock domain; async-assert on !locked.
     // ------------------------------------------------------------------

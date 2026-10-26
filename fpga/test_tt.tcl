@@ -1,10 +1,13 @@
 # test_tt.tcl -- program the TT-wrapper bitstream and run the test.py-equivalent
 # self-test on hardware.
-# Usage: vivado -mode batch -source fpga/test_tt.tcl -tclargs <FREQ> <fault>
+# Usage: vivado -mode batch -source fpga/test_tt.tcl -tclargs <FREQ> <fault> ?PROTO?
 #   FREQ:  50, 100, 125, or 150 (programs fpga/emu_tt_<FREQ>.bit)
 #   fault: 0=normal (expect tt_pass=1, fail_code=0)
 #          1=vacuity (loader expects PE_RUNNING after HALT -> must fail
 #             at the post-HALT RD_STATUS check with fail_code=0x0E)
+#   PROTO: spi (default) -> fpga/emu_tt_<FREQ>.bit, expect 15 milestones
+#          uart/i2c/onewire -> fpga/emu_tt_<FREQ>_<PROTO>.bit (GENERIC_MODE),
+#             expect core milestones 0-9 only
 # Prints: heartbeats, decoded status word + milestone table, signature,
 # observation registers, PASS/FAIL.
 #
@@ -12,7 +15,11 @@
 
 set FREQ  [lindex $argv 0]
 set fault [lindex $argv 1]
-puts "=== TT TEST ${FREQ} MHz fault=$fault ==="
+set PROTO [expr {$argc >= 3 ? [lindex $argv 2] : "spi"}]
+# GENERIC_MODE builds only set the core milestones 0-9 (LOAD/VERIFY/GO/HALT);
+# the SPI pin/TXFIFO milestones 10-14 stay clear by design.
+set exp_ms [expr {$PROTO eq "spi" ? 0x7FFF : 0x03FF}]
+puts "=== TT TEST ${FREQ} MHz fault=$fault proto=$PROTO ==="
 
 open_hw_manager
 connect_hw_server -url TCP:127.0.0.1:3121
@@ -22,10 +29,11 @@ current_hw_device $dev
 refresh_hw_device $dev
 
 # --- program the bitstream for this frequency ---
-set bitfile "fpga/emu_tt_${FREQ}.bit"
+set bitstem [expr {$PROTO eq "spi" ? "emu_tt_${FREQ}" : "emu_tt_${FREQ}_${PROTO}"}]
+set bitfile "fpga/${bitstem}.bit"
 if {![file exists $bitfile]} { puts "FAIL: bitfile not found: $bitfile"; exit 1 }
 set_property PROGRAM.FILE [file normalize $bitfile] $dev
-set_property PROBES.FILE [file normalize "fpga/emu_tt_${FREQ}.ltx"] $dev
+set_property PROBES.FILE [file normalize "fpga/${bitstem}.ltx"] $dev
 program_hw_devices $dev
 refresh_hw_device $dev
 
@@ -115,7 +123,61 @@ set sig    [hex2int [vin vio_signature]]
 set dbg0   [din tt_dbg0]
 set dbg1   [din tt_dbg1]
 set dbg2   [din tt_dbg2]
-
+# TAP: Vivado flattened tt_tap/tt_tap2 into per-signal probes; read by suffix.
+proc din_suffix {suffix} {
+    foreach pp [get_hw_probes -of_objects $::vio_dbg] {
+        set pn [lindex [split $pp /] end]
+        if {[string match "*$suffix" $pn]} {
+            refresh_hw_vio $::vio_dbg
+            return [hex2int [get_property INPUT_VALUE $pp]]
+        }
+    }
+    return -1
+}
+set tap_oe  [din_suffix "uio_oe_w"]
+set tap_out [din_suffix "uio_out_w"]
+set tap_r15 [din_suffix "regs\[15\]_orig"]
+set tap_rxc [din_suffix "rx_cnt_orig"]
+puts "TAP: oe=0x[format %02x [expr {$tap_oe & 0xFF}]] out=0x[format %02x [expr {$tap_out & 0xFF}]] r15=0x[format %04x [expr {$tap_r15 & 0xFFFF}]] rx_cnt=$tap_rxc"
+set t2_state [din_suffix "state_orig"]
+set t2_pc [din_suffix "pc_orig"]
+set t2_tick [din_suffix "tick_en_orig"]
+set t2_halted [din_suffix "halted_orig"]
+set t2_pmd [din_suffix "prog_mode_d_orig"]
+set t2_rxe [din_suffix "rx_empty_orig"]
+set t2_instr [din_suffix "imem_dout_orig"]
+puts "TAP2: state=$t2_state pc=0x[format %02x [expr {$t2_pc & 0xFF}]] tick=$t2_tick halted=$t2_halted pmd=$t2_pmd rxempty=$t2_rxe instr=0x[format %04x [expr {$t2_instr & 0xFFFF}]]"
+# SNAPSHOTS: {pc[7:0], state[2:0], tick_en, halted, prog_mode_d, rx_empty,
+#             r15[7:0], uio_oe[7:0], 1b0}
+proc dec_snap {nm} {
+    # robust probe lookup: exact name first, then suffix match
+    set r -1
+    if {[dict exists $::dbg_map $nm]} {
+        set r [din $nm]
+    } else {
+        foreach pp [get_hw_probes -of_objects $::vio_dbg] {
+            set pn [lindex [split $pp /] end]
+            if {[string match "*$nm" $pn]} {
+                refresh_hw_vio $::vio_dbg
+                set r [hex2int [get_property INPUT_VALUE $pp]]
+                break
+            }
+        }
+    }
+    if {$r == -1} { puts "SNAP $nm: <probe not found>"; return }
+    if {$r == 0} { puts "SNAP $nm: <empty - trigger never fired>"; return }
+    set pc     [expr {($r >> 24) & 0xFF}]
+    set state  [expr {($r >> 21) & 0x7}]
+    set tick   [expr {($r >> 20) & 0x1}]
+    set halted [expr {($r >> 19) & 0x1}]
+    set pmd    [expr {($r >> 18) & 0x1}]
+    set rxe    [expr {($r >> 17) & 0x1}]
+    set r15    [expr {($r >> 9) & 0xFF}]
+    set oe     [expr {($r >> 1) & 0xFF}]
+    puts "SNAP $nm: raw=0x[format %08x $r] pc=0x[format %02x $pc] state=$state tick=$tick halted=$halted pmd=$pmd rxempty=$rxe r15_lo=0x[format %02x $r15] uio_oe=0x[format %02x $oe]"
+}
+dec_snap snap_go
+dec_snap snap_ee
 puts "status=0x[format %08x $status] (tt_pass=$tpass fail_code=0x[format %02x $fcode] milestones=0x[format %04x $ms])"
 puts "signature=0x[format %08x $sig]"
 
@@ -153,10 +215,10 @@ if {$fault == 1} {
     }
 } else {
     if {$tpass && $fcode == 0} {
-        if {$ms == 0x7FFF} {
-            puts "PASS: all 15 TT milestones hit, signature=0x[format %08x $sig]"
+        if {$ms == $exp_ms} {
+            puts "PASS: milestones 0x[format %04x $ms] as expected, signature=0x[format %08x $sig]"
         } else {
-            puts "FAIL: tt_pass set but milestones incomplete (0x[format %04x $ms] != 0x7fff)"
+            puts "FAIL: tt_pass set but milestones 0x[format %04x $ms] != expected 0x[format %04x $exp_ms]"
             exit 1
         }
     } else {

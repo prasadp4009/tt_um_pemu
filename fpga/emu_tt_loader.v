@@ -75,13 +75,161 @@ module emu_tt_loader (
     localparam [17:0] REC_TIMEOUT = 18'd20000;  // matches test.py wait_done(20000)
 
     // ---------------- SPI image ROM (71 words) ----------------
-    reg [31:0] img [0:70];
-    initial $readmemh("fpga/spi_fpga.hex", img);
+    // NOTE: case-based ROM (not array+initial) because Vivado init
+    // extraction for LUTRAM proved unreliable (DCP: all-zero INIT).
+    // Case statement synthesizes to LUT equations; cannot be dropped.
+    // Generated from fpga/spi_fpga.hex.
+    // Firmware image descriptor: total 32-bit words in the img_word
+    // case ROM. Rewritten per protocol by fpga/gen_fw_rom.py
+    // (do not hand-edit the value).
+    localparam [7:0] IMG_WORDS = 8'd132;
+    function [31:0] img_word(input [7:0] w);
+        case (w)
+            8'd0 : img_word = 32'h101fe000;
+            8'd1 : img_word = 32'h0c1fe000;
+            8'd2 : img_word = 32'h00802000;
+            8'd3 : img_word = 32'h081e0000;
+            8'd4 : img_word = 32'h28018000;
+            8'd5 : img_word = 32'h14000000;
+            8'd6 : img_word = 32'h0c100000;
+            8'd7 : img_word = 32'h10100000;
+            8'd8 : img_word = 32'h00100000;
+            8'd9 : img_word = 32'h4c00b600;
+            8'd10 : img_word = 32'h4c009000;
+            8'd11 : img_word = 32'h300e0000;
+            8'd12 : img_word = 32'h28000000;
+            8'd13 : img_word = 32'h3c001e00;
+            8'd14 : img_word = 32'h480e0000;
+            8'd15 : img_word = 32'h4c023100;
+            8'd16 : img_word = 32'h3c001e00;
+            8'd17 : img_word = 32'h480e0000;
+            8'd18 : img_word = 32'h4c044100;
+            8'd19 : img_word = 32'h3c001e00;
+            8'd20 : img_word = 32'h480e0000;
+            8'd21 : img_word = 32'h4c05a100;
+            8'd22 : img_word = 32'h3c001e00;
+            8'd23 : img_word = 32'h480e0000;
+            8'd24 : img_word = 32'h4c072100;
+            8'd25 : img_word = 32'h280001fc;
+            8'd26 : img_word = 32'h3c001e00;
+            8'd27 : img_word = 32'h480e0000;
+            8'd28 : img_word = 32'h4c022100;
+            8'd29 : img_word = 32'h2801fffc;
+            8'd30 : img_word = 32'h3c001e00;
+            8'd31 : img_word = 32'h2c000000;
+            8'd32 : img_word = 32'h5c020000;
+            8'd33 : img_word = 32'h4c009000;
+            8'd34 : img_word = 32'h58000000;
+            8'd35 : img_word = 32'h5402d000;
+            8'd36 : img_word = 32'h4801e000;
+            8'd37 : img_word = 32'h4c02a100;
+            8'd38 : img_word = 32'h28000000;
+            8'd39 : img_word = 32'h2c000000;
+            8'd40 : img_word = 32'h5c020000;
+            8'd41 : img_word = 32'h4c009000;
+            8'd42 : img_word = 32'h2c1e0000;
+            8'd43 : img_word = 32'h5c000000;
+            8'd44 : img_word = 32'h4c009000;
+            8'd45 : img_word = 32'h00000000;
+            8'd46 : img_word = 32'h181f3f00;
+            8'd47 : img_word = 32'h181f3f00;
+            8'd48 : img_word = 32'h181f3f00;
+            8'd49 : img_word = 32'h00100000;
+            8'd50 : img_word = 32'h1c1e0800;
+            8'd51 : img_word = 32'h1c1c2800;
+            8'd52 : img_word = 32'h4c042500;
+            8'd53 : img_word = 32'h280c0008;
+            8'd54 : img_word = 32'h34000000;
+            8'd55 : img_word = 32'h38000000;
+            8'd56 : img_word = 32'h1c1e2800;
+            8'd57 : img_word = 32'h4c03b500;
+            8'd58 : img_word = 32'h4c03d000;
+            8'd59 : img_word = 32'h500c3600;
+            8'd60 : img_word = 32'h4c042000;
+            8'd61 : img_word = 32'h181fff00;
+            8'd62 : img_word = 32'h181fff00;
+            8'd63 : img_word = 32'h28000000;
+            8'd64 : img_word = 32'h3c001e00;
+            8'd65 : img_word = 32'h54000800;
+            8'd66 : img_word = 32'h28000000;
+            8'd67 : img_word = 32'h54000800;
+            8'd68 : img_word = 32'h4c046600;
+            8'd69 : img_word = 32'h4c044000;
+            8'd70 : img_word = 32'h30040000;
+            8'd71 : img_word = 32'h5404c000;
+            8'd72 : img_word = 32'h28000000;
+            8'd73 : img_word = 32'h2c000000;
+            8'd74 : img_word = 32'h5c000000;
+            8'd75 : img_word = 32'h4c009000;
+            8'd76 : img_word = 32'h28020010;
+            8'd77 : img_word = 32'h44045f00;
+            8'd78 : img_word = 32'h4c054300;
+            8'd79 : img_word = 32'h00000000;
+            8'd80 : img_word = 32'h180be800;
+            8'd81 : img_word = 32'h00100000;
+            8'd82 : img_word = 32'h1801bc00;
+            8'd83 : img_word = 32'h4c058000;
+            8'd84 : img_word = 32'h00000000;
+            8'd85 : img_word = 32'h18012a00;
+            8'd86 : img_word = 32'h00100000;
+            8'd87 : img_word = 32'h180c7b00;
+            8'd88 : img_word = 32'h50024d00;
+            8'd89 : img_word = 32'h54000800;
+            8'd90 : img_word = 32'h5405e000;
+            8'd91 : img_word = 32'h2c040000;
+            8'd92 : img_word = 32'h5c000000;
+            8'd93 : img_word = 32'h4c009000;
+            8'd94 : img_word = 32'h28020010;
+            8'd95 : img_word = 32'h28040000;
+            8'd96 : img_word = 32'h28080100;
+            8'd97 : img_word = 32'h2800000c;
+            8'd98 : img_word = 32'h3c001e00;
+            8'd99 : img_word = 32'h00000000;
+            8'd100 : img_word = 32'h18012a00;
+            8'd101 : img_word = 32'h00100000;
+            8'd102 : img_word = 32'h1801c300;
+            8'd103 : img_word = 32'h08060000;
+            8'd104 : img_word = 32'h44066100;
+            8'd105 : img_word = 32'h44045f00;
+            8'd106 : img_word = 32'h4807e000;
+            8'd107 : img_word = 32'h4c06e200;
+            8'd108 : img_word = 32'h40044880;
+            8'd109 : img_word = 32'h4c06f000;
+            8'd110 : img_word = 32'h18000100;
+            8'd111 : img_word = 32'h180ab200;
+            8'd112 : img_word = 32'h50026300;
+            8'd113 : img_word = 32'h54000800;
+            8'd114 : img_word = 32'h5402d000;
+            8'd115 : img_word = 32'h4801e000;
+            8'd116 : img_word = 32'h4c079100;
+            8'd117 : img_word = 32'h28000000;
+            8'd118 : img_word = 32'h2c000000;
+            8'd119 : img_word = 32'h5c020000;
+            8'd120 : img_word = 32'h4c009000;
+            8'd121 : img_word = 32'h28040198;
+            8'd122 : img_word = 32'h5404c000;
+            8'd123 : img_word = 32'h2804017c;
+            8'd124 : img_word = 32'h5404c000;
+            8'd125 : img_word = 32'h280c0010;
+            8'd126 : img_word = 32'h3c0cde00;
+            8'd127 : img_word = 32'h5405e000;
+            8'd128 : img_word = 32'h2c040000;
+            8'd129 : img_word = 32'h500c7f00;
+            8'd130 : img_word = 32'h5c000000;
+            8'd131 : img_word = 32'h4c009000;
+            default: img_word = 32'h00000000;
+        endcase
+    endfunction
 
-    function [7:0] img_byte(input [6:0] w, input [1:0] s);
-        img_byte = (s == 2'd0) ? img[w][31:24] :
-                   (s == 2'd1) ? img[w][23:16] :
-                   (s == 2'd2) ? img[w][15:8] : img[w][7:0];
+
+    function [7:0] img_byte(input [7:0] w, input [1:0] s);
+        reg [31:0] word;
+        begin
+            word = img_word(w);
+            img_byte = (s == 2'd0) ? word[31:24] :
+                       (s == 2'd1) ? word[23:16] :
+                       (s == 2'd2) ? word[15:8] : word[7:0];
+        end
     endfunction
 
     // TRANSFER command payload bytes: 00 01 | 00 02 | 00 A5 | 00 3C
@@ -101,6 +249,7 @@ module emu_tt_loader (
         T_LD_TX  = 8'h08, T_LD_AK = 8'h09,
         T_VF_TX  = 8'h0A, T_VF_AK = 8'h0B, T_VF_RX = 8'h0C,
         T_RS1    = 8'h0D,
+        T_RS2    = 8'h0E,   // 0x00 resync before GO (GENERIC_MODE)
         T_GO_TX  = 8'h10, T_GO_AK = 8'h11, T_GO_W = 8'h12,
         T_ST2_TX = 8'h13, T_ST2_AK = 8'h14, T_ST2_RX = 8'h15,
         T_DR1_TX = 8'h16, T_DR1_AK = 8'h17, T_DR1_CNT = 8'h18, T_DR1_RX = 8'h19,
@@ -111,7 +260,9 @@ module emu_tt_loader (
         T_GO2_TX = 8'h26, T_GO2_AK = 8'h27, T_REC_W = 8'h28, T_REC_AN = 8'h29,
         T_TXF_TX = 8'h2B, T_TXF_AK = 8'h2C, T_TXF_CNT = 8'h2D,
         T_TXF_RX = 8'h2E, T_TXF_EVAL = 8'h2F,
-        T_OK     = 8'h30;
+        T_OK     = 8'h30,
+        T_DG_TX  = 8'h31, T_DG_AK = 8'h32, T_DG_CNT = 8'h33,
+        T_DG_RX  = 8'h34, T_DG_DONE = 8'h35;
 
     // milestones
     localparam M_TX_IDLE = 0,  // hp_tx idles high after reset
@@ -167,7 +318,7 @@ module emu_tt_loader (
     reg [7:0] txb;
     always @(*) begin
         case (st_r)
-            T_SYNC, T_RS1:
+            T_SYNC, T_RS1, T_RS2:
                 txb = 8'h00;
             T_ST_TX, T_ST2_TX, T_ST3_TX:
                 txb = (bcnt == 8'd0) ? 8'h08 : 8'h00;
@@ -176,7 +327,7 @@ module emu_tt_loader (
                       (bcnt == 8'd1) ? (8'd2 + (ld_n << 2)) :
                       (bcnt == 8'd2) ? 8'h00 :
                       (bcnt == 8'd3) ? ld_base :
-                      img_byte(ld_base[6:0] + ld_pcnt[7:2], ld_pcnt[1:0]);
+                      img_byte(ld_base + ld_pcnt[7:2], ld_pcnt[1:0]);
             T_VF_TX:
                 txb = (bcnt == 8'd0) ? 8'h02 :
                       (bcnt == 8'd1) ? 8'h03 :
@@ -184,7 +335,7 @@ module emu_tt_loader (
                       (bcnt == 8'd3) ? vf_base : vf_n;
             T_GO_TX, T_GO2_TX:
                 txb = (bcnt == 8'd0) ? 8'h09 : 8'h00;
-            T_DR1_TX, T_DR2_TX, T_TXF_TX:
+            T_DR1_TX, T_DR2_TX, T_TXF_TX, T_DG_TX:
                 txb = (bcnt == 8'd0) ? 8'h06 :
                       (bcnt == 8'd1) ? 8'h01 : 8'h20;
             T_HLT_TX:
@@ -203,7 +354,7 @@ module emu_tt_loader (
     reg [7:0] tx_last;
     always @(*) begin
         case (st_r)
-            T_SYNC, T_RS1:
+            T_SYNC, T_RS1, T_RS2:
                 tx_last = 8'd0;                        // 1 byte
             T_VF_TX:
                 tx_last = 8'd4;                        // 5 bytes
@@ -213,7 +364,7 @@ module emu_tt_loader (
                 tx_last = 8'd9;                        // 10 bytes
             T_LD_TX:
                 tx_last = 8'd3 + (ld_n << 2);          // 4 + 4n bytes
-            T_DR1_TX, T_DR2_TX, T_TXF_TX:
+            T_DR1_TX, T_DR2_TX, T_TXF_TX, T_DG_TX:
                 tx_last = 8'd2;                        // 3 bytes: 06 01 20
             default:
                 tx_last = 8'd1;                        // 2 bytes: ST / GO
@@ -425,18 +576,42 @@ module emu_tt_loader (
                         dbg0[7:0] <= rx_byte;
                         if (rx_byte == 8'h10) begin
                             milestones[M_ST_PROG] <= 1'b1;
-                            ld_base <= 8'd0; ld_n <= 8'd60;
+                            ld_base <= 8'd0;
+`ifdef GENERIC_MODE
+                            ld_n <= (IMG_WORDS > 8'd60) ? 8'd60 : IMG_WORDS;
+`else
+                            ld_n <= 8'd60;
+`endif
                             st_r <= T_LD_TX;
                         end else do_fail(8'h03);
                     end else if (tcnt == RX_TIMEOUT) do_fail(8'h03);
                 end
-                // ============ LOAD_IMEM, 2 chunked frames ============
+                // ============ LOAD_IMEM, chunked frames (60w + tail) ============
                 T_LD_TX: tx_step(T_LD_AK);
                 T_LD_AK: begin
                     tcnt <= tcnt + 18'd1;
                     if (rx_valid) begin
                         tcnt <= 18'd0;
                         if (rx_byte == 8'hA5) begin
+`ifdef GENERIC_MODE
+                            // N-chunk LOAD: 60-word chunks + tail chunk.
+                            // ld_base/ld_n still hold the just-ACKed chunk.
+                            if (ld_base == 8'd0)
+                                milestones[M_LOAD0] <= 1'b1;
+                            if (ld_base + ld_n >= IMG_WORDS) begin
+                                // final chunk loaded
+                                milestones[M_LOAD1] <= 1'b1;
+                                vf_base <= 8'd0;
+                                vf_n <= (IMG_WORDS > 8'd60) ? 8'd60 : IMG_WORDS;
+                                dcnt <= 9'd0;
+                                st_r <= T_VF_TX;
+                            end else begin
+                                ld_n <= ((IMG_WORDS - (ld_base + ld_n)) > 8'd60)
+                                        ? 8'd60 : (IMG_WORDS - (ld_base + ld_n));
+                                ld_base <= ld_base + ld_n;
+                                st_r <= T_LD_TX;
+                            end
+`else
                             if (ld_base == 8'd0) begin
                                 milestones[M_LOAD0] <= 1'b1;
                                 ld_base <= 8'd60; ld_n <= 8'd11;
@@ -446,6 +621,7 @@ module emu_tt_loader (
                                 vf_base <= 8'd0; vf_n <= 8'd60; dcnt <= 9'd0;
                                 st_r <= T_VF_TX;
                             end
+`endif
                         end else do_fail(ld_base == 8'd0 ? 8'h04 : 8'h05);
                     end else if (tcnt == RX_TIMEOUT) do_fail(ld_base == 8'd0 ? 8'h04 : 8'h05);
                 end
@@ -465,10 +641,31 @@ module emu_tt_loader (
                     tcnt <= tcnt + 18'd1;
                     if (rx_valid) begin
                         tcnt <= 18'd0;
-                        if (rx_byte != img_byte(vf_base[6:0] + dcnt[8:2], dcnt[1:0]))
+                        if (rx_byte != img_byte(vf_base + dcnt[8:2], dcnt[1:0]))
                             do_fail(vf_base == 8'd0 ? 8'h07 : 8'h09);
                         else if ((dcnt + 9'd1) == ({1'b0, vf_n} << 2)) begin
                             dcnt <= 9'd0;
+`ifdef GENERIC_MODE
+                            if (vf_base == 8'd0)
+                                milestones[M_VF0] <= 1'b1;
+                            if (vf_base + vf_n >= IMG_WORDS) begin
+                                // final chunk verified byte-exact
+                                milestones[M_VF1] <= 1'b1;
+                                // 0x00 resync before GO only if the final reply
+                                // was long enough (>65535 clocks) to re-arm the
+                                // host autobaud; otherwise 0x00 is a NOP command
+                                // that would eat the GO byte as its length.
+                                // vf_n*4000 > 65535  <=>  vf_n > 16
+                                st_r <= (vf_n > 8'd16) ? T_RS2 : T_GO_TX;
+                            end else begin
+                                // mandatory 0x00 resync between VERIFY chunks:
+                                // each long reply idles the chip RX line
+                                vf_n <= ((IMG_WORDS - (vf_base + vf_n)) > 8'd60)
+                                        ? 8'd60 : (IMG_WORDS - (vf_base + vf_n));
+                                vf_base <= vf_base + vf_n;
+                                st_r <= T_RS1;
+                            end
+`else
                             if (vf_base == 8'd0) begin
                                 milestones[M_VF0] <= 1'b1;
                                 // mandatory 0x00 resync: the 240-byte reply
@@ -479,10 +676,12 @@ module emu_tt_loader (
                                 milestones[M_VF1] <= 1'b1;
                                 st_r <= T_GO_TX;
                             end
+`endif
                         end else dcnt <= dcnt + 9'd1;
                     end else if (tcnt == RX_TIMEOUT) do_fail(vf_base == 8'd0 ? 8'h07 : 8'h09);
                 end
                 T_RS1:    tx_step(T_VF_TX);   // 0x00 resync between VERIFY chunks
+                T_RS2:    tx_step(T_GO_TX);   // 0x00 resync before GO (GENERIC_MODE)
                 // ============ GO, expect PE_RUNNING ============
                 T_GO_TX: tx_step(T_GO_AK);
                 T_GO_AK: begin
@@ -559,8 +758,24 @@ module emu_tt_loader (
                         if (fault_lat ? ((rx_byte & 8'h80) && !(rx_byte & 8'h40))
                                       : ((rx_byte & 8'h40) && !(rx_byte & 8'h80))) begin
                             milestones[M_HALTED] <= 1'b1;
+`ifdef GENERIC_MODE
+                            // Generic protocol proof is complete here:
+                            // LOAD + byte-exact VERIFY + GO + RUNNING +
+                            // TX drain + HALTED, with the folded signature.
+                            // Skip the SPI-specific pin/TXFIFO checks.
+                            tt_pass <= 1'b1;
+                            done <= 1'b1;
+                            st_r <= T_OK;
+`else
                             st_r <= T_DR2_TX;
-                        end else do_fail(8'h0E);
+`endif
+                        end else begin
+                            // DIAG: HALT status mismatch. Drain TX FIFO,
+                            // capture first 4 bytes in dbg1, count in
+                            // dbg2[31:24], then fail 0xEE.
+                            rxc <= 8'd0; txf_n <= 8'd0; dbg1 <= 32'd0;
+                            st_r <= T_DG_TX;
+                        end
                     end else if (tcnt == RX_TIMEOUT) do_fail(8'h0E);
                 end
                 // ============ pre-drain TX FIFO ============
@@ -675,6 +890,30 @@ module emu_tt_loader (
                         done <= 1'b1;
                         st_r <= T_OK;
                     end else do_fail(8'h15);
+                end
+                T_DG_TX: tx_step(T_DG_AK);
+                T_DG_AK: rx_ack(T_DG_CNT, 8'hEB);
+                T_DG_CNT: begin
+                    tcnt <= tcnt + 18'd1;
+                    if (rx_valid) begin
+                        tcnt <= 18'd0;
+                        txf_n <= rx_byte; rxc <= 8'd0;
+                        st_r <= (rx_byte == 8'd0) ? T_DG_DONE : T_DG_RX;
+                    end else if (tcnt == RX_TIMEOUT) do_fail(8'hEC);
+                end
+                T_DG_RX: begin
+                    tcnt <= tcnt + 18'd1;
+                    if (rx_valid) begin
+                        tcnt <= 18'd0;
+                        if (rxc < 8'd4) dbg1 <= {dbg1[23:0], rx_byte};
+                        rxc <= rxc + 8'd1;
+                        if ((rxc + 8'd1 == txf_n) || (rxc + 8'd1 == 8'd8))
+                            st_r <= T_DG_DONE;
+                    end else if (tcnt == RX_TIMEOUT) do_fail(8'hED);
+                end
+                T_DG_DONE: begin
+                    dbg2 <= {txf_n, 24'd0};
+                    do_fail(8'hEE);
                 end
                 T_OK: begin
                     // hold; re-arm handled by the done branch above

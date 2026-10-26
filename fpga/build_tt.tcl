@@ -2,6 +2,11 @@
 #
 # usage:
 #   vivado -mode batch -source fpga/build_tt.tcl -tclargs 50
+#   vivado -mode batch -source fpga/build_tt.tcl -tclargs 50 uart
+#
+# PROTO selects the firmware image compiled into the loader case-ROM:
+#   spi (default) -> exact 71-word SPI image, full 15-milestone SPI checks
+#   uart/i2c/onewire -> GENERIC_MODE: LOAD/VERIFY/GO/HALT + signature only
 #
 # Top: fpga/emu_tt_top.v ; DUT: the real Tiny Tapeout wrapper src/tt_um_pemu.v ;
 # loader: fpga/emu_tt_loader.v (replicates test/test.py);
@@ -12,12 +17,19 @@
 # FPGA-EMULATION-ONLY. Not for ASIC synthesis.
 # SPDX-License-Identifier: Apache-2.0
 
-if { $argc != 1 } {
-    puts "usage: vivado -mode batch -source fpga/build_tt.tcl -tclargs FREQ"
-    puts "FREQ in {50, 100, 125, 150}"
+if { $argc < 1 || $argc > 2 } {
+    puts "usage: vivado -mode batch -source fpga/build_tt.tcl -tclargs FREQ ?PROTO?"
+    puts "FREQ in {50, 100, 125, 150}; PROTO in {spi, uart, i2c, onewire} (default spi)"
     exit 1
 }
 set FREQ [lindex $argv 0]
+set PROTO [expr {$argc == 2 ? [lindex $argv 1] : "spi"}]
+if {[lsearch {spi uart i2c onewire} $PROTO] < 0} {
+    puts "PROTO must be one of {spi, uart, i2c, onewire}, got '$PROTO'"
+    exit 1
+}
+# Bitstream stem: keep the legacy emu_tt_<FREQ>.bit name for plain SPI builds
+set BITSTEM [expr {$PROTO eq "spi" ? "emu_tt_${FREQ}" : "emu_tt_${FREQ}_${PROTO}"}]
 
 # MMCM divider table: 125 MHz reference -> test clock
 # (same as build.tcl: VCO=1000 for 50/100/125, VCO=750 for 150)
@@ -55,6 +67,10 @@ create_project -force -part xc7z010clg400-1 tt_emu $proj
 read_verilog [glob fpga/emu_tt_loader.v fpga/emu_tt_top.v fpga/sram_emu.v]
 read_verilog -sv [glob src/tt_um_pemu.v src/tt_um_pemu_pe.v src/tt_um_pemu_host.v src/tt_um_pemu_observer.v]
 set_property file_type SystemVerilog [get_files [glob src/tt_um_pemu*.v]]
+if {$PROTO ne "spi"} {
+    set_property verilog_define {GENERIC_MODE=1} [get_filesets sources_1]
+    puts "INFO: GENERIC_MODE=1 defined for '$PROTO' build"
+}
 
 # Debug IPs: VIOs only (ILA removed to avoid debug-hub routing conflict;
 # waves via VIO observation registers instead)
@@ -71,11 +87,15 @@ set_property -dict [list \
 ] [get_ips vio_0]
 create_ip -name vio -vendor xilinx.com -library ip -module_name vio_dbg
 set_property -dict [list \
-    CONFIG.C_NUM_PROBE_IN {3} \
+    CONFIG.C_NUM_PROBE_IN {7} \
     CONFIG.C_NUM_PROBE_OUT {0} \
     CONFIG.C_PROBE_IN0_WIDTH {32} \
     CONFIG.C_PROBE_IN1_WIDTH {32} \
     CONFIG.C_PROBE_IN2_WIDTH {32} \
+    CONFIG.C_PROBE_IN3_WIDTH {32} \
+    CONFIG.C_PROBE_IN4_WIDTH {32} \
+    CONFIG.C_PROBE_IN5_WIDTH {32} \
+    CONFIG.C_PROBE_IN6_WIDTH {32} \
 ] [get_ips vio_dbg]
 generate_target all [get_ips vio_0 vio_dbg]
 
@@ -88,7 +108,12 @@ wait_on_run synth_1
 if {[get_property PROGRESS [get_runs synth_1]] != "100%"} {
   puts "BUILD FAIL: synthesis did not complete"; exit 1
 }
-# Add hex file so synthesis $readmemh can find it
+# Add hex file so synthesis $readmemh can find it.
+# CRITICAL: $readmemh("fpga/spi_fpga.hex") in emu_tt_loader.v resolves
+# relative to the synthesis run directory, NOT the repo root. Without this
+# staging, synthesis warns "could not open $readmem data file" and the
+# loader's img ROM synthesizes as zeros -> VERIFY passes (0==0) but the PE
+# executes zeros -> 0xEE failure. Stage the file under <rundir>/fpga/.
 add_files -norecurse [list fpga/spi_fpga.hex]
 
 # Implementation (project flow, like build.tcl)
@@ -101,6 +126,6 @@ open_run impl_1
 report_timing_summary -file $proj/tt_timing_postroute.rpt
 report_utilization -file $proj/tt_util_postroute.rpt
 
-write_bitstream -force fpga/emu_tt_${FREQ}.bit
-write_debug_probes -force fpga/emu_tt_${FREQ}.ltx
-puts "INFO: TT build done -> fpga/emu_tt_${FREQ}.bit + fpga/emu_tt_${FREQ}.ltx"
+write_bitstream -force fpga/${BITSTEM}.bit
+write_debug_probes -force fpga/${BITSTEM}.ltx
+puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"

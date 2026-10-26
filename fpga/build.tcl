@@ -71,6 +71,16 @@ set_property -dict [list \
   CONFIG.C_PROBE_OUT2_WIDTH {1} \
 ] [get_ips vio_0]
 
+# --- Debug VIO: 3x32 probe_in on DUT host internals (diagnostic).
+create_ip -name vio -vendor xilinx.com -library ip -module_name vio_dbg
+set_property -dict [list \
+  CONFIG.C_NUM_PROBE_IN {3} \
+  CONFIG.C_PROBE_IN0_WIDTH {32} \
+  CONFIG.C_PROBE_IN1_WIDTH {32} \
+  CONFIG.C_PROBE_IN2_WIDTH {32} \
+  CONFIG.C_NUM_PROBE_OUT {0} \
+] [get_ips vio_dbg]
+
 # --- ILA: probe0[23:0]={milestones,st}, probe1[7:0]=uio_out,
 # ---      probe2[7:0]={0,hp_tx,hp_rx,test_clk,dut_rst_n,rx_valid,tx_busy,done}
 create_ip -name ila -vendor xilinx.com -library ip -module_name ila_0
@@ -85,7 +95,7 @@ set_property -dict [list \
   CONFIG.C_ADV_TRIGGER {false} \
 ] [get_ips ila_0]
 
-generate_target all [get_ips vio_0 ila_0]
+generate_target all [get_ips vio_0 vio_dbg ila_0]
 
 launch_runs synth_1 -jobs 4
 wait_on_run synth_1
