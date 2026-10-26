@@ -117,6 +117,9 @@
   "FP_MACRO_VERTICAL_HALO": 0.48,
   "ERROR_ON_PDN_VIOLATIONS": 0,
 
+  "//": "PDN config without the (empty) per-macro grid - see src/pdn_cfg.tcl.",
+  "PDN_CFG": "dir::pdn_cfg.tcl",
+
   "//": "Antenna diodes for the SRAM input pins (macro LEF carries antenna data).",
   "DIODE_CELL": "sg13cmos5l_antennanp/A",
 
