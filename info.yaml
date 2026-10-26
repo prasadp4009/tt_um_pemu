@@ -1,9 +1,9 @@
 # Tiny Tapeout project information
 project:
-  title:        "Protocol Emulator ASIC"      # Project title
+  title:        "TEMPO Protocol Emulator"      # Project title
   author:       "Prasad Pandit"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "Open-source programmable protocol emulator ASIC for the Jane Street competition"      # One line description of what your project does
+  description:  "TEMPO: timing-exact programmable protocol emulator (UART/SPI/I2C/1-Wire firmware) with an independent timestamped Observer/trace engine - Jane Street Protocol Emulator ASIC Competition entry"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     50000000       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -17,13 +17,16 @@ project:
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "project.v"
+    - "tt_um_pemu.v"
+    - "tt_um_pemu_pe.v"
+    - "tt_um_pemu_observer.v"
+    - "tt_um_pemu_host.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
+  ui[0]: "HP_RX (host port in)"
   ui[1]: ""
   ui[2]: ""
   ui[3]: ""
@@ -33,7 +36,7 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: ""
+  uo[0]: "HP_TX (host port out)"
   uo[1]: ""
   uo[2]: ""
   uo[3]: ""
@@ -43,14 +46,11 @@ pinout:
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
-  uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
-
-# Do not change!
-yaml_version: 6
+  uio[0]: "PIN0 (protocol pin 0)"
+  uio[1]: "PIN1 (protocol pin 1)"
+  uio[2]: "PIN2 (protocol pin 2)"
+  uio[3]: "PIN3 (protocol pin 3)"
+  uio[4]: "PIN4 (protocol pin 4)"
+  uio[5]: "PIN5 (protocol pin 5)"
+  uio[6]: "PIN6 (protocol pin 6)"
+  uio[7]: "PIN7 (protocol pin 7)"
