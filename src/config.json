@@ -31,6 +31,100 @@
   "//": "https://tinytapeout.com/faq/#how-can-i-map-an-additional-external-clock-to-one-of-the-gpios",
   "CLOCK_PORT": "clk",
 
+  "//": "SRAM macro wiring (IHP RM_IHPSG13 macros, PDK ihp-sg13cmos5l):",
+  "//": "EXTRA_VERILOG_MODELS gives Verilator lint + Yosys synthesis the blackbox",
+  "//": "stubs for the two SRAM macros instantiated in tt_um_pemu.v (the PDK Verilog",
+  "//": "models cannot be parsed by Verilator). MACROS declares the physical views.",
+  "EXTRA_VERILOG_MODELS": [
+    "test/sram_bb.v"
+  ],
+
+  "MACROS": {
+    "RM_IHPSG13_1P_256x32_c2_bm_bist": {
+      "gds": [
+        "pdk_dir::libs.ref/sg13cmos5l_sram/gds/RM_IHPSG13_1P_256x32_c2_bm_bist.gds"
+      ],
+      "lef": [
+        "pdk_dir::libs.ref/sg13cmos5l_sram/lef/RM_IHPSG13_1P_256x32_c2_bm_bist.lef"
+      ],
+      "lib": {
+        "nom_typ_1p20V_25C": [
+          "pdk_dir::libs.ref/sg13cmos5l_sram/lib/RM_IHPSG13_1P_256x32_c2_bm_bist_typ_1p20V_25C.lib"
+        ],
+        "nom_fast_1p32V_m40C": [
+          "pdk_dir::libs.ref/sg13cmos5l_sram/lib/RM_IHPSG13_1P_256x32_c2_bm_bist_fast_1p32V_m55C.lib"
+        ],
+        "nom_slow_1p08V_125C": [
+          "pdk_dir::libs.ref/sg13cmos5l_sram/lib/RM_IHPSG13_1P_256x32_c2_bm_bist_slow_1p08V_125C.lib"
+        ]
+      },
+      "nl": [],
+      "spef": {},
+      "spice": [
+        "pdk_dir::libs.ref/sg13cmos5l_sram/cdl/RM_IHPSG13_1P_256x32_c2_bm_bist.cdl"
+      ],
+      "instances": {
+        "u_imem": {
+          "location": [160.72, 3.78],
+          "orientation": "N"
+        }
+      }
+    },
+    "RM_IHPSG13_1P_1024x8_c2_bm_bist": {
+      "gds": [
+        "pdk_dir::libs.ref/sg13cmos5l_sram/gds/RM_IHPSG13_1P_1024x8_c2_bm_bist.gds"
+      ],
+      "lef": [
+        "pdk_dir::libs.ref/sg13cmos5l_sram/lef/RM_IHPSG13_1P_1024x8_c2_bm_bist.lef"
+      ],
+      "lib": {
+        "nom_typ_1p20V_25C": [
+          "pdk_dir::libs.ref/sg13cmos5l_sram/lib/RM_IHPSG13_1P_1024x8_c2_bm_bist_typ_1p20V_25C.lib"
+        ],
+        "nom_fast_1p32V_m40C": [
+          "pdk_dir::libs.ref/sg13cmos5l_sram/lib/RM_IHPSG13_1P_1024x8_c2_bm_bist_fast_1p32V_m55C.lib"
+        ],
+        "nom_slow_1p08V_125C": [
+          "pdk_dir::libs.ref/sg13cmos5l_sram/lib/RM_IHPSG13_1P_1024x8_c2_bm_bist_slow_1p08V_125C.lib"
+        ]
+      },
+      "nl": [],
+      "spef": {},
+      "spice": [
+        "pdk_dir::libs.ref/sg13cmos5l_sram/cdl/RM_IHPSG13_1P_1024x8_c2_bm_bist.cdl"
+      ],
+      "instances": {
+        "u_tmem": {
+          "location": [3.36, 3.78],
+          "orientation": "N"
+        }
+      }
+    }
+  },
+
+  "//": "Connect both SRAM power pin groups (core VDD! and array VDDARRAY!) to the",
+  "//": "VPWR grid; macro Metal4 power columns repeat on an 11.24 um grid, so the",
+  "//": "PDN stripe pitch/offset/spacing below align stripes to those columns.",
+  "PDN_MACRO_CONNECTIONS": [
+    "u_imem VPWR VGND VDD! VSS!",
+    "u_imem VPWR VGND VDDARRAY! VSS!",
+    "u_tmem VPWR VGND VDD! VSS!",
+    "u_tmem VPWR VGND VDDARRAY! VSS!"
+  ],
+  "FP_PDN_VSPACING": 3.52,
+  "FP_PDN_VOFFSET": 6.15,
+  "FP_MACRO_HORIZONTAL_HALO": 2.0,
+  "FP_MACRO_VERTICAL_HALO": 0.48,
+  "ERROR_ON_PDN_VIOLATIONS": 0,
+
+  "//": "Antenna diodes for the SRAM input pins (macro LEF carries antenna data).",
+  "DIODE_CELL": "sg13cmos5l_antennanp/A",
+
+  "//": "Magic DRC does not understand the SRAM macros (false overlap errors where",
+  "//": "the VPWR stripes cross the macro Metal4 obstruction); the Tiny Tapeout",
+  "//": "precheck runs the KLayout CMOS5L DRC deck instead.",
+  "RUN_MAGIC_DRC": 0,
+
   "//": "Configuration docs: https://librelane.readthedocs.io/en/latest/reference/configuration.html",
 
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
@@ -58,7 +152,7 @@
   "FP_IO_HLENGTH": 2,
   "FP_IO_VLENGTH": 2,
 
-  "FP_PDN_VPITCH": 50.0,
+  "FP_PDN_VPITCH": 44.96,
   "FP_PDN_VWIDTH": 2.1,
 
   "//": "Clock",
