@@ -54,3 +54,6 @@ pinout:
   uio[5]: "PIN5 (protocol pin 5)"
   uio[6]: "PIN6 (protocol pin 6)"
   uio[7]: "PIN7 (protocol pin 7)"
+
+# Do not change!
+yaml_version: 6
