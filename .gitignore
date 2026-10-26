@@ -11,3 +11,35 @@ test/sim_build
 test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
+
+# Vivado build products
+.Xil/
+*.jou
+*.backup.jou
+*.backup.log
+vivado*.log
+clockInfo.txt
+tight_setup_hold_pins.txt
+fpga/proj*/
+fpga/logs/
+fpga/*.log
+fpga/*.jou
+fpga/build_*.stdout.log
+fpga/emu_tt_*.bit
+fpga/emu_tt_*.ltx
+!fpga/emu_tt_50.bit
+!fpga/emu_tt_50.ltx
+# Tool outputs
+coverage.dat
+test/vbuild/
+test/cosim/sim_build/
+test/cosim/results.xml
+test/cosim/__pycache__/
+test/formal/gen/*/
+test/formal/sbysmoke/
+test/synth/tempo_mapped.v
+test/synth/synth*.log
+test/synth/synth*_stat.txt
+test/tt_run.log
+fpga/emu_top_50_v2.ltx
+fpga/ila_*.csv
