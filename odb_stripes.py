@@ -38,6 +38,31 @@ def is_sram(master):
     return master.findMTerm("VDD!") is not None and master.findMTerm("VSS!") is not None
 
 
+# ---------------------------------------------------------------------------
+# OUR MODIFICATION (tt_um_pemu, 2026-10-27) -- this block and the guard
+# call in tidy() are NOT part of Ken Pettit's original code (Apache
+# License 2.0; his copyright and license notices elsewhere in this file
+# are unchanged).
+#
+# Stripe-centre clearance guard: tidy() replaces pdngen's partial-height
+# stripe segments with one full-height stripe.  At the right edge of the
+# tt_um_pemu die that put a full-height VPWR stripe at x=1283.04 um
+# beside the VGND stripe at x=1284.48 um -- centres 1.44 um apart -- and
+# the two nets' via/pad geometry bridged for the full core height,
+# merging VPWR and VGND in extraction (run 40520569898, LVS: "Top level
+# cell failed pin matching").  A legitimate VPWR/VGND pair sits 5.62 um
+# apart (see pair_gap in extend()), so a 3.5 um centre-distance guard
+# blocks only pathological placements; when it trips, tidy() keeps
+# pdngen's segments (and their pin boxes) exactly as drawn.
+STRIPE_OPP_CLEARANCE_UM = 3.5
+
+
+def stripe_centre_blocked(cx, opp_centres, clearance):
+    """True if a stripe centred at cx would sit within `clearance`
+    (same units as cx) of any opposite-net stripe centre."""
+    return any(abs(o - cx) < clearance for o in opp_centres)
+
+
 @click.command()
 @click.option("--layer", default="Metal4", help="Vertical PDN layer of the tile")
 @click.option("--sram-layer", default=None, help="Layer of the IHP SRAM's power columns when it is not the tile's stripe layer "
@@ -306,6 +331,28 @@ def extend(reader, layer, sram_layer, clearance_um, stack_pitch, pin_face_margin
                 if not (on_sram_column(x0, x1, net_name) and clear_of_rails(x0, x1, net_name) and clear_of_pins(x0, x1)):
                     print(f"[WARNING] {net_name}: partial-height stripe at x={cx/dbu:.2f} um is blocked from running "
                           f"full height; the Tiny Tapeout pin check will reject its pin boxes")
+                    continue
+                # OUR MODIFICATION (tt_um_pemu, 2026-10-27; see
+                # stripe_centre_blocked above): never extend pdngen's
+                # partial-height segments into a full-height stripe whose
+                # centre sits within STRIPE_OPP_CLEARANCE_UM of an
+                # opposite-net stripe on this layer -- at the die's right
+                # edge the VPWR segments at x=1283.04 um would have been
+                # extended beside the VGND stripe at x=1284.48 um
+                # (1.44 um apart) and bridged VPWR to VGND.  Keep
+                # pdngen's segments (and pin boxes) exactly as drawn.
+                _other = block.findNet("VGND" if net_name == "VPWR" else "VPWR")
+                _opp = []
+                if _other is not None:
+                    for _sw in _other.getSWires():
+                        for _b in _sw.getWires():
+                            if _b.getTechLayer() is not None and _b.getTechLayer().getName() == layer \
+                               and (_b.yMax() - _b.yMin()) > (_b.xMax() - _b.xMin()):
+                                _opp.append((_b.xMin() + _b.xMax()) // 2)
+                if stripe_centre_blocked(cx, _opp, int(STRIPE_OPP_CLEARANCE_UM * dbu)):
+                    print(f"[WARNING] {net_name}: partial-height stripe at x={cx/dbu:.2f} um NOT extended to full "
+                          f"height: an opposite-net stripe sits within {STRIPE_OPP_CLEARANCE_UM} um of it "
+                          f"(stripe-centre guard, tt_um_pemu modification); pdngen's segments are kept")
                     continue
                 for b in sb:
                     odb.dbSBox_destroy(b)
