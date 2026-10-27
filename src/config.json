@@ -34,6 +34,36 @@
   "RUN_POST_GRT_RESIZER_TIMING": true,
   "DRT_SAVE_DRC_REPORT_ITERS": 4,
 
+  "//": "Step 3 (2026-10-27): custom PDN steps ported from Ken Pettit's",
+  "//": "ihp-um-janestreet-prism (Apache-2.0) - librelane_plugin_prism_pdn.py",
+  "//": "at the repo root, auto-loaded by LibreLane. ExtendPowerStripes runs",
+  "//": "right after GeneratePDN and bridges the tile stripes onto the SRAMs'",
+  "//": "own Metal4 supply columns (the only feed the macros get: pdngen trims",
+  "//": "its stripes around macros, and its mid-flow connectivity check runs",
+  "//": "before this step, so a mid-flow PSM-0039 is expected - LVS + the",
+  "//": "final IR-drop report are the verdict). MouthKeepouts runs right",
+  "//": "after macro placement (density-capped strips at the macro mouths).",
+  "meta": {
+    "flow": "Classic",
+    "substituting_steps": {
+      "+Odb.ManualMacroPlacement": "Project.MouthKeepouts",
+      "+OpenROAD.GeneratePDN": "Project.ExtendPowerStripes"
+    }
+  },
+  "//": "Pettit's signed-off stripe settings: grid columns moved onto the",
+  "//": "SRAMs' tracks plus a VPWR/VGND pair on every other array pair",
+  "//": "position; pin-face margin 0 (his sign-off value - plugin default 3).",
+  "EXTEND_STRIPES_SRAM_ALL_COLUMNS": false,
+  "EXTEND_STRIPES_SRAM_ARRAY_EVERY_OTHER": true,
+  "EXTEND_STRIPES_PIN_FACE_MARGIN": 0,
+  "//": "Mouth keep-outs over the RM_IHPSG13 macros (his tuned values:",
+  "//": "width 40 um, margin 20 um, density cap 0.25).",
+  "MOUTH_KEEPOUT_MACRO_PREFIX": "RM_",
+  "MOUTH_KEEPOUT_WIDTH": 40,
+  "MOUTH_KEEPOUT_MARGIN": 20,
+  "MOUTH_KEEPOUT_MAX_DENSITY": 0.25,
+  "MOUTH_KEEPOUT_INWARD": 0,
+
   "//": "RUN_LINTER, LINTER_INCLUDE_PDK_MODELS - Disabling the linter is not recommended!",
   "RUN_LINTER": 1,
   "LINTER_INCLUDE_PDK_MODELS": 1,
@@ -127,6 +157,9 @@
   "FP_MACRO_HORIZONTAL_HALO": 6.0,
   "FP_MACRO_VERTICAL_HALO": 2.0,
   "ERROR_ON_PDN_VIOLATIONS": 0,
+  "//": "Kept 0 (Pettit's signed-off value too): pdngen's connectivity check",
+  "//": "runs before Project.ExtendPowerStripes bridges the macro pins;",
+  "//": "LVS + the final IR-drop report are the verdict, not this check.",
 
   "//": "PDN config without the (empty) per-macro grid - see src/pdn_cfg.tcl.",
   "PDN_CFG": "dir::pdn_cfg.tcl",
