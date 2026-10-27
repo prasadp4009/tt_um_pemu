@@ -66,7 +66,7 @@
       "instances": {
         "u_imem": {
           "location": [205.68, 3.78],
-          "orientation": "N"
+          "orientation": "FS"
         }
       }
     },
@@ -96,7 +96,7 @@
       "instances": {
         "u_tmem": {
           "location": [1127.36, 3.78],
-          "orientation": "N"
+          "orientation": "FS"
         }
       }
     }
