@@ -23,6 +23,17 @@
   "PL_RESIZER_HOLD_SLACK_MARGIN": 0.1,
   "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.05,
 
+  "//": "Step 1+2 (2026-10-27): fanout/transition caps + setup slack margin shed",
+  "//": "pre-route repair demand (baseline RSZ: 1,333 setup + 2,519 hold buffers);",
+  "//": "post-GRT resizer repairs timing on real routed parasitics (Pettit cmos5l",
+  "//": "recipe, BEST_PRACTICES_AND_PLAN_2026-10-26.md S5 Step 2); DRT DRC reports",
+  "//": "saved every 4 iterations so a stall leaves evidence.",
+  "MAX_FANOUT_CONSTRAINT": 8,
+  "MAX_TRANSITION_CONSTRAINT": 0.75,
+  "PL_RESIZER_SETUP_SLACK_MARGIN": 0.25,
+  "RUN_POST_GRT_RESIZER_TIMING": true,
+  "DRT_SAVE_DRC_REPORT_ITERS": 4,
+
   "//": "RUN_LINTER, LINTER_INCLUDE_PDK_MODELS - Disabling the linter is not recommended!",
   "RUN_LINTER": 1,
   "LINTER_INCLUDE_PDK_MODELS": 1,
