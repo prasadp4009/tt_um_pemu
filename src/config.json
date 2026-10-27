@@ -172,6 +172,21 @@
   "//": "precheck runs the KLayout CMOS5L DRC deck instead.",
   "RUN_MAGIC_DRC": 0,
 
+  "//": "Step 4 (2026-10-27): run the KLayout CMOS5L DRC deck (the same deck",
+  "//": "the Tiny Tapeout precheck uses) in-flow, with the PDK runset.",
+  "RUN_KLAYOUT_DRC": 1,
+  "KLAYOUT_DRC_RUNSET": "pdk_dir::libs.tech/klayout/tech/drc/ihp-sg13cmos5l.drc",
+
+  "//": "Step 4 waiver: Magic's illegal-overlap check is not an error here.",
+  "//": "All 52 reports in run 40520569898 are 'Illegal overlap between obsm4",
+  "//": "and metal4 (types do not connect)' where the VPWR stripes cross the",
+  "//": "SRAM LEF abstracts' Metal4 OBS bar at the macros' own VDD columns;",
+  "//": "the GDS has no metal there and Magic itself notes the types do not",
+  "//": "connect. This is Pettit's documented waived case (22 in his design,",
+  "//": "ihp-um-janestreet-prism); the real DRC verdict is the KLayout deck",
+  "//": "above and LVS.",
+  "ERROR_ON_ILLEGAL_OVERLAPS": 0,
+
   "//": "Configuration docs: https://librelane.readthedocs.io/en/latest/reference/configuration.html",
 
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
@@ -180,7 +195,7 @@
 
   "//": "Save some time",
   "RUN_KLAYOUT_XOR": 0,
-  "RUN_KLAYOUT_DRC": 0,
+  "RUN_KLAYOUT_DRC": 1,
 
   "//": "Don't put clock buffers on the outputs",
   "DESIGN_REPAIR_BUFFER_OUTPUT_PORTS": 0,
