@@ -82,147 +82,147 @@ module emu_tt_loader (
     // Firmware image descriptor: total 32-bit words in the img_word
     // case ROM. Rewritten per protocol by fpga/gen_fw_rom.py
     // (do not hand-edit the value).
-    localparam [7:0] IMG_WORDS = 8'd132;
-    function [31:0] img_word(input [7:0] w);
+    localparam [8:0] IMG_WORDS = 9'd132;
+    function [31:0] img_word(input [8:0] w);
         case (w)
-            8'd0 : img_word = 32'h101fe000;
-            8'd1 : img_word = 32'h0c1fe000;
-            8'd2 : img_word = 32'h00802000;
-            8'd3 : img_word = 32'h081e0000;
-            8'd4 : img_word = 32'h28018000;
-            8'd5 : img_word = 32'h14000000;
-            8'd6 : img_word = 32'h0c100000;
-            8'd7 : img_word = 32'h10100000;
-            8'd8 : img_word = 32'h00100000;
-            8'd9 : img_word = 32'h4c00b600;
-            8'd10 : img_word = 32'h4c009000;
-            8'd11 : img_word = 32'h300e0000;
-            8'd12 : img_word = 32'h28000000;
-            8'd13 : img_word = 32'h3c001e00;
-            8'd14 : img_word = 32'h480e0000;
-            8'd15 : img_word = 32'h4c023100;
-            8'd16 : img_word = 32'h3c001e00;
-            8'd17 : img_word = 32'h480e0000;
-            8'd18 : img_word = 32'h4c044100;
-            8'd19 : img_word = 32'h3c001e00;
-            8'd20 : img_word = 32'h480e0000;
-            8'd21 : img_word = 32'h4c05a100;
-            8'd22 : img_word = 32'h3c001e00;
-            8'd23 : img_word = 32'h480e0000;
-            8'd24 : img_word = 32'h4c072100;
-            8'd25 : img_word = 32'h280001fc;
-            8'd26 : img_word = 32'h3c001e00;
-            8'd27 : img_word = 32'h480e0000;
-            8'd28 : img_word = 32'h4c022100;
-            8'd29 : img_word = 32'h2801fffc;
-            8'd30 : img_word = 32'h3c001e00;
-            8'd31 : img_word = 32'h2c000000;
-            8'd32 : img_word = 32'h5c020000;
-            8'd33 : img_word = 32'h4c009000;
-            8'd34 : img_word = 32'h58000000;
-            8'd35 : img_word = 32'h5402d000;
-            8'd36 : img_word = 32'h4801e000;
-            8'd37 : img_word = 32'h4c02a100;
-            8'd38 : img_word = 32'h28000000;
-            8'd39 : img_word = 32'h2c000000;
-            8'd40 : img_word = 32'h5c020000;
-            8'd41 : img_word = 32'h4c009000;
-            8'd42 : img_word = 32'h2c1e0000;
-            8'd43 : img_word = 32'h5c000000;
-            8'd44 : img_word = 32'h4c009000;
-            8'd45 : img_word = 32'h00000000;
-            8'd46 : img_word = 32'h181f3f00;
-            8'd47 : img_word = 32'h181f3f00;
-            8'd48 : img_word = 32'h181f3f00;
-            8'd49 : img_word = 32'h00100000;
-            8'd50 : img_word = 32'h1c1e0800;
-            8'd51 : img_word = 32'h1c1c2800;
-            8'd52 : img_word = 32'h4c042500;
-            8'd53 : img_word = 32'h280c0008;
-            8'd54 : img_word = 32'h34000000;
-            8'd55 : img_word = 32'h38000000;
-            8'd56 : img_word = 32'h1c1e2800;
-            8'd57 : img_word = 32'h4c03b500;
-            8'd58 : img_word = 32'h4c03d000;
-            8'd59 : img_word = 32'h500c3600;
-            8'd60 : img_word = 32'h4c042000;
-            8'd61 : img_word = 32'h181fff00;
-            8'd62 : img_word = 32'h181fff00;
-            8'd63 : img_word = 32'h28000000;
-            8'd64 : img_word = 32'h3c001e00;
-            8'd65 : img_word = 32'h54000800;
-            8'd66 : img_word = 32'h28000000;
-            8'd67 : img_word = 32'h54000800;
-            8'd68 : img_word = 32'h4c046600;
-            8'd69 : img_word = 32'h4c044000;
-            8'd70 : img_word = 32'h30040000;
-            8'd71 : img_word = 32'h5404c000;
-            8'd72 : img_word = 32'h28000000;
-            8'd73 : img_word = 32'h2c000000;
-            8'd74 : img_word = 32'h5c000000;
-            8'd75 : img_word = 32'h4c009000;
-            8'd76 : img_word = 32'h28020010;
-            8'd77 : img_word = 32'h44045f00;
-            8'd78 : img_word = 32'h4c054300;
-            8'd79 : img_word = 32'h00000000;
-            8'd80 : img_word = 32'h180be800;
-            8'd81 : img_word = 32'h00100000;
-            8'd82 : img_word = 32'h1801bc00;
-            8'd83 : img_word = 32'h4c058000;
-            8'd84 : img_word = 32'h00000000;
-            8'd85 : img_word = 32'h18012a00;
-            8'd86 : img_word = 32'h00100000;
-            8'd87 : img_word = 32'h180c7b00;
-            8'd88 : img_word = 32'h50024d00;
-            8'd89 : img_word = 32'h54000800;
-            8'd90 : img_word = 32'h5405e000;
-            8'd91 : img_word = 32'h2c040000;
-            8'd92 : img_word = 32'h5c000000;
-            8'd93 : img_word = 32'h4c009000;
-            8'd94 : img_word = 32'h28020010;
-            8'd95 : img_word = 32'h28040000;
-            8'd96 : img_word = 32'h28080100;
-            8'd97 : img_word = 32'h2800000c;
-            8'd98 : img_word = 32'h3c001e00;
-            8'd99 : img_word = 32'h00000000;
-            8'd100 : img_word = 32'h18012a00;
-            8'd101 : img_word = 32'h00100000;
-            8'd102 : img_word = 32'h1801c300;
-            8'd103 : img_word = 32'h08060000;
-            8'd104 : img_word = 32'h44066100;
-            8'd105 : img_word = 32'h44045f00;
-            8'd106 : img_word = 32'h4807e000;
-            8'd107 : img_word = 32'h4c06e200;
-            8'd108 : img_word = 32'h40044880;
-            8'd109 : img_word = 32'h4c06f000;
-            8'd110 : img_word = 32'h18000100;
-            8'd111 : img_word = 32'h180ab200;
-            8'd112 : img_word = 32'h50026300;
-            8'd113 : img_word = 32'h54000800;
-            8'd114 : img_word = 32'h5402d000;
-            8'd115 : img_word = 32'h4801e000;
-            8'd116 : img_word = 32'h4c079100;
-            8'd117 : img_word = 32'h28000000;
-            8'd118 : img_word = 32'h2c000000;
-            8'd119 : img_word = 32'h5c020000;
-            8'd120 : img_word = 32'h4c009000;
-            8'd121 : img_word = 32'h28040198;
-            8'd122 : img_word = 32'h5404c000;
-            8'd123 : img_word = 32'h2804017c;
-            8'd124 : img_word = 32'h5404c000;
-            8'd125 : img_word = 32'h280c0010;
-            8'd126 : img_word = 32'h3c0cde00;
-            8'd127 : img_word = 32'h5405e000;
-            8'd128 : img_word = 32'h2c040000;
-            8'd129 : img_word = 32'h500c7f00;
-            8'd130 : img_word = 32'h5c000000;
-            8'd131 : img_word = 32'h4c009000;
+            9'd0 : img_word = 32'h101fe000;
+            9'd1 : img_word = 32'h0c1fe000;
+            9'd2 : img_word = 32'h00802000;
+            9'd3 : img_word = 32'h081e0000;
+            9'd4 : img_word = 32'h28018000;
+            9'd5 : img_word = 32'h14000000;
+            9'd6 : img_word = 32'h0c100000;
+            9'd7 : img_word = 32'h10100000;
+            9'd8 : img_word = 32'h00100000;
+            9'd9 : img_word = 32'h4c00b600;
+            9'd10 : img_word = 32'h4c009000;
+            9'd11 : img_word = 32'h300e0000;
+            9'd12 : img_word = 32'h28000000;
+            9'd13 : img_word = 32'h3c001e00;
+            9'd14 : img_word = 32'h480e0000;
+            9'd15 : img_word = 32'h4c023100;
+            9'd16 : img_word = 32'h3c001e00;
+            9'd17 : img_word = 32'h480e0000;
+            9'd18 : img_word = 32'h4c044100;
+            9'd19 : img_word = 32'h3c001e00;
+            9'd20 : img_word = 32'h480e0000;
+            9'd21 : img_word = 32'h4c05a100;
+            9'd22 : img_word = 32'h3c001e00;
+            9'd23 : img_word = 32'h480e0000;
+            9'd24 : img_word = 32'h4c072100;
+            9'd25 : img_word = 32'h280001fc;
+            9'd26 : img_word = 32'h3c001e00;
+            9'd27 : img_word = 32'h480e0000;
+            9'd28 : img_word = 32'h4c022100;
+            9'd29 : img_word = 32'h2801fffc;
+            9'd30 : img_word = 32'h3c001e00;
+            9'd31 : img_word = 32'h2c000000;
+            9'd32 : img_word = 32'h5c020000;
+            9'd33 : img_word = 32'h4c009000;
+            9'd34 : img_word = 32'h58000000;
+            9'd35 : img_word = 32'h5402d000;
+            9'd36 : img_word = 32'h4801e000;
+            9'd37 : img_word = 32'h4c02a100;
+            9'd38 : img_word = 32'h28000000;
+            9'd39 : img_word = 32'h2c000000;
+            9'd40 : img_word = 32'h5c020000;
+            9'd41 : img_word = 32'h4c009000;
+            9'd42 : img_word = 32'h2c1e0000;
+            9'd43 : img_word = 32'h5c000000;
+            9'd44 : img_word = 32'h4c009000;
+            9'd45 : img_word = 32'h00000000;
+            9'd46 : img_word = 32'h181f3f00;
+            9'd47 : img_word = 32'h181f3f00;
+            9'd48 : img_word = 32'h181f3f00;
+            9'd49 : img_word = 32'h00100000;
+            9'd50 : img_word = 32'h1c1e0800;
+            9'd51 : img_word = 32'h1c1c2800;
+            9'd52 : img_word = 32'h4c042500;
+            9'd53 : img_word = 32'h280c0008;
+            9'd54 : img_word = 32'h34000000;
+            9'd55 : img_word = 32'h38000000;
+            9'd56 : img_word = 32'h1c1e2800;
+            9'd57 : img_word = 32'h4c03b500;
+            9'd58 : img_word = 32'h4c03d000;
+            9'd59 : img_word = 32'h500c3600;
+            9'd60 : img_word = 32'h4c042000;
+            9'd61 : img_word = 32'h181fff00;
+            9'd62 : img_word = 32'h181fff00;
+            9'd63 : img_word = 32'h28000000;
+            9'd64 : img_word = 32'h3c001e00;
+            9'd65 : img_word = 32'h54000800;
+            9'd66 : img_word = 32'h28000000;
+            9'd67 : img_word = 32'h54000800;
+            9'd68 : img_word = 32'h4c046600;
+            9'd69 : img_word = 32'h4c044000;
+            9'd70 : img_word = 32'h30040000;
+            9'd71 : img_word = 32'h5404c000;
+            9'd72 : img_word = 32'h28000000;
+            9'd73 : img_word = 32'h2c000000;
+            9'd74 : img_word = 32'h5c000000;
+            9'd75 : img_word = 32'h4c009000;
+            9'd76 : img_word = 32'h28020010;
+            9'd77 : img_word = 32'h44045f00;
+            9'd78 : img_word = 32'h4c054300;
+            9'd79 : img_word = 32'h00000000;
+            9'd80 : img_word = 32'h180be800;
+            9'd81 : img_word = 32'h00100000;
+            9'd82 : img_word = 32'h1801bc00;
+            9'd83 : img_word = 32'h4c058000;
+            9'd84 : img_word = 32'h00000000;
+            9'd85 : img_word = 32'h18012a00;
+            9'd86 : img_word = 32'h00100000;
+            9'd87 : img_word = 32'h180c7b00;
+            9'd88 : img_word = 32'h50024d00;
+            9'd89 : img_word = 32'h54000800;
+            9'd90 : img_word = 32'h5405e000;
+            9'd91 : img_word = 32'h2c040000;
+            9'd92 : img_word = 32'h5c000000;
+            9'd93 : img_word = 32'h4c009000;
+            9'd94 : img_word = 32'h28020010;
+            9'd95 : img_word = 32'h28040000;
+            9'd96 : img_word = 32'h28080100;
+            9'd97 : img_word = 32'h2800000c;
+            9'd98 : img_word = 32'h3c001e00;
+            9'd99 : img_word = 32'h00000000;
+            9'd100 : img_word = 32'h18012a00;
+            9'd101 : img_word = 32'h00100000;
+            9'd102 : img_word = 32'h1801c300;
+            9'd103 : img_word = 32'h08060000;
+            9'd104 : img_word = 32'h44066100;
+            9'd105 : img_word = 32'h44045f00;
+            9'd106 : img_word = 32'h4807e000;
+            9'd107 : img_word = 32'h4c06e200;
+            9'd108 : img_word = 32'h40044880;
+            9'd109 : img_word = 32'h4c06f000;
+            9'd110 : img_word = 32'h18000100;
+            9'd111 : img_word = 32'h180ab200;
+            9'd112 : img_word = 32'h50026300;
+            9'd113 : img_word = 32'h54000800;
+            9'd114 : img_word = 32'h5402d000;
+            9'd115 : img_word = 32'h4801e000;
+            9'd116 : img_word = 32'h4c079100;
+            9'd117 : img_word = 32'h28000000;
+            9'd118 : img_word = 32'h2c000000;
+            9'd119 : img_word = 32'h5c020000;
+            9'd120 : img_word = 32'h4c009000;
+            9'd121 : img_word = 32'h28040198;
+            9'd122 : img_word = 32'h5404c000;
+            9'd123 : img_word = 32'h2804017c;
+            9'd124 : img_word = 32'h5404c000;
+            9'd125 : img_word = 32'h280c0010;
+            9'd126 : img_word = 32'h3c0cde00;
+            9'd127 : img_word = 32'h5405e000;
+            9'd128 : img_word = 32'h2c040000;
+            9'd129 : img_word = 32'h500c7f00;
+            9'd130 : img_word = 32'h5c000000;
+            9'd131 : img_word = 32'h4c009000;
             default: img_word = 32'h00000000;
         endcase
     endfunction
 
 
-    function [7:0] img_byte(input [7:0] w, input [1:0] s);
+    function [7:0] img_byte(input [8:0] w, input [1:0] s);
         reg [31:0] word;
         begin
             word = img_word(w);
@@ -290,8 +290,8 @@ module emu_tt_loader (
     reg [17:0] tcnt;        // wait / RX timeout counter
     reg        fault_lat;   // inject_fault latched at run start
 
-    reg [7:0] ld_base, ld_n;   // LOAD chunk descriptor
-    reg [7:0] vf_base, vf_n;   // VERIFY chunk descriptor
+    reg [8:0] ld_base, ld_n;   // LOAD chunk descriptor (9-bit: IMEM-512)
+    reg [8:0] vf_base, vf_n;   // VERIFY chunk descriptor (9-bit: IMEM-512)
     reg [7:0] dr_n;            // drain count
     reg [7:0] txf_n, rxc;      // TXFIFO count / received bytes
     reg [7:0] w_hi;            // TXFIFO word high byte
@@ -324,15 +324,15 @@ module emu_tt_loader (
                 txb = (bcnt == 8'd0) ? 8'h08 : 8'h00;
             T_LD_TX:
                 txb = (bcnt == 8'd0) ? 8'h01 :
-                      (bcnt == 8'd1) ? (8'd2 + (ld_n << 2)) :
-                      (bcnt == 8'd2) ? 8'h00 :
-                      (bcnt == 8'd3) ? ld_base :
-                      img_byte(ld_base + ld_pcnt[7:2], ld_pcnt[1:0]);
+                      (bcnt == 8'd1) ? (8'd2 + (ld_n[7:0] << 2)) :
+                      (bcnt == 8'd2) ? {7'b0, ld_base[8]} :
+                      (bcnt == 8'd3) ? ld_base[7:0] :
+                      img_byte(ld_base + {3'b0, ld_pcnt[7:2]}, ld_pcnt[1:0]);
             T_VF_TX:
                 txb = (bcnt == 8'd0) ? 8'h02 :
                       (bcnt == 8'd1) ? 8'h03 :
-                      (bcnt == 8'd2) ? 8'h00 :
-                      (bcnt == 8'd3) ? vf_base : vf_n;
+                      (bcnt == 8'd2) ? {7'b0, vf_base[8]} :
+                      (bcnt == 8'd3) ? vf_base[7:0] : vf_n[7:0];
             T_GO_TX, T_GO2_TX:
                 txb = (bcnt == 8'd0) ? 8'h09 : 8'h00;
             T_DR1_TX, T_DR2_TX, T_TXF_TX, T_DG_TX:
@@ -363,7 +363,7 @@ module emu_tt_loader (
             T_XF_TX:
                 tx_last = 8'd9;                        // 10 bytes
             T_LD_TX:
-                tx_last = 8'd3 + (ld_n << 2);          // 4 + 4n bytes
+                tx_last = 8'd3 + (ld_n[7:0] << 2);    // 4 + 4n bytes (n<=60 -> <=243)
             T_DR1_TX, T_DR2_TX, T_TXF_TX, T_DG_TX:
                 tx_last = 8'd2;                        // 3 bytes: 06 01 20
             default:
@@ -490,7 +490,7 @@ module emu_tt_loader (
             dbg0 <= 32'd0; dbg1 <= 32'd0; dbg2 <= 32'd0;
             tx_byte <= 8'd0; tx_start <= 1'b0;
             start_d <= 1'b0;
-            ld_base <= 8'd0; ld_n <= 8'd0; vf_base <= 8'd0; vf_n <= 8'd0;
+            ld_base <= 9'd0; ld_n <= 9'd0; vf_base <= 9'd0; vf_n <= 9'd0;
             dr_n <= 8'd0; txf_n <= 8'd0; rxc <= 8'd0;
             w_hi <= 8'd0; byte_odd <= 1'b0;
             txf_zeros <= 8'd0; zero_run <= 8'd0;
@@ -576,11 +576,11 @@ module emu_tt_loader (
                         dbg0[7:0] <= rx_byte;
                         if (rx_byte == 8'h10) begin
                             milestones[M_ST_PROG] <= 1'b1;
-                            ld_base <= 8'd0;
+                            ld_base <= 9'd0;
 `ifdef GENERIC_MODE
-                            ld_n <= (IMG_WORDS > 8'd60) ? 8'd60 : IMG_WORDS;
+                            ld_n <= (IMG_WORDS > 9'd60) ? 9'd60 : IMG_WORDS;
 `else
-                            ld_n <= 8'd60;
+                            ld_n <= 9'd60;
 `endif
                             st_r <= T_LD_TX;
                         end else do_fail(8'h03);
@@ -596,34 +596,34 @@ module emu_tt_loader (
 `ifdef GENERIC_MODE
                             // N-chunk LOAD: 60-word chunks + tail chunk.
                             // ld_base/ld_n still hold the just-ACKed chunk.
-                            if (ld_base == 8'd0)
+                            if (ld_base == 9'd0)
                                 milestones[M_LOAD0] <= 1'b1;
                             if (ld_base + ld_n >= IMG_WORDS) begin
                                 // final chunk loaded
                                 milestones[M_LOAD1] <= 1'b1;
-                                vf_base <= 8'd0;
-                                vf_n <= (IMG_WORDS > 8'd60) ? 8'd60 : IMG_WORDS;
+                                vf_base <= 9'd0;
+                                vf_n <= (IMG_WORDS > 9'd60) ? 9'd60 : IMG_WORDS;
                                 dcnt <= 9'd0;
                                 st_r <= T_VF_TX;
                             end else begin
-                                ld_n <= ((IMG_WORDS - (ld_base + ld_n)) > 8'd60)
-                                        ? 8'd60 : (IMG_WORDS - (ld_base + ld_n));
+                                ld_n <= ((IMG_WORDS - (ld_base + ld_n)) > 9'd60)
+                                        ? 9'd60 : (IMG_WORDS - (ld_base + ld_n));
                                 ld_base <= ld_base + ld_n;
                                 st_r <= T_LD_TX;
                             end
 `else
-                            if (ld_base == 8'd0) begin
+                            if (ld_base == 9'd0) begin
                                 milestones[M_LOAD0] <= 1'b1;
-                                ld_base <= 8'd60; ld_n <= 8'd11;
+                                ld_base <= 9'd60; ld_n <= 9'd11;
                                 st_r <= T_LD_TX;
                             end else begin
                                 milestones[M_LOAD1] <= 1'b1;
-                                vf_base <= 8'd0; vf_n <= 8'd60; dcnt <= 9'd0;
+                                vf_base <= 9'd0; vf_n <= 9'd60; dcnt <= 9'd0;
                                 st_r <= T_VF_TX;
                             end
 `endif
-                        end else do_fail(ld_base == 8'd0 ? 8'h04 : 8'h05);
-                    end else if (tcnt == RX_TIMEOUT) do_fail(ld_base == 8'd0 ? 8'h04 : 8'h05);
+                        end else do_fail(ld_base == 9'd0 ? 8'h04 : 8'h05);
+                    end else if (tcnt == RX_TIMEOUT) do_fail(ld_base == 9'd0 ? 8'h04 : 8'h05);
                 end
                 // ============ VERIFY_IMEM, byte-exact ============
                 T_VF_TX: tx_step(T_VF_AK);
@@ -634,19 +634,19 @@ module emu_tt_loader (
                         if (rx_byte == 8'hA5) begin
                             dcnt <= 9'd0;
                             st_r <= T_VF_RX;
-                        end else do_fail(vf_base == 8'd0 ? 8'h06 : 8'h08);
-                    end else if (tcnt == RX_TIMEOUT) do_fail(vf_base == 8'd0 ? 8'h06 : 8'h08);
+                        end else do_fail(vf_base == 9'd0 ? 8'h06 : 8'h08);
+                    end else if (tcnt == RX_TIMEOUT) do_fail(vf_base == 9'd0 ? 8'h06 : 8'h08);
                 end
                 T_VF_RX: begin
                     tcnt <= tcnt + 18'd1;
                     if (rx_valid) begin
                         tcnt <= 18'd0;
-                        if (rx_byte != img_byte(vf_base + dcnt[8:2], dcnt[1:0]))
-                            do_fail(vf_base == 8'd0 ? 8'h07 : 8'h09);
+                        if (rx_byte != img_byte(vf_base + {2'b0, dcnt[8:2]}, dcnt[1:0]))
+                            do_fail(vf_base == 9'd0 ? 8'h07 : 8'h09);
                         else if ((dcnt + 9'd1) == ({1'b0, vf_n} << 2)) begin
                             dcnt <= 9'd0;
 `ifdef GENERIC_MODE
-                            if (vf_base == 8'd0)
+                            if (vf_base == 9'd0)
                                 milestones[M_VF0] <= 1'b1;
                             if (vf_base + vf_n >= IMG_WORDS) begin
                                 // final chunk verified byte-exact
@@ -656,21 +656,21 @@ module emu_tt_loader (
                                 // host autobaud; otherwise 0x00 is a NOP command
                                 // that would eat the GO byte as its length.
                                 // vf_n*4000 > 65535  <=>  vf_n > 16
-                                st_r <= (vf_n > 8'd16) ? T_RS2 : T_GO_TX;
+                                st_r <= (vf_n > 9'd16) ? T_RS2 : T_GO_TX;
                             end else begin
                                 // mandatory 0x00 resync between VERIFY chunks:
                                 // each long reply idles the chip RX line
-                                vf_n <= ((IMG_WORDS - (vf_base + vf_n)) > 8'd60)
-                                        ? 8'd60 : (IMG_WORDS - (vf_base + vf_n));
+                                vf_n <= ((IMG_WORDS - (vf_base + vf_n)) > 9'd60)
+                                        ? 9'd60 : (IMG_WORDS - (vf_base + vf_n));
                                 vf_base <= vf_base + vf_n;
                                 st_r <= T_RS1;
                             end
 `else
-                            if (vf_base == 8'd0) begin
+                            if (vf_base == 9'd0) begin
                                 milestones[M_VF0] <= 1'b1;
                                 // mandatory 0x00 resync: the 240-byte reply
                                 // idles the chip RX line >65535 clocks
-                                vf_base <= 8'd60; vf_n <= 8'd11;
+                                vf_base <= 9'd60; vf_n <= 9'd11;
                                 st_r <= T_RS1;
                             end else begin
                                 milestones[M_VF1] <= 1'b1;
@@ -678,7 +678,7 @@ module emu_tt_loader (
                             end
 `endif
                         end else dcnt <= dcnt + 9'd1;
-                    end else if (tcnt == RX_TIMEOUT) do_fail(vf_base == 8'd0 ? 8'h07 : 8'h09);
+                    end else if (tcnt == RX_TIMEOUT) do_fail(vf_base == 9'd0 ? 8'h07 : 8'h09);
                 end
                 T_RS1:    tx_step(T_VF_TX);   // 0x00 resync between VERIFY chunks
                 T_RS2:    tx_step(T_GO_TX);   // 0x00 resync before GO (GENERIC_MODE)

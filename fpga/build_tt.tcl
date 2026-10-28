@@ -6,7 +6,7 @@
 #
 # PROTO selects the firmware image compiled into the loader case-ROM:
 #   spi (default) -> exact 71-word SPI image, full 15-milestone SPI checks
-#   uart/i2c/onewire -> GENERIC_MODE: LOAD/VERIFY/GO/HALT + signature only
+#   uart/i2c/onewire/usb_full/ubproof/usb_full301 -> GENERIC_MODE: LOAD/VERIFY/GO/HALT + signature only
 #
 # Top: fpga/emu_tt_top.v ; DUT: the real Tiny Tapeout wrapper src/tt_um_pemu.v ;
 # loader: fpga/emu_tt_loader.v (replicates test/test.py);
@@ -19,13 +19,13 @@
 
 if { $argc < 1 || $argc > 2 } {
     puts "usage: vivado -mode batch -source fpga/build_tt.tcl -tclargs FREQ ?PROTO?"
-    puts "FREQ in {50, 100, 125, 150}; PROTO in {spi, uart, i2c, onewire} (default spi)"
+    puts "FREQ in {50, 100, 125, 150}; PROTO in {spi, uart, i2c, onewire, usb_full, ubproof, usb_full301} (default spi)"
     exit 1
 }
 set FREQ [lindex $argv 0]
 set PROTO [expr {$argc == 2 ? [lindex $argv 1] : "spi"}]
-if {[lsearch {spi uart i2c onewire} $PROTO] < 0} {
-    puts "PROTO must be one of {spi, uart, i2c, onewire}, got '$PROTO'"
+if {[lsearch {spi uart i2c onewire usb_full ubproof usb_full301} $PROTO] < 0} {
+    puts "PROTO must be one of {spi, uart, i2c, onewire, usb_full, ubproof, usb_full301}, got '$PROTO'"
     exit 1
 }
 # Bitstream stem: keep the legacy emu_tt_<FREQ>.bit name for plain SPI builds
