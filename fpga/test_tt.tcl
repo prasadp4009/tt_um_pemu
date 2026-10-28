@@ -3,8 +3,9 @@
 # Usage: vivado -mode batch -source fpga/test_tt.tcl -tclargs <FREQ> <fault> ?PROTO?
 #   FREQ:  50, 100, 125, or 150 (programs fpga/emu_tt_<FREQ>.bit)
 #   fault: 0=normal (expect tt_pass=1, fail_code=0)
-#          1=vacuity (loader expects PE_RUNNING after HALT -> must fail
-#             at the post-HALT RD_STATUS check with fail_code=0x0E)
+#          1=vacuity (loader expects PE_RUNNING after HALT -> post-HALT
+#             RD_STATUS check mismatches by design; the loader drains via
+#             T_DG and terminates with fail_code=0xEE, tt_pass stays 0)
 #   PROTO: spi (default) -> fpga/emu_tt_<FREQ>.bit, expect 15 milestones
 #          uart/i2c/onewire -> fpga/emu_tt_<FREQ>_<PROTO>.bit (GENERIC_MODE),
 #             expect core milestones 0-9 only
@@ -207,8 +208,8 @@ puts "TXFIFO: words=$txf_n zeros=$txf_zeros bad=$txf_bad three_consecutive_zero=
 
 # --- 6. verdict ---
 if {$fault == 1} {
-    if {!$tpass && $fcode == 0x0E} {
-        puts "VACUITY-OK: fault run failed exactly at post-HALT RD_STATUS (fail_code=0x0E), no false pass"
+    if {!$tpass && $fcode == 0xEE} {
+        puts "VACUITY-OK: fault run caught at post-HALT RD_STATUS check (fail_code=0xEE via T_DG drain), no false pass"
     } else {
         puts "FAIL: vacuity run did not behave as designed (tpass=$tpass fcode=0x[format %02x $fcode])"
         exit 1
