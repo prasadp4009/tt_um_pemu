@@ -6,7 +6,7 @@
  *   - tt_um_pemu_pe       : TEMPO-32 PE core (Worker A)
  *   - tt_um_pemu_observer : trace observer (Worker B)
  *   - tt_um_pemu_host     : 2-wire host port (Worker C, amended Worker D)
- *   - RM_IHPSG13_1P_256x32_c2_bm_bist  : IMEM  (256x32, program store)
+ *   - RM_IHPSG13_1P_512x32_c2_bm_bist  : IMEM  (512x32, program store)
  *   - RM_IHPSG13_1P_1024x8_c2_bm_bist  : trace (1024x8, observer entries)
  *
  * Pin map (tt_um_* standard):
@@ -67,7 +67,7 @@ module tt_um_pemu (
     // PE <-> host program port
     // ------------------------------------------------------------------
     wire        prog_mode;
-    wire [7:0]  prog_addr;
+    wire [8:0]  prog_addr;
     wire [31:0] prog_din;
     wire        prog_wen;
     wire        prog_ren;
@@ -76,7 +76,7 @@ module tt_um_pemu (
     // ------------------------------------------------------------------
     // PE <-> IMEM macro
     // ------------------------------------------------------------------
-    wire [7:0]  imem_addr;
+    wire [8:0]  imem_addr;
 /* verilator lint_off UNUSEDSIGNAL */  // PE replicates enables x8; bit 0 drives the macro
     wire [7:0]  imem_men, imem_wen, imem_ren;
 /* verilator lint_on UNUSEDSIGNAL */
@@ -294,10 +294,10 @@ module tt_um_pemu (
     );
 
     // ------------------------------------------------------------------
-    // IMEM macro: RM_IHPSG13_1P_256x32_c2_bm_bist
+    // IMEM macro: RM_IHPSG13_1P_512x32_c2_bm_bist
     // Bit 0 of the replicated PE enables drives the scalar macro control.
     // ------------------------------------------------------------------
-    RM_IHPSG13_1P_256x32_c2_bm_bist u_imem (
+    RM_IHPSG13_1P_512x32_c2_bm_bist u_imem (
         .A_CLK      (clk),
         .A_MEN      (imem_men[0]),
         .A_WEN      (imem_wen[0]),
@@ -312,7 +312,7 @@ module tt_um_pemu (
         .A_BIST_MEN (1'b0),
         .A_BIST_WEN (1'b0),
         .A_BIST_REN (1'b0),
-        .A_BIST_ADDR(8'b0),
+        .A_BIST_ADDR(9'b0),
         .A_BIST_DIN (32'b0),
         .A_BIST_BM  (32'b0)
     );

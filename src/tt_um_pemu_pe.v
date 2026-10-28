@@ -70,14 +70,14 @@ module tt_um_pemu_pe (
     input  wire        ena,
     // Program-load port (loader active only in prog_mode; PE held in reset)
     input  wire        prog_mode,
-    input  wire [7:0]  prog_addr,
+    input  wire [8:0]  prog_addr,
     input  wire [31:0] prog_din,
     input  wire        prog_wen,
     input  wire        prog_ren,       // [AMD-A] host VERIFY_IMEM read enable
     output wire [31:0] prog_dout,     // IMEM readback for host VERIFY_IMEM
-    // IMEM macro port (RM_IHPSG13_1P_256x32_c2_bm_bist). men/ren/wen are
+    // IMEM macro port (RM_IHPSG13_1P_512x32_c2_bm_bist). men/ren/wen are
     // 8-bit per the dictated interface; all 8 bits carry the same enable.
-    output wire [7:0]  imem_addr,
+    output wire [8:0]  imem_addr,
     output wire [7:0]  imem_men,
     output wire [7:0]  imem_ren,
     output wire [7:0]  imem_wen,
@@ -171,7 +171,7 @@ module tt_um_pemu_pe (
     // State
     // ------------------------------------------------------------------
     reg [2:0]  state;
-    reg [7:0]  pc;
+    reg [8:0]  pc;
     reg [15:0] regs [0:15];
     // flag_n is architectural state per ISA §5.1 (set on every ALU/SHIFT/CMP
     // result) but no JMP condition reads N; it is write-only in hardware.
@@ -189,7 +189,7 @@ module tt_um_pemu_pe (
     reg [31:0] ts;                 // prescaled timestamp (runs in HLT per T16)
     reg [12:0] prescale_cnt;
     reg [31:0] cycles_r;           // raw PE cycle counter (frozen in HLT)
-    reg [7:0]  retstack [0:3];
+    reg [8:0]  retstack [0:3];
     reg [2:0]  rsp;
     reg [15:0] cts_hi;
     reg [7:0]  cts_pins;
@@ -323,11 +323,11 @@ module tt_um_pemu_pe (
     // Next fetch address (branch-resolved, combinational). The synchronous
     // IMEM macro latches this at the clock edge; DOUT is the instruction
     // for the following cycle.
-    wire [7:0] pc_plus1 = pc + 8'd1;
-    wire [7:0] next_pc_addr =
-        (exec_active && opcode == OP_JMP && jmp_taken) ? instr[19:12] :
-        (exec_active && opcode == OP_DJNZ && djnz_take) ? instr[15:8] :
-        (exec_active && opcode == OP_CALLRET && !instr[11] && rsp != 3'd4) ? instr[19:12] :
+    wire [8:0] pc_plus1 = pc + 9'd1;
+    wire [8:0] next_pc_addr =
+        (exec_active && opcode == OP_JMP && jmp_taken) ? instr[20:12] :
+        (exec_active && opcode == OP_DJNZ && djnz_take) ? instr[16:8] :
+        (exec_active && opcode == OP_CALLRET && !instr[11] && rsp != 3'd4) ? instr[20:12] :
         (exec_active && opcode == OP_CALLRET && instr[11] && rsp != 3'd0) ? retstack[rsp[1:0] - 2'd1] :
         pc_plus1;
 
@@ -389,7 +389,7 @@ module tt_um_pemu_pe (
 
         if (!rst_n || prog_mode) begin
             state           <= ST_PRIME;
-            pc              <= 8'd0;
+            pc              <= 9'd0;
             for (i = 0; i < 16; i = i + 1) regs[i] <= 16'd0;
             flag_z          <= 1'b0;
             flag_n          <= 1'b0;
@@ -407,7 +407,7 @@ module tt_um_pemu_pe (
             prescale_cnt    <= 13'd0;
             cycles_r        <= 32'd0;
             rsp             <= 3'd0;
-            for (i = 0; i < 4; i = i + 1) retstack[i] <= 8'd0;
+            for (i = 0; i < 4; i = i + 1) retstack[i] <= 9'd0;
             cts_hi          <= 16'd0;
             cts_pins        <= 8'd0;
             evtflag         <= 16'd0;
@@ -483,7 +483,7 @@ module tt_um_pemu_pe (
                 if (prog_mode_d && !prog_mode && !halt_req) begin
                     halted <= 1'b0;
                     state  <= ST_BASE;
-                    pc     <= 8'd0;
+                    pc     <= 9'd0;
                 end
             end else if (prog_mode_d) begin
                 // GO while running: the IMEM macro was already primed with
@@ -742,14 +742,14 @@ module tt_um_pemu_pe (
                             OP_JMP: begin
                                 if (jmp_cond_reserved)
                                     sticky[ST_CONFIG_ERR] <= 1'b1;
-                                pc <= jmp_taken ? instr[19:12] : pc_plus1;
+                                pc <= jmp_taken ? instr[20:12] : pc_plus1;
                                 if (dly != 5'd0) begin
                                     state <= ST_DELAY; dcnt <= dly;
                                 end else if (halt_req) halted <= 1'b1;
                             end
                             OP_DJNZ: begin
                                 regs[instr[20:17]] <= djnz_new;
-                                pc <= djnz_take ? instr[15:8] : pc_plus1;
+                                pc <= djnz_take ? instr[16:8] : pc_plus1;
                                 if (dly != 5'd0) begin
                                     state <= ST_DELAY; dcnt <= dly;
                                 end else if (halt_req) halted <= 1'b1;
@@ -764,7 +764,7 @@ module tt_um_pemu_pe (
                                     end else begin
                                         retstack[rsp[1:0]] <= pc_plus1;
                                         rsp <= rsp + 3'd1;
-                                        pc <= instr[19:12];
+                                        pc <= instr[20:12];
                                     end
                                 end else begin
                                     // RET
@@ -872,8 +872,8 @@ module tt_um_pemu_pe (
     // ST_DELAY/ST_SLEEP: pc ALREADY advanced (pc<=pc_plus1) at entry;
     // exit holds pc, so prefetch pc (pc_plus1 would skip an instruction).
     // Halted: hold pc. Prog mode: loader writes.
-    assign imem_addr = prog_mode ? ((prog_wen || prog_ren) ? prog_addr : 8'd0) :
-                       (state == ST_PRIME) ? 8'd0 :
+    assign imem_addr = prog_mode ? ((prog_wen || prog_ren) ? prog_addr : 9'd0) :
+                       (state == ST_PRIME) ? 9'd0 :
                        ((state == ST_BASE) && !halted) ? next_pc_addr :
                        (state == ST_WAIT) ? pc_plus1 : pc;
     assign imem_men  = 8'hFF;

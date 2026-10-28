@@ -62,7 +62,7 @@ module tt_um_pemu_host (
     input  wire        evt_pulse,
     // IMEM loader (PE held in reset while prog_mode=1)
     output wire        prog_mode,
-    output wire [7:0]  prog_addr,
+    output wire [8:0]  prog_addr,
     output wire [31:0] prog_din,
     output wire        prog_wen,
     output wire        prog_ren,       // [AMD-B] VERIFY_IMEM read enable -> PE
@@ -393,7 +393,8 @@ module tt_um_pemu_host (
     reg [7:0]  cmd_r, len_r, snd_byte;
     reg [10:0] dcnt;          // discard / data byte counter
     // LOAD_IMEM
-    reg [7:0]  nwords, widx, addr8;
+    reg [7:0]  nwords, widx;
+    reg [8:0]  addr9;
     reg [7:0]  addr_hi;
     reg        abyte;         // 0/1 addr bytes received
     reg [1:0]  wbyte;
@@ -413,14 +414,15 @@ module tt_um_pemu_host (
     reg [7:0]  sram_to;
     // outputs
     reg        prog_mode_r, ena_d;
-    reg [7:0]  prog_addr_r;
+    reg [8:0]  prog_addr_r;
     reg [31:0] prog_din_r;
     reg        prog_wen_r;
     // [AMD-B] VERIFY_IMEM / HALT_REQ / GO-pulse
     reg        prog_ren_r;
     reg        halt_req_r;
     reg [1:0]  go_cnt;
-    reg [7:0]  vaddr_hi, vaddr_lo, vnwords, vcur, vrem;
+    reg [7:0]  vaddr_hi, vaddr_lo, vnwords, vrem;
+    reg [8:0]  vcur;
     reg [31:0] vwacc;
     reg        vmore;
     reg        host_rd_en_r;
@@ -450,7 +452,7 @@ module tt_um_pemu_host (
             m_st <= S_IDLE; snd_ret <= S_IDLE;
             cmd_r <= 8'd0; len_r <= 8'd0; snd_byte <= 8'd0;
             dcnt <= 11'd0; dleft <= 11'd0;
-            nwords <= 8'd0; widx <= 8'd0; addr8 <= 8'd0; addr_hi <= 8'd0;
+            nwords <= 8'd0; widx <= 8'd0; addr9 <= 9'd0; addr_hi <= 8'd0;
             abyte <= 1'b0; wbyte <= 2'd0; wacc <= 32'd0;
             rxw_acc <= 8'd0; rxw_half <= 1'b0;
             rtx_ret <= 8'd0; rtx_left <= 9'd0; rtx_word <= 16'd0;
@@ -458,10 +460,10 @@ module tt_um_pemu_host (
             rtr_left <= 5'd0; rtr_b <= 3'd0; sram_to <= 8'd0;
             prog_mode_r <= 1'b1;   // power-on = PROG (PE held in reset)
             ena_d <= 1'b1;
-            prog_addr_r <= 8'd0; prog_din_r <= 32'd0; prog_wen_r <= 1'b0;
+            prog_addr_r <= 9'd0; prog_din_r <= 32'd0; prog_wen_r <= 1'b0;
             prog_ren_r <= 1'b0; halt_req_r <= 1'b0; go_cnt <= 2'd0;
             vaddr_hi <= 8'd0; vaddr_lo <= 8'd0; vnwords <= 8'd0;
-            vcur <= 8'd0; vrem <= 8'd0; vwacc <= 32'd0; vmore <= 1'b0;
+            vcur <= 9'd0; vrem <= 8'd0; vwacc <= 32'd0; vmore <= 1'b0;
             host_rd_en_r <= 1'b0; host_rd_addr_r <= 10'd0;
             tx_start <= 1'b0; tx_byte <= 8'd0;
             tx_rd_en <= 1'b0; rx_fw_en <= 1'b0; rx_fw_data <= 16'd0;
@@ -631,14 +633,14 @@ module tt_um_pemu_host (
                             addr_hi <= rx_byte;
                             abyte  <= 1'b1;
                         end else begin
-                            // full addr = {addr_hi, rx_byte}; IMEM is
-                            // 256 words so addr[15:8] must be 0 and
-                            // addr[7:0] + nwords <= 256.
-                            if (addr_hi != 8'd0 ||
-                                ({1'b0, rx_byte} + {1'b0, nwords}) > 9'd256) begin
+                            // full addr = {addr_hi, rx_byte} (16-bit);
+                            // IMEM is 512 words, so the span
+                            // [addr, addr + nwords) must satisfy
+                            // addr + nwords <= 512.
+                            if (({1'b0, addr_hi, rx_byte} + {9'd0, nwords}) > 17'd512) begin
                                 dcnt <= dleft; m_st <= S_DISCN;
                             end else begin
-                                addr8 <= rx_byte;
+                                addr9 <= {addr_hi[0], rx_byte};
                                 widx <= 8'd0; wbyte <= 2'd0; wacc <= 32'd0;
                                 if (dleft == 11'd0) begin
                                     // LEN=2: zero data words -> ACK now
@@ -658,7 +660,7 @@ module tt_um_pemu_host (
                     end
                 end
                 S_LDW: begin
-                    prog_addr_r <= addr8 + widx;
+                    prog_addr_r <= addr9 + {1'b0, widx};
                     prog_din_r  <= wacc;
                     prog_wen_r  <= 1'b1;   // 1 cycle, full-word write
                     if (dleft == 11'd0) begin
@@ -805,13 +807,12 @@ module tt_um_pemu_host (
                 S_VFNW: begin
                     if (rx_valid) begin
                         vnwords <= rx_byte;
-                        // range check: high addr byte must be 0 and the span
-                        // [addr_lo, addr_lo+nwords) must fit 256 words
-                        if (vaddr_hi != 8'd0 ||
-                            ({1'b0, vaddr_lo} + {1'b0, rx_byte}) > 9'd256) begin
+                        // range check: full 16-bit base {vaddr_hi, vaddr_lo};
+                        // the span [base, base+nwords) must fit 512 words
+                        if (({1'b0, vaddr_hi, vaddr_lo} + {9'd0, rx_byte}) > 17'd512) begin
                             snd_byte <= NACK_ERR; snd_ret <= S_IDLE; m_st <= S_TXB;
                         end else begin
-                            vcur <= vaddr_lo; vrem <= rx_byte;
+                            vcur <= {vaddr_hi[0], vaddr_lo}; vrem <= rx_byte;
                             snd_byte <= ACK_OK;
                             snd_ret <= (rx_byte == 8'd0) ? S_IDLE : S_VF0;
                             m_st <= S_TXB;
@@ -832,7 +833,7 @@ module tt_um_pemu_host (
                     if (vrem == 8'd1) begin
                         vmore <= 1'b0;
                     end else begin
-                        vcur <= vcur + 8'd1; vrem <= vrem - 8'd1; vmore <= 1'b1;
+                        vcur <= vcur + 9'd1; vrem <= vrem - 8'd1; vmore <= 1'b1;
                     end
                     m_st <= S_VF3;
                 end
