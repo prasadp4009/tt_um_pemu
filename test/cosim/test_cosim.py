@@ -33,18 +33,23 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge, Timer
 
-REC_SIZE = 121
+REC_SIZE = 122
 HDR_SIZE = 47
 
-# field offsets in the 121-byte record
-O_PINS, O_PC, O_REGS = 0, 1, 2
-O_ZNC, O_STICKY = 34, 35
-O_PMASK, O_PDIR, O_PMODE = 37, 38, 39
-O_PINDRV, O_SYNC0, O_SYNC1 = 41, 42, 43
-O_TS, O_EVT = 44, 48
-O_RXLEN, O_RX = 50, 51
-O_TXLEN, O_TX = 83, 84
-O_TRIG, O_OBSEN, O_WMARK, O_PRESC, O_TRACELEN = 116, 117, 118, 119, 120
+# COS2 trace format (see firmware/tools/record_cosim.py for the full
+# field-by-field COS1->COS2 delta): magic "COS2"; header final_pc is
+# u16 LE at bytes 9-10 (header still 47 bytes); per-record pc is u16 LE
+# at bytes 1-2, so the record is 122 bytes and every field after pc is
+# shifted +1 vs COS1. COS1 traces are NOT accepted -- re-record in COS2.
+# field offsets in the 122-byte record
+O_PINS, O_PC, O_REGS = 0, 1, 3
+O_ZNC, O_STICKY = 35, 36
+O_PMASK, O_PDIR, O_PMODE = 38, 39, 40
+O_PINDRV, O_SYNC0, O_SYNC1 = 42, 43, 44
+O_TS, O_EVT = 45, 49
+O_RXLEN, O_RX = 51, 52
+O_TXLEN, O_TX = 84, 85
+O_TRIG, O_OBSEN, O_WMARK, O_PRESC, O_TRACELEN = 117, 118, 119, 120, 121
 
 
 def b(rec, off):
@@ -56,7 +61,11 @@ def w(rec, off):
 
 
 def ts_of(rec):
-    return rec[44] | (rec[45] << 8) | (rec[46] << 16) | (rec[47] << 24)
+    return rec[O_TS] | (rec[O_TS + 1] << 8) | (rec[O_TS + 2] << 16) | (rec[O_TS + 3] << 24)
+
+
+def pc_of(rec):
+    return w(rec, O_PC)
 
 
 def reg_of(rec, r):
@@ -83,10 +92,10 @@ async def test_replay(dut):
 
     with open(trace_path, "rb") as f:
         data = f.read()
-    assert data[0:4] == b"COS1", "bad trace magic"
+    assert data[0:4] == b"COS2", "bad trace magic (COS2 only; re-record COS1 traces)"
     n = struct.unpack("<I", data[4:8])[0]
     gold_halted = data[8]
-    gold_final_pc = data[9]
+    gold_final_pc = struct.unpack("<H", data[9:11])[0]
     init_rx_len = data[12]
     init_rx = [struct.unpack("<H", data[15 + 2 * i:17 + 2 * i])[0]
                for i in range(16)]
@@ -150,9 +159,9 @@ async def test_replay(dut):
         for jj in range(max(1, kk - 3), kk + 1):
             r = recs[jj - 1]
             lines.append(
-                "    @%d pc=%02x r0=%04x r1=%04x r2=%04x r3=%04x "
+                "    @%d pc=%03x r0=%04x r1=%04x r2=%04x r3=%04x "
                 "drv=%02x sync1=%02x ts=%d" % (
-                    jj, b(r, O_PC), reg_of(r, 0), reg_of(r, 1),
+                    jj, pc_of(r), reg_of(r, 0), reg_of(r, 1),
                     reg_of(r, 2), reg_of(r, 3), b(r, O_PINDRV),
                     b(r, O_SYNC1), ts_of(r)))
         return "\n".join(lines)
@@ -184,8 +193,8 @@ async def test_replay(dut):
     def check_state(rec, kk, wait_rd=None):
         pe = dut.u_pe
         if wait_rd is None:
-            if int(pe.pc.value) != b(rec, O_PC):
-                fail("pc", b(rec, O_PC), int(pe.pc.value), kk)
+            if int(pe.pc.value) != pc_of(rec):
+                fail("pc", pc_of(rec), int(pe.pc.value), kk)
         for i in range(16):
             if i == wait_rd:
                 continue  # WAIT Rd commits post-tick in golden; checked at k+1
@@ -256,7 +265,7 @@ async def test_replay(dut):
 
     def wait_exit_rd(k, prev_state, cur_state):
         rec = recs[k - 1]
-        pc = rec[O_PC]
+        pc = pc_of(rec)
         if pc >= len(hexwords):
             return None
         instr = hexwords[pc]
@@ -265,7 +274,7 @@ async def test_replay(dut):
         rd = (instr >> 9) & 0xF
         if k == n:
             return rd  # WAIT -> HLT: the final tick must be the exit
-        if recs[k][O_PC] != pc:
+        if pc_of(recs[k]) != pc:
             return rd  # next tick moved on: this was the exit tick
         # Next tick still shows the WAIT pc: mid-poll, unless the RTL really
         # exited and the next instruction jumped straight back (ST_WAIT ->

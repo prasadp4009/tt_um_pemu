@@ -33,7 +33,7 @@ module cosim_top (
     output wire        pe_halted
 );
     // PE <-> IMEM macro
-    wire [7:0]  imem_addr;
+    wire [8:0]  imem_addr;
     wire [7:0]  imem_men, imem_wen, imem_ren;
     wire [31:0] imem_din, imem_dout;
     wire [31:0] imem_bm;
@@ -76,7 +76,7 @@ module cosim_top (
         .rst_n         (rst_n),
         .ena           (1'b1),
         .prog_mode     (1'b0),
-        .prog_addr     (8'b0),
+        .prog_addr     (9'b0),
         .prog_din      (32'b0),
         .prog_wen      (1'b0),
         .prog_ren      (1'b0),
@@ -159,7 +159,7 @@ module cosim_top (
         .trace_wm      (obs_trace_wm)
     );
 
-    RM_IHPSG13_1P_256x32_c2_bm_bist u_imem (
+    RM_IHPSG13_1P_512x32_c2_bm_bist u_imem (
         .A_CLK      (clk),
         .A_MEN      (imem_men[0]),
         .A_WEN      (imem_wen[0]),
@@ -174,7 +174,7 @@ module cosim_top (
         .A_BIST_MEN (1'b0),
         .A_BIST_WEN (1'b0),
         .A_BIST_REN (1'b0),
-        .A_BIST_ADDR(8'b0),
+        .A_BIST_ADDR(9'b0),
         .A_BIST_DIN (32'b0),
         .A_BIST_BM  (32'b0)
     );
