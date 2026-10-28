@@ -1,0 +1,275 @@
+INFO: [Common 17-3922] A valid Vivado Design Suite BASIC license has been detected. Your current license is active and will expire on 04-jul-2027.
+#-----------------------------------------------------------
+# Vivado v2026.1 (64-bit)
+# SW Build 6511674 on Tue Jun 16 11:01:26 MDT 2026
+# IP Build 6504888 on Tue Jun 09 09:05:25 MDT 2026
+# SharedData Build 6501428 on Mon Jun 08 17:34:18 MDT 2026
+# Start of session at: Wed Oct 28 12:37:42 2026
+# Process ID         : 621142
+# Current directory  : /home/jarvis/asic/projects/js-pemu
+# Command line       : vivado -mode batch -log fpga/logs/test512_spi_50_fault1_fixed.log -journal /tmp/fault_fixed.jou -source fpga/test_tt.tcl -tclargs 50 1 spi
+# Log file           : /home/jarvis/asic/projects/js-pemu/fpga/logs/test512_spi_50_fault1_fixed.log
+# Journal file       : /tmp/fault_fixed.jou
+# Running On         : StarkLabs
+# Platform           : Ubuntu
+# Operating System   : Ubuntu 26.04.1 LTS
+# Processor Detail   : AMD Ryzen 7 5800X 8-Core Processor
+# CPU Frequency      : 3829.148 MHz
+# CPU Physical cores : 8
+# CPU Logical cores  : 16
+# Host memory        : 32475 MB
+# Swap memory        : 32000 MB
+# Total Virtual      : 64476 MB
+# Available Virtual  : 57991 MB
+#-----------------------------------------------------------
+source fpga/test_tt.tcl
+# set FREQ  [lindex $argv 0]
+# set fault [lindex $argv 1]
+# set PROTO [expr {$argc >= 3 ? [lindex $argv 2] : "spi"}]
+# set exp_ms [expr {$PROTO eq "spi" ? 0x7FFF : 0x03FF}]
+# puts "=== TT TEST ${FREQ} MHz fault=$fault proto=$PROTO ==="
+=== TT TEST 50 MHz fault=1 proto=spi ===
+# open_hw_manager
+# connect_hw_server -url TCP:127.0.0.1:3121
+INFO: [Labtools 27-2285] Connecting to hw_server url TCP:127.0.0.1:3121
+INFO: [Labtools 27-3415] Connecting to cs_server url TCP:localhost:0
+INFO: [Labtools 27-3417] Launching cs_server...
+INFO: [Labtools 27-2221] Launch Output:
+Cannot send datagram packet to /100.113.169.255
+OSError: [Errno 126] Required key not available
+  File "chipscopy/tcf/services/local/LocatorService.py", line 706, in __sendDatagramPacket
+Cannot send datagram packet to /100.97.156.255
+OSError: [Errno 126] Required key not available
+  File "chipscopy/tcf/services/local/LocatorService.py", line 706, in __sendDatagramPacket
+
+****** Xilinx cs_server v2026.1
+  **** Build Info : #60 | 2026-06-15 19:15 UTC | a9691a9
+    ** Copyright 2017-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+
+
+
+# open_hw_target
+INFO: [Labtoolstcl 44-466] Opening hw_target 127.0.0.1:3121/xilinx_tcf/Digilent/210279760184A
+# set dev [lindex [get_hw_devices xc7z010_1] 0]
+# current_hw_device $dev
+# refresh_hw_device $dev
+INFO: [Labtools 27-2302] Device xc7z010 (JTAG device index = 1) is programmed with a design that has 2 VIO core(s).
+WARNING: [Labtools 27-1347] Unable to find Debug Probes file []. Please update hw_device property [PROBES.FILE]
+ Update of hw_probe objects, will be skipped.
+WARNING: [Labtools 27-1974] Mismatch between the design programmed into the device xc7z010_1 and the probes file(s) .
+The device design has 0 ILA core(s) and 2 VIO core(s). 0 ILA core(s) and 0 VIO core(s) are matched in the probes file(s).
+Resolution: 
+1. Reprogram device with the correct programming file and associated probes file(s) OR
+2. Goto device properties and associate the correct probes file(s) with the programming file already programmed in the device.
+# set bitstem [expr {$PROTO eq "spi" ? "emu_tt_${FREQ}" : "emu_tt_${FREQ}_${PROTO}"}]
+# set bitfile "fpga/${bitstem}.bit"
+# if {![file exists $bitfile]} { puts "FAIL: bitfile not found: $bitfile"; exit 1 }
+# set_property PROGRAM.FILE [file normalize $bitfile] $dev
+# set_property PROBES.FILE [file normalize "fpga/${bitstem}.ltx"] $dev
+# program_hw_devices $dev
+INFO: [Labtools 27-3164] End of startup status: HIGH
+# refresh_hw_device $dev
+INFO: [Labtools 27-2302] Device xc7z010 (JTAG device index = 1) is programmed with a design that has 2 VIO core(s).
+INFO: [Labtools 27-1889] Uploading output probe values for VIO core [hw_vio_1]
+# set vio_main ""
+# set vio_dbg ""
+# foreach v [get_hw_vios] {
+#     refresh_hw_vio $v
+#     set has_main 0
+#     set has_dbg 0
+#     foreach p [get_hw_probes -of_objects $v] {
+#         set pname [lindex [split $p /] end]
+#         if {$pname eq "vio_start_test"} { set has_main 1 }
+#         if {$pname eq "tt_dbg0"}        { set has_dbg 1 }
+#     }
+#     if {$has_main} { set vio_main $v }
+#     if {$has_dbg}  { set vio_dbg $v }
+# }
+# if {$vio_main eq ""} { puts "FAIL: main VIO (vio_start_test) not found"; exit 1 }
+# if {$vio_dbg eq ""}  { puts "FAIL: dbg VIO (tt_dbg0) not found"; exit 1 }
+# puts "main VIO: $vio_main"
+main VIO: hw_vio_1
+# puts "dbg  VIO: $vio_dbg"
+dbg  VIO: hw_vio_2
+# puts "programmed $bitfile"
+programmed fpga/emu_tt_50.bit
+# set ::probe_map [dict create]
+# foreach p [get_hw_probes -of_objects $vio_main] {
+#     set pname [lindex [split $p /] end]
+#     dict set ::probe_map $pname $p
+# }
+# set ::vio $vio_main
+# proc vout {sig val} {
+#     set p [dict get $::probe_map $sig]
+#     set_property OUTPUT_VALUE $val $p
+#     commit_hw_vio $::vio
+# }
+# proc vin {sig} {
+#     refresh_hw_vio $::vio
+#     set p [dict get $::probe_map $sig]
+#     return [get_property INPUT_VALUE $p]
+# }
+# proc hex2int {h} { scan $h %x v; return $v }
+# set ::dbg_map [dict create]
+# foreach p [get_hw_probes -of_objects $vio_dbg] {
+#     set pname [lindex [split $p /] end]
+#     dict set ::dbg_map $pname $p
+# }
+# proc din {sig} {
+#     refresh_hw_vio $::vio_dbg
+#     set p [dict get $::dbg_map $sig]
+#     return [hex2int [get_property INPUT_VALUE $p]]
+# }
+# set hb1 [hex2int [vin vio_heartbeats]]
+# after 1000
+# set hb2 [hex2int [vin vio_heartbeats]]
+# puts "heartbeat1=0x[format %08x $hb1] heartbeat2=0x[format %08x $hb2]"
+heartbeat1=0x00d96100 heartbeat2=0x03d67b66
+# if {$hb2 == $hb1} { puts "FAIL: test clock not toggling (MMCM not locked?)"; exit 1 }
+# puts "clocks OK: test_clk alive"
+clocks OK: test_clk alive
+# vout vio_reset 1
+# after 200
+# vout vio_reset 0
+# after 200
+# vout vio_inject_fault $fault
+# vout vio_start_test 1
+# set status 0
+# set done 0
+# for {set i 0} {$i < 120} {incr i} {
+#     after 1000
+#     set status [hex2int [vin vio_status]]
+#     set tpass [expr {($status >> 31) & 1}]
+#     set fcode [expr {($status >> 16) & 0xFF}]
+#     if {$tpass || $fcode != 0} { set done 1; break }
+# }
+# if {!$done} { puts "FAIL: test did not complete in 120s, status=0x[format %08x $status]"; exit 1 }
+# set ms     [expr {$status & 0xFFFF}]
+# set fcode  [expr {($status >> 16) & 0xFF}]
+# set tpass  [expr {($status >> 31) & 1}]
+# set sig    [hex2int [vin vio_signature]]
+# set dbg0   [din tt_dbg0]
+# set dbg1   [din tt_dbg1]
+# set dbg2   [din tt_dbg2]
+# proc din_suffix {suffix} {
+#     foreach pp [get_hw_probes -of_objects $::vio_dbg] {
+#         set pn [lindex [split $pp /] end]
+#         if {[string match "*$suffix" $pn]} {
+#             refresh_hw_vio $::vio_dbg
+#             return [hex2int [get_property INPUT_VALUE $pp]]
+#         }
+#     }
+#     return -1
+# }
+# set tap_oe  [din_suffix "uio_oe_w"]
+# set tap_out [din_suffix "uio_out_w"]
+# set tap_r15 [din_suffix "regs\[15\]_orig"]
+# set tap_rxc [din_suffix "rx_cnt_orig"]
+# puts "TAP: oe=0x[format %02x [expr {$tap_oe & 0xFF}]] out=0x[format %02x [expr {$tap_out & 0xFF}]] r15=0x[format %04x [expr {$tap_r15 & 0xFFFF}]] rx_cnt=$tap_rxc"
+TAP: oe=0x2e out=0x21 r15=0xffff rx_cnt=0
+# set t2_state [din_suffix "state_orig"]
+# set t2_pc [din_suffix "pc_orig"]
+# set t2_tick [din_suffix "tick_en_orig"]
+# set t2_halted [din_suffix "halted_orig"]
+# set t2_pmd [din_suffix "prog_mode_d_orig"]
+# set t2_rxe [din_suffix "rx_empty_orig"]
+# set t2_instr [din_suffix "imem_dout_orig"]
+# puts "TAP2: state=$t2_state pc=0x[format %02x [expr {$t2_pc & 0xFF}]] tick=$t2_tick halted=$t2_halted pmd=$t2_pmd rxempty=$t2_rxe instr=0x[format %04x [expr {$t2_instr & 0xFFFF}]]"
+TAP2: state=1 pc=0x46 tick=-1 halted=1 pmd=0 rxempty=1 instr=0x5800
+# proc dec_snap {nm} {
+#     # robust probe lookup: exact name first, then suffix match
+#     set r -1
+#     if {[dict exists $::dbg_map $nm]} {
+#         set r [din $nm]
+#     } else {
+#         foreach pp [get_hw_probes -of_objects $::vio_dbg] {
+#             set pn [lindex [split $pp /] end]
+#             if {[string match "*$nm" $pn]} {
+#                 refresh_hw_vio $::vio_dbg
+#                 set r [hex2int [get_property INPUT_VALUE $pp]]
+#                 break
+#             }
+#         }
+#     }
+#     if {$r == -1} { puts "SNAP $nm: <probe not found>"; return }
+#     if {$r == 0} { puts "SNAP $nm: <empty - trigger never fired>"; return }
+#     set pc     [expr {($r >> 24) & 0xFF}]
+#     set state  [expr {($r >> 21) & 0x7}]
+#     set tick   [expr {($r >> 20) & 0x1}]
+#     set halted [expr {($r >> 19) & 0x1}]
+#     set pmd    [expr {($r >> 18) & 0x1}]
+#     set rxe    [expr {($r >> 17) & 0x1}]
+#     set r15    [expr {($r >> 9) & 0xFF}]
+#     set oe     [expr {($r >> 1) & 0xFF}]
+#     puts "SNAP $nm: raw=0x[format %08x $r] pc=0x[format %02x $pc] state=$state tick=$tick halted=$halted pmd=$pmd rxempty=$rxe r15_lo=0x[format %02x $r15] uio_oe=0x[format %02x $oe]"
+# }
+# dec_snap snap_go
+SNAP snap_go: raw=0x0f32025c pc=0x0f state=1 tick=1 halted=0 pmd=0 rxempty=1 r15_lo=0x01 uio_oe=0x2e
+# dec_snap snap_ee
+SNAP snap_ee: raw=0x462a025c pc=0x46 state=1 tick=0 halted=1 pmd=0 rxempty=1 r15_lo=0x01 uio_oe=0x2e
+# puts "status=0x[format %08x $status] (tt_pass=$tpass fail_code=0x[format %02x $fcode] milestones=0x[format %04x $ms])"
+status=0x00ee01ff (tt_pass=0 fail_code=0xee milestones=0x01ff)
+# puts "signature=0x[format %08x $sig]"
+signature=0xcb6b9ef1
+# set mnames {TX_IDLE ST_PROG LOAD0 LOAD1 VF0 VF1 GO RUNNING DRAIN1 HALTED DRAIN2 XFER PULSE SPIOK TXFIFO}
+# puts "--- milestones ---"
+--- milestones ---
+# for {set b 0} {$b < 15} {incr b} {
+#     set hit [expr {($ms >> $b) & 1}]
+#     puts "  [format %2d $b] [lindex $mnames $b]: [expr {$hit ? {HIT} : {miss}}]"
+# }
+   0 TX_IDLE: HIT
+   1 ST_PROG: HIT
+   2 LOAD0: HIT
+   3 LOAD1: HIT
+   4 VF0: HIT
+   5 VF1: HIT
+   6 GO: HIT
+   7 RUNNING: HIT
+   8 DRAIN1: HIT
+   9 HALTED: miss
+  10 DRAIN2: miss
+  11 XFER: miss
+  12 PULSE: miss
+  13 SPIOK: miss
+  14 TXFIFO: miss
+# set st_prog [expr {$dbg0 & 0xFF}]
+# set st_run  [expr {($dbg0 >> 8) & 0xFF}]
+# set st_halt [expr {($dbg0 >> 16) & 0xFF}]
+# puts "RD_STATUS: prog=0x[format %02x $st_prog] run=0x[format %02x $st_run] halt=0x[format %02x $st_halt]"
+RD_STATUS: prog=0x10 run=0x90 halt=0x50
+# set saw_pulse [expr {($dbg1 >> 31) & 1}]
+# set spi_ok    [expr {($dbg1 >> 30) & 1}]
+# set edge_cnt  [expr {($dbg1 >> 16) & 0xFF}]
+# set mosi      [expr {$dbg1 & 0xFFFF}]
+# puts "SPI pins: saw_pulse=$saw_pulse spi_ok=$spi_ok sclk_edges=$edge_cnt mosi=0x[format %04x $mosi] (expect 16 / 0xa53c)"
+SPI pins: saw_pulse=0 spi_ok=0 sclk_edges=0 mosi=0x0000 (expect 16 / 0xa53c)
+# set txf_n     [expr {($dbg2 >> 24) & 0xFF}]
+# set txf_zeros [expr {($dbg2 >> 16) & 0xFF}]
+# set txf_bad   [expr {($dbg2 >> 15) & 1}]
+# set three_z   [expr {($dbg2 >> 14) & 1}]
+# puts "TXFIFO: words=$txf_n zeros=$txf_zeros bad=$txf_bad three_consecutive_zero=$three_z"
+TXFIFO: words=0 zeros=0 bad=0 three_consecutive_zero=0
+# if {$fault == 1} {
+#     if {!$tpass && $fcode == 0xEE} {
+#         puts "VACUITY-OK: fault run caught at post-HALT RD_STATUS check (fail_code=0xEE via T_DG drain), no false pass"
+#     } else {
+#         puts "FAIL: vacuity run did not behave as designed (tpass=$tpass fcode=0x[format %02x $fcode])"
+#         exit 1
+#     }
+# } else {
+#     if {$tpass && $fcode == 0} {
+#         if {$ms == $exp_ms} {
+#             puts "PASS: milestones 0x[format %04x $ms] as expected, signature=0x[format %08x $sig]"
+#         } else {
+#             puts "FAIL: tt_pass set but milestones 0x[format %04x $ms] != expected 0x[format %04x $exp_ms]"
+#             exit 1
+#         }
+#     } else {
+#         puts "FAIL: tpass=$tpass fcode=0x[format %02x $fcode]"
+#         exit 1
+#     }
+# }
+VACUITY-OK: fault run caught at post-HALT RD_STATUS check (fail_code=0xEE via T_DG drain), no false pass
+INFO: [Common 17-206] Exiting Vivado at Wed Oct 28 12:37:52 2026...

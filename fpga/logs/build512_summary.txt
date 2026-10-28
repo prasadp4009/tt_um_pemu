@@ -1,0 +1,39 @@
+=== BUILD 50 spi -> emu_tt_50 ===
+VERIFY OK: 71/71 words byte-identical, IMG_WORDS=9'd71
+BUILD freq=50 proto=spi rc=0 dur=311s bit_bytes=2083941 ltx_bytes=73221 crit_or_err_lines=1
+#   puts "BUILD FAIL: synthesis did not complete"; exit 1
+# puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"
+INFO: TT build done -> fpga/emu_tt_50.bit + fpga/emu_tt_50.ltx
+=== BUILD 50 uart -> emu_tt_50_uart ===
+VERIFY OK: 125/125 words byte-identical, IMG_WORDS=9'd125
+BUILD freq=50 proto=uart rc=0 dur=342s bit_bytes=2083941 ltx_bytes=73216 crit_or_err_lines=1
+#   puts "BUILD FAIL: synthesis did not complete"; exit 1
+# puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"
+INFO: TT build done -> fpga/emu_tt_50_uart.bit + fpga/emu_tt_50_uart.ltx
+=== BUILD 50 i2c -> emu_tt_50_i2c ===
+VERIFY OK: 209/209 words byte-identical, IMG_WORDS=9'd209
+BUILD freq=50 proto=i2c rc=0 dur=348s bit_bytes=2083941 ltx_bytes=73221 crit_or_err_lines=1
+#   puts "BUILD FAIL: synthesis did not complete"; exit 1
+# puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"
+INFO: TT build done -> fpga/emu_tt_50_i2c.bit + fpga/emu_tt_50_i2c.ltx
+=== BUILD 50 onewire -> emu_tt_50_onewire ===
+VERIFY OK: 132/132 words byte-identical, IMG_WORDS=9'd132
+BUILD freq=50 proto=onewire rc=0 dur=324s bit_bytes=2083941 ltx_bytes=73221 crit_or_err_lines=1
+#   puts "BUILD FAIL: synthesis did not complete"; exit 1
+# puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"
+INFO: TT build done -> fpga/emu_tt_50_onewire.bit + fpga/emu_tt_50_onewire.ltx
+=== BUILD 50 usb_full -> emu_tt_50_usb_full ===
+VERIFY OK: 299/299 words byte-identical, IMG_WORDS=9'd299
+BUILD freq=50 proto=usb_full rc=0 dur=304s bit_bytes=2083941 ltx_bytes=73221 crit_or_err_lines=1
+#   puts "BUILD FAIL: synthesis did not complete"; exit 1
+# puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"
+INFO: TT build done -> fpga/emu_tt_50_usb_full.bit + fpga/emu_tt_50_usb_full.ltx
+=== BUILD 125 spi -> emu_tt_125 ===
+VERIFY OK: 71/71 words byte-identical, IMG_WORDS=9'd71
+BUILD freq=125 proto=spi rc=0 dur=322s bit_bytes=2083941 ltx_bytes=73221 crit_or_err_lines=1
+#   puts "BUILD FAIL: synthesis did not complete"; exit 1
+# puts "INFO: TT build done -> fpga/${BITSTEM}.bit + fpga/${BITSTEM}.ltx"
+INFO: TT build done -> fpga/emu_tt_125.bit + fpga/emu_tt_125.ltx
+onewire: 132 words from /home/jarvis/asic/projects/js-pemu/test/cosim/hex/onewire.hex
+VERIFY OK: 132/132 words byte-identical, IMG_WORDS=9'd132
+ALL BUILDS DONE
