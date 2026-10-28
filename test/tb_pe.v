@@ -22,7 +22,7 @@
 //   bash test/run_verilator.sh pe
 //   (verilator --timing; equivalent iverilog: iverilog -g2012 -DSYNTHESIS
 //    -DFUNCTIONAL -o /tmp/tb_pe test/tb_pe.v src/tt_um_pemu_pe.v
-//    <pdk>/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_256x32_c2_bm_bist.v
+//    <pdk>/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_512x32_c2_bm_bist.v
 //    <pdk>/libs.ref/sg13g2_sram/verilog/RM_IHPSG13_1P_core_behavioral_bm_bist.v)
 `default_nettype none
 `timescale 1ns / 1ps
@@ -37,14 +37,15 @@ module tb_pe;
 
     // program port
     reg        prog_mode = 1;
-    reg [7:0]  prog_addr = 0;
+    reg [8:0]  prog_addr = 0;
     reg [31:0] prog_din = 0;
     reg        prog_wen = 0;
     reg        prog_ren = 0;
     wire [31:0] prog_dout;
 
     // IMEM macro
-    wire [7:0]  imem_addr, imem_men, imem_wen, imem_ren;
+    wire [8:0]  imem_addr;
+    wire [7:0]  imem_men, imem_wen, imem_ren;
     wire [31:0] imem_din, imem_bm;
     wire [31:0] imem_dout;
 
@@ -115,12 +116,12 @@ module tb_pe;
         .tx_empty(tx_empty_r), .rx_full(rx_full_r)
     );
 
-    RM_IHPSG13_1P_256x32_c2_bm_bist u_imem (
+    RM_IHPSG13_1P_512x32_c2_bm_bist u_imem (
         .A_CLK(clk), .A_MEN(imem_men[0]), .A_WEN(imem_wen[0]),
         .A_REN(imem_ren[0]), .A_ADDR(imem_addr), .A_DIN(imem_din),
         .A_DLY(1'b1), .A_DOUT(imem_dout), .A_BM(imem_bm),
         .A_BIST_CLK(1'b0), .A_BIST_EN(1'b0), .A_BIST_MEN(1'b0),
-        .A_BIST_WEN(1'b0), .A_BIST_REN(1'b0), .A_BIST_ADDR(8'd0),
+        .A_BIST_WEN(1'b0), .A_BIST_REN(1'b0), .A_BIST_ADDR(9'd0),
         .A_BIST_DIN(32'd0), .A_BIST_BM(32'd0)
     );
 
@@ -232,8 +233,8 @@ module tb_pe;
     // ------------------------------------------------------------------
     // Program load / run helpers
     // ------------------------------------------------------------------
-    reg [31:0] prog [0:255];
-    reg [31:0] img [0:255];
+    reg [31:0] prog [0:511];
+    reg [31:0] img [0:511];
 
     task load_prog(input integer n);
         integer k;
@@ -243,7 +244,7 @@ module tb_pe;
             repeat (2) @(posedge clk);
             for (k = 0; k < n; k = k + 1) begin
                 @(negedge clk);
-                prog_addr = k[7:0]; prog_din = prog[k]; prog_wen = 1;
+                prog_addr = k[8:0]; prog_din = prog[k]; prog_wen = 1;
                 @(negedge clk);
                 prog_wen = 0;
             end
@@ -338,20 +339,20 @@ module tb_pe;
         // ---- LOAD via prog port ----
         for (i = 0; i < 10; i = i + 1) begin
             @(negedge clk);
-            prog_addr = i[7:0]; prog_din = img[i]; prog_wen = 1;
+            prog_addr = i[8:0]; prog_din = img[i]; prog_wen = 1;
             @(negedge clk);
             prog_wen = 0;
         end
         repeat (2) @(posedge clk);
 
         // ---- Amendment A: prog_ren readback ----
-        @(negedge clk); prog_addr = 8'd3; prog_ren = 1;
+        @(negedge clk); prog_addr = 9'd3; prog_ren = 1;
         repeat (3) @(posedge clk);   // addr latch + macro latency
-        check(imem_addr === 8'd3, "prog_ren routes prog_addr to macro");
+        check(imem_addr === 9'd3, "prog_ren routes prog_addr to macro");
         check(prog_dout === img[3], "prog_dout readback word3");
-        @(negedge clk); prog_ren = 0; prog_addr = 8'd0;
+        @(negedge clk); prog_ren = 0; prog_addr = 9'd0;
         repeat (2) @(posedge clk);
-        check(imem_addr === 8'd0, "imem_addr back to 0 (prime)");
+        check(imem_addr === 9'd0, "imem_addr back to 0 (prime)");
 
         // ---- GO ----
         check(prog_wen === 1'b0, "prog_wen deasserted before GO");
@@ -586,11 +587,11 @@ module tb_pe;
         prog[3] = i_hlt();
         load_prog(4); go(); wait_halt(2000);
         check(pe_halted === 1'b1, "HLT regression: halted");
-        check(dut.pc === 8'd1, "HLT regression: PC holds at HLT addr (was pc+1)");
+        check(dut.pc === 9'd1, "HLT regression: PC holds at HLT addr (was pc+1)");
         check(dut.regs[2] === 16'h0000, "HLT regression: post-HLT insn not executed");
         check(dut.regs[1] === 16'h0001, "HLT regression: pre-HLT state intact");
         repeat (5) @(posedge clk); #1;
-        check(dut.pc === 8'd1 && pe_halted, "HLT regression: PC still held 5 cycles later");
+        check(dut.pc === 9'd1 && pe_halted, "HLT regression: PC still held 5 cycles later");
 
         // ---- illegal opcodes: CONFIG_ERR, pc advances ----
         prog[0] = enc(6'd24, 5'd0, 21'd0);
@@ -1234,14 +1235,14 @@ module tb_pe;
         halt_req_r = 0;
         load_prog(12); go();
         to = 0;
-        while (!(dut.state === 3'd1 && dut.pc === 8'd10) && to < 2000) begin
+        while (!(dut.state === 3'd1 && dut.pc === 9'd10) && to < 2000) begin
             @(posedge clk); #1; to = to + 1;
         end
         check(to < 2000, "halt_req: caught ST_BASE of target insn");
         @(negedge clk); halt_req_r = 1;
         wait_halt(2000);
         check(pe_halted === 1'b1, "halt_req: PE halted");
-        check(dut.pc === 8'd11, "halt_req: pc advanced past current insn");
+        check(dut.pc === 9'd11, "halt_req: pc advanced past current insn");
         // RTL halts AFTER current insn completes (at insn boundary)
         check(dut.regs[2] === 16'h0002, "halt_req: current insn DID execute");
         halt_req_r = 0;
@@ -1262,7 +1263,7 @@ module tb_pe;
         trace_full_r = 0; trace_wm_r = 0; cfg_dirty_set_r = 0;
         load_prog(72); go();
         to = 0;
-        while (dut.pc !== 8'd10 && to < 1000) begin @(posedge clk); #1; to = to + 1; end
+        while (dut.pc !== 9'd10 && to < 1000) begin @(posedge clk); #1; to = to + 1; end
         @(negedge clk); trace_full_r = 1; @(negedge clk); trace_full_r = 0;
         @(negedge clk); trace_wm_r = 1;   @(negedge clk); trace_wm_r = 0;
         @(negedge clk); cfg_dirty_set_r = 1; @(negedge clk); cfg_dirty_set_r = 0;
@@ -1273,6 +1274,28 @@ module tb_pe;
         check(dut.regs[4][12] === 1'b0, "obs_clr clears trace_wm sticky");
         check(dut.regs[4][3] === 1'b1, "obs_clr leaves TRACE_FULL sticky");
         check(dut.regs[5][3] === 1'b0, "MSR STATUS W1C clears TRACE_FULL");
+
+        // ============ Part 12: IMEM-512 upper bank (256..511) ============
+        $display("  info: Part 12: upper bank branches");
+        for (i = 0; i < 512; i = i + 1) prog[i] = i_hlt();
+        prog[0]   = i_ldi(4'd1, 16'd2);          // DJNZ counter
+        prog[1]   = i_jmp(9'd300, 4'd0, 5'd0);   // JMP into upper bank
+        prog[300] = i_call(9'd400, 5'd0);        // CALL upper; ret addr = 301
+        prog[301] = i_djnz(4'd1, 9'd310, 5'd0);  // DJNZ to upper target
+        prog[302] = i_jmp(9'd320, 4'd0, 5'd0);   // DJNZ exhausted -> here
+        prog[310] = i_ldi(4'd3, 16'hBEEF);
+        prog[311] = i_jmp(9'd301, 4'd0, 5'd0);   // loop back to DJNZ
+        prog[320] = i_ldi(4'd4, 16'h00AA);
+        prog[321] = i_hlt();
+        prog[400] = i_ldi(4'd5, 16'h5678);       // subroutine (upper bank)
+        prog[401] = i_ret(5'd0);                 // RET to 301 (>255)
+        clear_mon(); pins_in = 8'h00;
+        load_prog(402); go(); wait_halt(5000);
+        check(dut.regs[5] === 16'h5678, "upper: CALL 400 executed sub");
+        check(dut.regs[3] === 16'hBEEF, "upper: DJNZ target 310 reached");
+        check(dut.regs[1] === 16'd0, "upper: DJNZ counter exhausted");
+        check(dut.regs[4] === 16'h00AA, "upper: fall-through to 320");
+        check(dut.pc === 9'd321, "upper: halt pc=321 (9-bit)");
 
         // ================= finish =================
         if (fail) $display("RESULT: FAIL (%0d checks)", nchecks);

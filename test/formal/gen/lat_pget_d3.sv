@@ -5,13 +5,13 @@ module formal_top (input wire clk);
     always @(posedge clk) if (rst_cnt != 4'd8) rst_cnt <= rst_cnt + 4'd1;
     reg [9:0] cyc = 10'd0;
     always @(posedge clk) if (rst_n) cyc <= cyc + 10'd1;
-    reg [7:0] addr_q = 8'd0;
-    wire [7:0] imem_addr;
+    reg [8:0] addr_q = 9'd0;
+    wire [8:0] imem_addr;
     wire [31:0] imem_dout;
     always @(posedge clk) addr_q <= imem_addr;
 
     function [31:0] rom_word;
-        input [7:0] a;
+        input [8:0] a;
         begin
             rom_word = {6'd2, 5'd3, 21'd0};
         end
@@ -23,7 +23,7 @@ module formal_top (input wire clk);
     wire [4:0] h_dly;
     wire [31:0] h_instr;
     wire [2:0] h_state;
-    wire [7:0] h_pc;
+    wire [8:0] h_pc;
     wire h_tick_en;
     wire [7:0] h_sync0, h_sync1;
     wire [7:0] h_pin_drv, h_pmask;
@@ -38,7 +38,7 @@ module formal_top (input wire clk);
 
     tt_um_pemu_pe dut (
         .clk(clk), .rst_n(rst_n), .ena(1'b1),
-        .prog_mode(1'b0), .prog_addr(8'd0), .prog_din(32'd0),
+        .prog_mode(1'b0), .prog_addr(9'd0), .prog_din(32'd0),
         .prog_wen(1'b0), .prog_ren(1'b0), .prog_dout(),
         .imem_addr(imem_addr), .imem_men(), .imem_ren(), .imem_wen(),
         .imem_din(), .imem_bm(), .imem_dout(imem_dout),

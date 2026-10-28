@@ -14,7 +14,7 @@ module xcheck_pe;
     reg rst_n = 0;
     reg [7:0] pins_in = 0;
 
-    wire [7:0] imem_addr;
+    wire [8:0] imem_addr;
     reg [31:0] rom [0:255];
     reg [31:0] imem_dout_r = 0;
     wire [31:0] imem_dout = imem_dout_r;
@@ -39,7 +39,7 @@ module xcheck_pe;
 
     tt_um_pemu_pe dut (
         .clk(clk), .rst_n(rst_n), .ena(1'b1),
-        .prog_mode(1'b0), .prog_addr(8'd0), .prog_din(32'd0),
+        .prog_mode(1'b0), .prog_addr(9'd0), .prog_din(32'd0),
         .prog_wen(1'b0), .prog_ren(1'b0), .prog_dout(),
         .imem_addr(imem_addr), .imem_men(), .imem_ren(), .imem_wen(),
         .imem_din(), .imem_bm(), .imem_dout(imem_dout),

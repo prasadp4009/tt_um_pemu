@@ -33,12 +33,12 @@ module tb_host;
 
     // loader
     wire        prog_mode;
-    wire [7:0]  prog_addr;
+    wire [8:0]  prog_addr;
     wire [31:0] prog_din;
     wire        prog_wen;
     wire        prog_ren;                      // [AMD-B]
     wire [31:0] prog_dout;                     // [AMD-B] TB stub IMEM model
-    assign prog_dout = {8'hA5, 16'h0000, prog_addr};
+    assign prog_dout = {8'hA5, 15'h0000, prog_addr};
     wire        halt_req;                      // [AMD-B]
     wire        tx_empty_w, rx_full_w;         // [AMD-B]
 
@@ -199,9 +199,10 @@ module tb_host;
     // ------------------------------------------------------------------
     // prog loader monitor
     // ------------------------------------------------------------------
-    reg [7:0]  seen_addr [0:255];
+    reg [8:0]  seen_addr [0:511];
     reg [31:0] seen_data [0:255];
     integer seen_n = 0;
+    integer seen_mark = 0;
     always @(posedge clk) begin
         if (prog_wen) begin
             seen_addr[seen_n] = prog_addr;
@@ -290,12 +291,18 @@ module tb_host;
         // ---- 6. LOAD_IMEM errors ----
         fdata[0]=8'h00; fdata[1]=8'h00; fdata[2]=8'hFF;
         send_frame(8'h01, 3); expect_ack(8'h5B, "LOAD bad len NACK");
-        fdata[0]=8'h01; fdata[1]=8'h00;  // addr hi != 0
-        fdata[2]=8'h00; fdata[3]=8'h00; fdata[4]=8'h00; fdata[5]=8'h00;
-        send_frame(8'h01, 6); expect_ack(8'h5B, "LOAD addr hi NACK");
-        fdata[0]=8'h00; fdata[1]=8'hFF;  // addr=255, 2 words -> overflow
+        // [IMEM-512] addr_hi=1 is legal now: addr=256, 1 word -> ACK
+        fdata[0]=8'h01; fdata[1]=8'h00;  // addr=256 (upper bank)
+        fdata[2]=8'hCA; fdata[3]=8'hFE; fdata[4]=8'hBA; fdata[5]=8'hBE;
+        send_frame(8'h01, 6); expect_ack(8'hA5, "LOAD addr=256 ACK (upper)");
+        check(seen_n === 5, "LOAD upper: +1 prog_wen pulse");
+        check(seen_addr[4]===9'd256 && seen_data[4]===32'hCAFEBABE, "LOAD word @256");
+        // [IMEM-512] span boundary 256->512: addr=255, 2 words fits
+        fdata[0]=8'h00; fdata[1]=8'hFF;  // addr=255, 2 words -> 257 <= 512
         for (i=2;i<10;i=i+1) fdata[i]=8'h00;
-        send_frame(8'h01, 10); expect_ack(8'h5B, "LOAD addr+len overflow NACK");
+        send_frame(8'h01, 10); expect_ack(8'hA5, "LOAD 255+2 ACK (fits 512)");
+        check(seen_n === 7, "LOAD 255+2: +2 prog_wen pulses");
+        check(seen_addr[5]===9'd255 && seen_addr[6]===9'd256, "LOAD words @255,256");
 
         // ---- 7. unsupported / unknown / bad-len ----
         // [AMD-B] VERIFY_IMEM: addr=2, nwords=2 -> ACK + 8 bytes MSB-first.
@@ -309,15 +316,58 @@ module tb_host;
         // nwords=0 -> ACK_OK, no data bytes
         fdata[0]=8'h00; fdata[1]=8'h05; fdata[2]=8'h00;
         send_frame(8'h02, 3); expect_ack(8'hA5, "VERIFY_IMEM nwords=0 ack");
-        // addr_hi != 0 -> NACK_ERR
+        // [IMEM-512] addr_hi=1 is legal now: addr=256, nwords=1 -> ACK.
+        // TB stub word for 256 = 0xA5000100 (bytes A5 00 01 00).
         fdata[0]=8'h01; fdata[1]=8'h00; fdata[2]=8'h01;
-        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY_IMEM addr_hi NACK");
-        // addr+len overflow (255+2) -> NACK_ERR
+        send_frame(8'h02, 3); expect_ack(8'hA5, "VERIFY_IMEM addr=256 ack");
+        recv_byte(rb); check(rb===8'hA5,"vrf @256 b3"); recv_byte(rb); check(rb===8'h00,"vrf @256 b2");
+        recv_byte(rb); check(rb===8'h01,"vrf @256 b1"); recv_byte(rb); check(rb===8'h00,"vrf @256 b0");
+        // [IMEM-512] span boundary moved: addr=255, nwords=2 fits -> ACK.
+        // TB stub words: @255 = 0xA50000FF, @256 = 0xA5000100.
         fdata[0]=8'h00; fdata[1]=8'hFF; fdata[2]=8'h02;
-        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY_IMEM overflow NACK");
+        send_frame(8'h02, 3); expect_ack(8'hA5, "VERIFY_IMEM 255+2 ack");
+        recv_byte(rb); check(rb===8'hA5,"vrf @255 b3"); recv_byte(rb); check(rb===8'h00,"vrf @255 b2");
+        recv_byte(rb); check(rb===8'h00,"vrf @255 b1"); recv_byte(rb); check(rb===8'hFF,"vrf @255 b0");
+        recv_byte(rb); check(rb===8'hA5,"vrf @256b b3"); recv_byte(rb); check(rb===8'h00,"vrf @256b b2");
+        recv_byte(rb); check(rb===8'h01,"vrf @256b b1"); recv_byte(rb); check(rb===8'h00,"vrf @256b b0");
         // bad LEN -> NACK_ERR
         fdata[0]=8'h00; fdata[1]=8'h00;
         send_frame(8'h02, 2); expect_ack(8'h5B, "VERIFY_IMEM bad LEN NACK");
+        // ---- 7b. [IMEM-512] upper-bank LOAD+VERIFY, past-512 NACKs ----
+        // LOAD 3 words at base 300 (0x012C)
+        seen_mark = seen_n;
+        fdata[0]=8'h01; fdata[1]=8'h2C;  // addr=300
+        fdata[2]=8'h11; fdata[3]=8'h22; fdata[4]=8'h33; fdata[5]=8'h44;
+        fdata[6]=8'h55; fdata[7]=8'h66; fdata[8]=8'h77; fdata[9]=8'h88;
+        fdata[10]=8'h99; fdata[11]=8'hAA; fdata[12]=8'hBB; fdata[13]=8'hCC;
+        send_frame(8'h01, 14); expect_ack(8'hA5, "LOAD @300 ack (upper bank)");
+        check(seen_n === seen_mark + 3, "LOAD @300: 3 prog_wen pulses");
+        check(seen_addr[seen_mark]===9'd300 && seen_data[seen_mark]===32'h11223344, "LOAD @300 word0");
+        check(seen_addr[seen_mark+1]===9'd301 && seen_data[seen_mark+1]===32'h55667788, "LOAD @301 word1");
+        check(seen_addr[seen_mark+2]===9'd302 && seen_data[seen_mark+2]===32'h99AABBCC, "LOAD @302 word2");
+        // VERIFY base 300, 3 words (stub words 0xA500012C/2D/2E)
+        fdata[0]=8'h01; fdata[1]=8'h2C; fdata[2]=8'h03;
+        send_frame(8'h02, 3); expect_ack(8'hA5, "VERIFY @300 ack (upper)");
+        recv_byte(rb); check(rb===8'hA5,"vrf @300 b3"); recv_byte(rb); check(rb===8'h00,"vrf @300 b2");
+        recv_byte(rb); check(rb===8'h01,"vrf @300 b1"); recv_byte(rb); check(rb===8'h2C,"vrf @300 b0");
+        recv_byte(rb); check(rb===8'hA5,"vrf @301 b3"); recv_byte(rb); check(rb===8'h00,"vrf @301 b2");
+        recv_byte(rb); check(rb===8'h01,"vrf @301 b1"); recv_byte(rb); check(rb===8'h2D,"vrf @301 b0");
+        recv_byte(rb); check(rb===8'hA5,"vrf @302 b3"); recv_byte(rb); check(rb===8'h00,"vrf @302 b2");
+        recv_byte(rb); check(rb===8'h01,"vrf @302 b1"); recv_byte(rb); check(rb===8'h2E,"vrf @302 b0");
+        // LOAD spanning past 512 (base 510 + 3 words = 513) -> NACK_ERR
+        fdata[0]=8'h01; fdata[1]=8'hFE;  // addr=510
+        for (i=2;i<14;i=i+1) fdata[i]=8'h00;
+        send_frame(8'h01, 14); expect_ack(8'h5B, "LOAD 510+3 past512 NACK");
+        // LOAD at base 512 -> NACK_ERR
+        fdata[0]=8'h02; fdata[1]=8'h00;  // addr=512
+        fdata[2]=8'h00; fdata[3]=8'h00; fdata[4]=8'h00; fdata[5]=8'h00;
+        send_frame(8'h01, 6); expect_ack(8'h5B, "LOAD @512 NACK");
+        // VERIFY spanning past 512 (base 511 + 2 = 513) -> NACK_ERR
+        fdata[0]=8'h01; fdata[1]=8'hFF; fdata[2]=8'h02;  // addr=511
+        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY 511+2 past512 NACK");
+        // VERIFY at base 512 -> NACK_ERR
+        fdata[0]=8'h02; fdata[1]=8'h00; fdata[2]=8'h01;  // addr=512
+        send_frame(8'h02, 3); expect_ack(8'h5B, "VERIFY @512 NACK");
         fdata[0]=8'h10; fdata[1]=8'h01;
         send_frame(8'h03, 2); expect_ack(8'h5B, "WR_CFG NACK (no cfg iface)");
         fdata[0]=8'h10;
