@@ -1,21 +1,23 @@
 // Site navigation — defined in exactly one place.
-// ADD FUTURE PAGES HERE when the page actually exists. Do NOT add a link
-// to a page that does not exist yet (no dead links; the simulator page
-// gets its link only when the simulator page ships).
+// The simulator page (docs/simulator.html) now exists, so it gets its
+// link here; do NOT add a link to a page that does not exist yet.
 (function () {
+  var isSim = /simulator\.html$/.test(window.location.pathname);
+  var base = isSim ? "index.html" : "";
   var PAGES = [
-    { href: "#top", label: "TEMPO" },
-    { href: "#architecture", label: "Architecture" },
-    { href: "#spec", label: "Spec" },
-    { href: "#functionality", label: "Functionality" },
-    { href: "#waveforms", label: "Waveforms" },
-    { href: "#code", label: "Example code" },
-    { href: "#using", label: "How to use" },
-    { href: "#testing", label: "FPGA testing" },
-    { href: "#layout", label: "Labeled layout" },
-    { href: "#explorer", label: "GDS explorer" },
-    { href: "#view3d", label: "3D stack" },
-    { href: "#limitations", label: "Limitations" }
+    { href: base + "#top", label: "TEMPO" },
+    { href: base + "#architecture", label: "Architecture" },
+    { href: base + "#spec", label: "Spec" },
+    { href: base + "#functionality", label: "Functionality" },
+    { href: base + "#waveforms", label: "Waveforms" },
+    { href: base + "#code", label: "Example code" },
+    { href: base + "#using", label: "How to use" },
+    { href: base + "#testing", label: "FPGA testing" },
+    { href: base + "#layout", label: "Labeled layout" },
+    { href: base + "#explorer", label: "GDS explorer" },
+    { href: base + "#view3d", label: "3D stack" },
+    { href: base + "#limitations", label: "Limitations" },
+    { href: "simulator.html", label: "Simulator" }
   ];
   var nav = document.getElementById("site-nav");
   if (!nav) return;
