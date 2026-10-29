@@ -38,9 +38,12 @@
   function resize() {
     // Backing store in CSS pixels (not device pixels) so canvas
     // coordinates match getBoundingClientRect() throughout.
+    // Deliberately does NOT refit: on phones, window resize fires when
+    // the URL bar shows/hides while scrolling, and refitting there would
+    // yank the user's pan/zoom. Fit runs on load and on Reset view only.
     var r = cv.getBoundingClientRect();
     cv.width = Math.round(r.width); cv.height = Math.round(r.height);
-    fit(); draw();
+    draw();
   }
   function applyTransform() {
     // world (um, y up) -> screen: x' = ox + x*s, y' = panY + (dieH - y)*s
@@ -68,6 +71,12 @@
     if (!data) return;
     var P = pal();
     var r = cv.getBoundingClientRect();
+    // Self-heal: if the CSS size drifted without a resize event (or the
+    // backing store was dropped), resync it here — setting the size
+    // clears the canvas, but this function repaints everything anyway.
+    if (cv.width !== Math.round(r.width) || cv.height !== Math.round(r.height)) {
+      cv.width = Math.round(r.width); cv.height = Math.round(r.height);
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
     ctx.fillStyle = P.canvasBg; ctx.fillRect(0, 0, r.width, r.height);
@@ -98,11 +107,14 @@
         ctx.strokeRect(m.x, m.y, m.w, m.h);
       });
     }
-    // pins
+    // pins — as short outward ticks, NOT dots: the 43 north-edge anchors
+    // sit at a 3.84 um pitch while a 4 um-radius dot is 8 um wide, so dots
+    // overlap 2x in world units at ANY zoom and render as a red smear.
+    // Ticks match the labeled top view's convention and stay distinct.
     if (window.TempoLayers.state.showPins) {
-      ctx.fillStyle = P.pin;
+      ctx.strokeStyle = P.pin; ctx.lineWidth = 1.5 / scale;
       (data.pins || []).forEach(function (p) {
-        ctx.beginPath(); ctx.arc(p.x, p.y, 4 / scale, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + 12); ctx.stroke();
       });
     }
     // screen-space labels for macros (unscaled text)
@@ -260,6 +272,20 @@
     });
   });
   window.addEventListener("resize", resize);
+  // Self-heal for the blank-after-navigation class of failure: if the
+  // canvas backing store is ever dropped (or the view otherwise goes
+  // blank), scrolling the section back into view repaints it — the user
+  // should never have to hunt for Reset view. Same for pageshow and for
+  // returning to a visible tab.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) draw(); });
+    }).observe(cv);
+  }
+  window.addEventListener("pageshow", function () { draw(); });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) draw();
+  });
 
   fetch("assets/layers.json").then(function (r) {
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -272,7 +298,7 @@
       total.toLocaleString("en-US") + " shipped polygons, " +
       (j.pins || []).length + " pin label anchors. Die " +
       dieW + " x " + dieH + " um. Drag to pan, scroll or pinch to zoom.";
-    buildPaths(); buildList(); resize();
+    buildPaths(); buildList(); fit(); resize();
     showInfo("<h4>GDS explorer</h4><p>Toggle layers, solo one layer, or use " +
       "All / None / Metals. Click a layer name for its GDS number, polygon " +
       "count, and fidelity class. Click a gold macro block for its facts. " +

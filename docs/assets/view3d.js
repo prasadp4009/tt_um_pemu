@@ -24,9 +24,14 @@
       canvasBg: "#ffffff",
       macro3d: { side1: "#b45309", side2: "#92400e", top: "#fde68a", topStroke: "#92400e", topLabel: "#451a03" } };
   }
-  var az = -0.6, el = 35 * Math.PI / 180, zoom = 1, explode = 30;
+  var DEFAULT_EXPLODE = 10;  // gaps alone at 30 px/layer (540 px) exceed
+  // most canvases, so the default must be one the fit can actually fit:
+  // 10 fits both the 1100x560 desktop canvas and the 360x380 phone canvas
+  // exactly at the 32 px margin (larger defaults clip on the phone).
+  var az = -0.6, el = 35 * Math.PI / 180, zoom = 1, explode = DEFAULT_EXPLODE;
   var cx = 0, cy = 0;              // pan offset (screen px)
   var pointers = new Map(), lastPinch = 0;
+  var fitted = false;              // true once the stack has been fitted to the canvas
 
   function meta(id) {
     for (var i = 0; i < window.TempoLayers.META.length; i++)
@@ -34,19 +39,68 @@
     return null;
   }
   // Project a die point (um, y up) at slab height z (screen px) to screen.
-  function proj(x, y, z) {
+  // zm overrides the global zoom (used by fitStack to measure at zoom 1).
+  function proj(x, y, z, zm) {
     var r = cv.getBoundingClientRect();
     var ox = r.width / 2 + cx, oy = r.height * 0.52 + cy;
     var dx = x - dieW / 2, dy = y - dieH / 2;
     var rx = Math.cos(az) * dx - Math.sin(az) * dy;
     var ry = Math.sin(az) * dx + Math.cos(az) * dy;
-    var s = 0.42 * zoom;
+    var s = 0.42 * (zm === undefined ? zoom : zm);
     return {
       x: ox + (rx - ry) * Math.cos(Math.PI / 6) * s,
       y: oy + (rx + ry) * Math.sin(el) * s - z
     };
   }
   function layerZ(i) { return i * (4 + explode); }
+  // Projected bounds of the whole stack (die corners at the bottom slab
+  // and at the top slab + macro block height), at the given zoom.
+  function stackBounds(zm) {
+    var zMax = layerZ(data.layers.length - 1) + 30;
+    var pts = [];
+    [[0, 0], [dieW, 0], [dieW, dieH], [0, dieH]].forEach(function (c) {
+      pts.push(proj(c[0], c[1], 0, zm)); pts.push(proj(c[0], c[1], zMax, zm));
+    });
+    var xs = pts.map(function (p) { return p.x; });
+    var ys = pts.map(function (p) { return p.y; });
+    return { minX: Math.min.apply(null, xs), maxX: Math.max.apply(null, xs),
+             minY: Math.min.apply(null, ys), maxY: Math.max.apply(null, ys) };
+  }
+  // Fit the whole stack into the canvas. proj() subtracts z in raw screen
+  // px, NOT scaled by zoom, so the explode gaps are zoom-invariant: the
+  // stack height at zoom z is slabH*z + zMax, not (slabH + zMax)*z. A fit
+  // that scales the whole bounds by zoom therefore never fits at large
+  // explode (at explode 30 the gaps alone are 540 px on a 560 px canvas,
+  // so no zoom can fit the stack). The height fit below divides only the
+  // slab part by zoom: fitZoomH = (H - 32 - zMax) / slabH1. When the gaps
+  // alone exceed the canvas (explode too large), zoom clamps at 0.3 and
+  // the stack is centered, so clipping is symmetric; Reset restores the
+  // default explode and refits to a full view. setZoom=true (load, Reset)
+  // fits zoom exactly; setZoom=false (explode change) only ever shrinks
+  // zoom and recenters, so it never yanks a user's deliberate zoom-out.
+  function fitStack(setZoom) {
+    if (!data) return false;
+    var r = cv.getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) return false;
+    var zMax = layerZ(data.layers.length - 1) + 30;
+    var b1 = stackBounds(1);
+    var slabW1 = b1.maxX - b1.minX;
+    var slabH1 = (b1.maxY - b1.minY) - zMax;
+    var fitZoom = Math.min((r.width - 32) / slabW1,
+                           (r.height - 32 - zMax) / slabH1);
+    fitZoom = Math.max(0.3, Math.min(6, fitZoom));
+    if (setZoom) zoom = fitZoom; else zoom = Math.min(zoom, fitZoom);
+    var b = stackBounds(zoom);
+    cx += r.width / 2 - (b.minX + b.maxX) / 2;
+    cy += r.height / 2 - (b.minY + b.maxY) / 2;
+    return true;
+  }
+  function stackVisible() {
+    if (!data) return true;
+    var r = cv.getBoundingClientRect();
+    var b = stackBounds(zoom);
+    return !(b.maxY < 0 || b.minY > r.height || b.maxX < 0 || b.minX > r.width);
+  }
   function rasterize() {
     var RW = 1024, RH = Math.round(1024 * dieH / dieW);
     data.layers.forEach(function (L) {
@@ -72,7 +126,7 @@
     // Affine map from raster pixels to screen via three projected corners.
     var o = proj(0, 0, z), ex = proj(1, 0, z), ey = proj(0, 1, z);
     ex = { x: ex.x - o.x, y: ex.y - o.y };
-    ey = { x: ey.x - o.y, y: ey.y - o.y };
+    ey = { x: ey.x - o.x, y: ey.y - o.y };
     // raster pixel (u,v) <-> die (u/RW*dieW, dieH - v/RH*dieH)
     var a = dieW / RW * ex.x, b = dieW / RW * ex.y;
     var c = -dieH / RH * ey.x, d = -dieH / RH * ey.y;
@@ -122,6 +176,11 @@
   function draw() {
     if (!data) return;
     var r = cv.getBoundingClientRect();
+    // Self-heal: resync the backing store if the CSS size drifted without
+    // a resize event (or the store was dropped); this repaints everything.
+    if (cv.width !== Math.round(r.width) || cv.height !== Math.round(r.height)) {
+      cv.width = Math.round(r.width); cv.height = Math.round(r.height);
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
     ctx.fillStyle = pal().canvasBg; ctx.fillRect(0, 0, r.width, r.height);
@@ -170,7 +229,7 @@
     return null;
   }
   cv.addEventListener("pointerdown", function (e) {
-    cv.setPointerCapture(e.pointerId);
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* no capture: drag still tracks while over the canvas */ }
     pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
     if (pointers.size === 2) {
       var pts = Array.from(pointers.values());
@@ -220,26 +279,57 @@
   explodeEl.addEventListener("input", function () {
     explode = parseInt(explodeEl.value, 10);
     explodeVal.textContent = explode + " px/layer";
+    fitStack(false);
     draw();
   });
   document.getElementById("btn-3d-reset").addEventListener("click", function () {
-    az = -0.6; el = 35 * Math.PI / 180; zoom = 1; cx = 0; cy = 0; draw();
+    az = -0.6; el = 35 * Math.PI / 180; zoom = 1; cx = 0; cy = 0;
+    explode = DEFAULT_EXPLODE;
+    if (explodeEl) explodeEl.value = String(DEFAULT_EXPLODE);
+    if (explodeVal) explodeVal.textContent = DEFAULT_EXPLODE + " px/layer";
+    fitStack(true); fitted = true; draw();
   });
+  var lastW = 0, lastH = 0;
   function resize() {
     // Backing store in CSS pixels (not device pixels) so canvas
-    // coordinates match getBoundingClientRect() throughout.
+    // coordinates match getBoundingClientRect() throughout. Preserves
+    // the user's zoom on small size changes (phone URL-bar show/hide
+    // fires resize while scrolling and must not yank the view); refits
+    // on a large size change (orientation change, window resize) or if
+    // the stack somehow ends up entirely off-canvas.
     var r = cv.getBoundingClientRect();
     cv.width = Math.round(r.width); cv.height = Math.round(r.height);
+    var bigChange = lastW > 0 && (Math.abs(r.width - lastW) / lastW > 0.25 ||
+                                  Math.abs(r.height - lastH) / lastH > 0.25);
+    if (bigChange || !stackVisible()) { fitStack(true); fitted = true; }
+    lastW = r.width; lastH = r.height;
     draw();
   }
   window.addEventListener("resize", resize);
+  // Self-heal for blank-after-navigation: scrolling the section back
+  // into view repaints, and fits the stack if it was never fitted (e.g.
+  // the canvas had no size at load). Same for pageshow / tab visibility.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) {
+          if (!fitted) fitted = fitStack(true);
+          draw();
+        }
+      });
+    }).observe(cv);
+  }
+  window.addEventListener("pageshow", function () { draw(); });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) draw();
+  });
 
   fetch("assets/layers.json").then(function (r) {
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.json();
   }).then(function (j) {
     data = j; dieW = j.die[0]; dieH = j.die[1];
-    rasterize(); resize();
+    rasterize(); fitted = fitStack(true); resize();
     info.innerHTML = "<h4>3D exploded stack</h4><p>Drag to orbit, scroll or " +
       "pinch to zoom, use the explode slider to separate layers. Layer " +
       "toggles are shared with the 2D explorer above. Click a layer slab " +

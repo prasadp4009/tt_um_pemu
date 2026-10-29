@@ -132,9 +132,11 @@
 
 <details class="card" open>
   <summary><h2>Signal activity on the die view</h2></summary>
-  <p>Pin-level activity from the run, drawn at the true pad anchors. Green
-  pad = pin high, dark pad = pin low. Replay animates the recorded pin
-  waveform onto the pads after the run ends.</p>
+  <p>Pin-level activity from the run. Ticks on the die's north edge are at
+  the true pad anchors; the magnified pad row below the die shows the same
+  8 pins (die order, PIN7…PIN0) at readable size. Green pad = pin high,
+  dark pad = pin low. Replay animates the recorded pin waveform onto the
+  pads after the run ends.</p>
   <canvas id="sim-die" class="die"></canvas>
   <div class="controls">
     <button id="sim-replay" type="button">Replay activity</button>

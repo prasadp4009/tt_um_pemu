@@ -44,7 +44,7 @@
       die: "#0f172a", core: "#2563eb",
       macroFill: "rgba(254,243,199,0.7)", macroStroke: "#92400e", macroLabel: "#92400e",
       wave: ["#2563eb", "#047857"], trace: "#b45309", cursor: "#dc2626",
-      padHigh: "#22c55e", padLow: "#334155" };
+      padHigh: "#22c55e", padLow: "#334155", pin: "#dc2626" };
   }
 
   function fmtNs(cycles) {
@@ -309,16 +309,25 @@
   function drawDie(histOverride) {
     var P = pal();
     var cv = $("sim-die"), ctx = cv.getContext("2d");
-    var w = cv.clientWidth || 800, h = Math.round(w * DIE_H / DIE_W);
+    // The 8 pad anchors span only 26.88 um (2% of the die width) at a
+    // 3.84 um pitch, so 11 px circles at true positions overlap into one
+    // illegible blob at any canvas width (9x overlap on desktop, 20x on
+    // a phone). Instead: true-position ticks on the die's north edge
+    // (matching the labeled top view's convention) plus a magnified pad
+    // row below the die, in die order, explicitly not to scale.
+    var w = cv.clientWidth || 800;
+    var s = w / DIE_W;
+    var TOPM = 16;   // top margin: room for outward pad ticks
+    var STRIP_H = 80; // magnified pad row band below the die
+    var h = Math.round(TOPM + DIE_H * s + STRIP_H);
     if (cv.width !== w) cv.width = w;
     cv.height = h;
-    var s = w / DIE_W;
     function X(x) { return x * s; }
-    function Y(y) { return (DIE_H - y) * s; } // GDS y-up -> screen y-down
+    function Y(y) { return TOPM + (DIE_H - y) * s; } // GDS y-up -> screen y-down
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = P.canvasBg; ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = P.die; ctx.lineWidth = 2;
-    ctx.strokeRect(0, 0, DIE_W * s, DIE_H * s);
+    ctx.strokeRect(0, TOPM, DIE_W * s, DIE_H * s);
     ctx.setLineDash([6, 4]); ctx.strokeStyle = P.core;
     ctx.strokeRect(2.88 * s, Y(3.78 + 703.08), 1283.52 * s, 703.08 * s);
     ctx.setLineDash([]);
@@ -331,15 +340,30 @@
     var hist = histOverride !== undefined ? histOverride :
       (current ? current.sim.history : []);
     var cur = hist.length ? hist[hist.length - 1] : 0;
-    ctx.textAlign = "center";
+    // True-position ticks: one per pad anchor, outward into the top margin.
+    var pinCol = P.pin || "#dc2626";
+    ctx.strokeStyle = pinCol; ctx.lineWidth = 2;
     for (var p = 0; p < 8; p++) {
-      var cx = X(PAD_X[p]), cy = Y(PAD_Y);
-      var lvl = (cur >> p) & 1;
-      ctx.beginPath(); ctx.arc(cx, cy + 12, 11, 0, 7);
+      var tx = X(PAD_X[p]), ty = Y(PAD_Y);
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx, ty - 10); ctx.stroke();
+    }
+    // Magnified pad row: same levels, die order left to right (PIN7
+    // leftmost ... PIN0 rightmost, as on the die edge), NOT to scale.
+    var stripTop = TOPM + DIE_H * s + 10;
+    var cellW = w / 8, rad = Math.max(10, Math.min(15, cellW * 0.32));
+    var padY = stripTop + 19 + rad;
+    ctx.textAlign = "center";
+    ctx.fillStyle = P.label; ctx.font = "11px monospace";
+    ctx.fillText("Magnified pad row — left to right PIN7 … PIN0 as on the die edge (not to scale)", w / 2, stripTop + 11);
+    for (var i = 0; i < 8; i++) {
+      var pin = 7 - i;
+      var cx = (i + 0.5) * cellW;
+      var lvl = (cur >> pin) & 1;
+      ctx.beginPath(); ctx.arc(cx, padY, rad, 0, 7);
       ctx.fillStyle = lvl ? P.padHigh : P.padLow; ctx.fill();
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = P.label; ctx.font = "11px monospace";
-      ctx.fillText("PIN" + p, cx, cy + 32);
+      ctx.fillText("PIN" + pin, cx, padY + rad + 13);
     }
   }
   function renderActivity() {
@@ -353,8 +377,10 @@
         ((cur >> p) & 1) + "</td><td>" + c + "</td><td>" + rate.toFixed(4) + " /cycle</td></tr>";
     }).join("");
     $("sim-activity").innerHTML = "<div class=\"table-scroll\"><table><tr><th>logical pin</th><th>pad anchor (layers.json)</th><th>level</th><th>toggles</th><th>activity rate</th></tr>" + rows + "</table></div>" +
-      "<p class=\"caption\">Pad markers are the uio_in[i] Metal4.text label anchors on the die's north edge " +
-      "(layers.json, 45 anchors; uio_in/out/oe are three views of the same 8 uio pins). " +
+      "<p class=\"caption\">Ticks on the die's north edge are at the true uio_in[i] Metal4.text label anchors " +
+      "(layers.json, 45 anchors; uio_in/out/oe are three views of the same 8 uio pins). The magnified pad row " +
+      "below the die shows the same 8 pins in die order (PIN7…PIN0 left to right) and is not to scale — " +
+      "at true scale the 8 anchors span 26.88 um and individual markers would overlap. " +
       "This is pin-level activity at true pad anchors only — NOT a per-net heatmap: net-level activity " +
       "would need DEF net data plus a VCD and is deliberately not synthesized. The die canvas shows the " +
       "die outline and the two SRAM macros at true GDS rects; full layer polygons live in the " +
