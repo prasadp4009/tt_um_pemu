@@ -71,6 +71,7 @@
 
 <section class="card" id="spec">
   <h2>Specification (IMEM-512, the submittable design)</h2>
+  <div class="table-scroll">
   <table>
     <tr><th>Item</th><th>Value</th></tr>
     <tr><td>Die</td><td><strong>1289.28 &times; 710.64 &micro;m</strong> (916,214 &micro;m&sup2;) — exactly 6&times;4 tiles, 0 &micro;m&sup2; overflow</td></tr>
@@ -86,6 +87,7 @@
     <tr><td>Program / trace memory</td><td>512 &times; 32-bit IMEM (v0.3) · 1024 &times; 8-bit TMEM = 204 entries &times; {timestamp[31:0], pins[7:0]}, saturating pointer</td></tr>
     <tr><td>Sign-off</td><td>GDS &#9989; · precheck 9/9 &#9989; · LVS “Circuits match uniquely” &#9989; · KLayout DRC 0 errors &#9989; · antenna 0 &#9989; · worst IR drop 0.128 mV &#9989;</td></tr>
   </table>
+  </div>
   <div class="warn"><strong>The honest timing note.</strong> The slow-corner setup violation is the one
   genuine silicon-risk item, and it is characterised, not hidden: at the slow corner the IMEM fetch-path
   net cannot meet a 20 ns cycle (worst slack &minus;2.824 ns &rArr; slow-corner fmax &asymp; 43.8 MHz).
@@ -106,6 +108,7 @@
   golden model with a <em>protocol-specific wire decoder</em> (bytes, CRCs, parity, state sequences),
   and replayed cycle-exact against the RTL where stated. It never means “tested on the ASIC” — the
   ASIC is not fabricated yet; hardware evidence is from the Zybo FPGA port.</p>
+  <div class="table-scroll">
   <table>
     <tr><th>Protocol</th><th>Evidence</th><th>Verdict</th></tr>
     <tr><td>UART 115200 8N1</td><td>119 words; bit cell 434 exact; byte pitch 4349 &times;3, zero deviation</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
@@ -121,6 +124,7 @@
     <tr><td>USB merged TX+RX</td><td><strong>299-word</strong> single image on the 512 build; 301-word variant on Zybo</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
     <tr><td>10BASE-T Ethernet</td><td>Manchester half-bit 2.5 cycles on the 20 ns grid; needs a 100 MHz grid and an analog PHY</td><td class="bad">Not feasible on-chip — not claimed</td></tr>
   </table>
+  </div>
   <p><strong>USB, stated carefully.</strong> Merged TX+RX in one 299-word image is proven. A complete
   USB <em>device stack</em> (enumeration and beyond) is firmware work beyond the shipped image, not a
   chip limitation. The RX loop alone is proven; the 256-word integration gap (291 &gt; 256) is closed
@@ -233,6 +237,7 @@ cmd_have:
   (SPI 855/855, UART 8,747 cycles, USB merged 6,297 cycles; 11/11 co-sims overall);
   <strong>(3)</strong> Zybo hardware runs checked by milestones + a run signature. The harness loader
   implements LOAD / VERIFY / GO / TRANSFER / RD_TXFIFO.</p>
+  <div class="table-scroll">
   <table>
     <tr><th>Test</th><th>Milestones</th><th>Signature</th><th>Result</th></tr>
     <tr><td>SPI @ 50 MHz</td><td>0x7fff (15/15)</td><td>0xa6b864d9</td><td class="ok">PASS</td></tr>
@@ -245,6 +250,7 @@ cmd_have:
     <tr><td>SPI @ 125 MHz (&times;2 runs)</td><td>0x7fff</td><td>0xa6b864d9 (identical to 50 MHz)</td><td class="ok">PASS — but see the 125 MHz caveat</td></tr>
     <tr><td>SPI fault-injection (fault 1)</td><td>caught at post-HALT RD_STATUS, fail_code 0xEE</td><td>0xcb6b9ef1</td><td class="ok">VACUITY-OK (no false pass)</td></tr>
   </table>
+  </div>
   <p>Overall verification depth: 643 benches, formal 32/32 on the ISA-contract subset, 11/11
   cycle-exact co-sims, 4 base protocols on Zybo hardware plus stretch protocols in sim/co-sim.
   The 0xEE code is the vacuity guard working: an injected fault must produce a <em>failing</em> run,
@@ -253,7 +259,7 @@ cmd_have:
 
 <section class="card" id="layout">
   <h2>Labeled layout — the real 512-word die</h2>
-  <img class="diagram" src="assets/labeled-top-view.svg" data-dark-src="assets/labeled-top-view-dark.svg" alt="Labeled GDS top view, IMEM-512 layout">
+  <div class="diagram-scroll"><img class="diagram" src="assets/labeled-top-view.svg" data-dark-src="assets/labeled-top-view-dark.svg" alt="Labeled GDS top view, IMEM-512 layout"></div>
   <p class="caption">Die, core, and SRAM macros at true GDS positions (IMEM-512 run 40699493628);
   pin ticks at true Metal4.text label anchors (all 45; group-bracketed because anchors are 3.84 &micro;m
   apart). Logic-block outlines are placement regions from the final DEF: solid = 5–95 percentile
@@ -300,7 +306,7 @@ cmd_have:
   <div class="readout" id="explorer-readout">Loading layers.json…</div>
   <div class="readout" id="explorer-status"></div>
   <div class="infopanel" id="explorer-info"></div>
-  <p class="caption">Drag to pan, scroll to zoom. Hover to probe &micro;m coordinates (GDS, y up),
+  <p class="caption">Drag to pan, scroll or pinch to zoom. On touch: drag pans, pinch zooms; swipe outside the canvas to scroll the page. Hover to probe &micro;m coordinates (GDS, y up),
   the nearest pin label anchor, and macro hits. Click a layer name for its GDS number, polygon
   count, and fidelity class; click a gold macro block for its facts. The toggles below are shared
   with the 3D stack view.</p>
@@ -321,7 +327,7 @@ cmd_have:
   <canvas class="viewer" id="view3d-canvas"></canvas>
   <div class="readout" id="view3d-readout">Drag to orbit · scroll / pinch to zoom · explode slider separates layers</div>
   <div class="infopanel" id="view3d-info"></div>
-  <p class="caption">Drag to orbit/rotate, scroll or pinch to zoom, explode slider to separate the layers.
+  <p class="caption">Drag to orbit/rotate, scroll or pinch to zoom, explode slider to separate the layers. On touch: swipe outside the canvas to scroll the page.
   Hover or click a layer slab or a gold macro block for its name, role, GDS number, polygon count,
   and fidelity class. Per-layer visibility toggles are shared with the 2D explorer's layer state.</p>
 </section>

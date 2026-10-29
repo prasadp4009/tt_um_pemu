@@ -116,7 +116,21 @@ canvas.die { width: 100%; border: 1px solid var(--line-strong); border-radius: 1
 
 /* ---- narrow widths: stack everything, keep transports tappable ---- */
 @media (max-width: 760px) {
-  .transport-row button { flex: 1 1 auto; text-align: center; }
+  /* No double-sticky stack with the nav: the transport bar scrolls with
+     the page on phones instead of covering the nav + theme toggle. */
+  .transport { position: static; }
+  .transport-row button { flex: 1 1 auto; text-align: center; min-height: 44px; }
+  .transport-row .btn-primary { flex: 1 1 100%; }
+  .transport-field { flex-wrap: wrap; }
   .howto { flex-direction: column; gap: .3rem; }
   .state-grid { grid-template-columns: 1fr; }
+  .regs { grid-template-columns: repeat(auto-fill, minmax(5.4rem, 1fr)); }
+  .example-grid { grid-template-columns: 1fr; }
+  .ex-card { min-height: 44px; }
+  /* iOS Safari auto-zooms on focus for inputs under 16 px: the editor
+     and number inputs stay at 1 rem on phones. */
+  #sim-editor { font-size: 1rem; }
+  #sim-speed, #sim-ncycles { width: 6rem; }
+  canvas.wave { height: 170px; }
+  .controls button { min-height: 44px; }
 }

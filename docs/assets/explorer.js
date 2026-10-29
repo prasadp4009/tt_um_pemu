@@ -13,7 +13,6 @@
 
   var data = null, paths = {};   // layer id -> Path2D
   var scale = 1, ox = 0, panY = 0, dieW = 1289.28, dieH = 710.64;
-  var dragging = false, lx = 0, ly = 0;
   var hoverPin = null;
 
   // Theme-aware canvas palette (nav.js TempoTheme). Falls back to the old
@@ -182,17 +181,16 @@
     window.TempoLayers.state.showPins = e.target.checked; draw();
   });
 
-  cv.addEventListener("mousedown", function (e) {
-    dragging = true; lx = e.offsetX; ly = e.offsetY;
-  });
-  window.addEventListener("mouseup", function () { dragging = false; });
-  cv.addEventListener("mousemove", function (e) {
-    var w = toWorld(e.offsetX, e.offsetY);
+  // Pointer events (mouse + touch + pen): one pointer drags to pan, two
+  // pointers pinch to zoom. This was mouse-only before, so on a phone a
+  // touch drag did nothing at all — and touch-action: none also blocked
+  // page scroll over the canvas. Mouse behaviour is unchanged: a mouse
+  // drag pans, the wheel zooms, hover still probes. On touch, swipe
+  // outside the canvas to scroll the page (the caption says so).
+  var pointers = new Map(), lastPinch = 0;
+  function probe(mx, my) {
+    var w = toWorld(mx, my);
     var txt = "x = " + w.x.toFixed(1) + " um, y = " + w.y.toFixed(1) + " um (GDS, y up)";
-    if (dragging) {
-      ox += e.offsetX - lx; panY += e.offsetY - ly;
-      lx = e.offsetX; ly = e.offsetY; draw();
-    }
     // nearest pin within 10 um
     var best = null, bd = 1e9;
     (data.pins || []).forEach(function (p) {
@@ -206,6 +204,41 @@
         txt += "  |  macro: " + m.name + " (" + m.cell + ")";
     });
     readout.textContent = txt;
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* no capture: drag still tracks while over the canvas */ }
+    pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    if (pointers.size === 2) {
+      var pts = Array.from(pointers.values());
+      lastPinch = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    }
+  });
+  ["pointerup", "pointercancel"].forEach(function (t) {
+    cv.addEventListener(t, function (e) {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) lastPinch = 0;
+    });
+  });
+  cv.addEventListener("pointermove", function (e) {
+    if (!pointers.has(e.pointerId)) { probe(e.offsetX, e.offsetY); return; }
+    var prev = pointers.get(e.pointerId);
+    pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    if (pointers.size === 2) {
+      var pts = Array.from(pointers.values());
+      var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (lastPinch > 0) {
+        var mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+        var w = toWorld(mid.x, mid.y);
+        scale *= d / lastPinch;
+        ox = mid.x - w.x * scale;
+        panY = mid.y - (dieH - w.y) * scale;
+        draw();
+      }
+      lastPinch = d;
+      return;
+    }
+    ox += e.offsetX - prev.x; panY += e.offsetY - prev.y; draw();
+    probe(e.offsetX, e.offsetY);
   });
   cv.addEventListener("wheel", function (e) {
     e.preventDefault();
@@ -238,7 +271,7 @@
     statusEl.textContent = "Loaded: " + j.layers.length + " layers, " +
       total.toLocaleString("en-US") + " shipped polygons, " +
       (j.pins || []).length + " pin label anchors. Die " +
-      dieW + " x " + dieH + " um. Drag to pan, scroll to zoom.";
+      dieW + " x " + dieH + " um. Drag to pan, scroll or pinch to zoom.";
     buildPaths(); buildList(); resize();
     showInfo("<h4>GDS explorer</h4><p>Toggle layers, solo one layer, or use " +
       "All / None / Metals. Click a layer name for its GDS number, polygon " +

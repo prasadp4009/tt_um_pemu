@@ -241,7 +241,7 @@
       return "<tr><td>" + i + "</td><td>" + e.cycle + "</td><td>" + e.ts + "</td><td>" +
         hex(e.pins, 2) + "</td><td>r" + e.rd + "</td></tr>";
     }).join("");
-    $("sim-caps").innerHTML = "<table><tr><th>#</th><th>cycle (instr. start)</th><th>timestamp</th><th>pins (sync)</th><th>Rd</th></tr>" + rows + "</table>";
+    $("sim-caps").innerHTML = "<div class=\"table-scroll\"><table><tr><th>#</th><th>cycle (instr. start)</th><th>timestamp</th><th>pins (sync)</th><th>Rd</th></tr>" + rows + "</table></div>";
   }
 
   // ------------------------------------------------------------- trace plot
@@ -291,7 +291,7 @@
       return "<tr><td>" + i + "</td><td>" + e[0] + "</td><td>" + hex(e[1], 2) + "</td></tr>";
     }).join("");
     $("sim-trace-list").innerHTML = tr.length ?
-      "<table><tr><th>index</th><th>timestamp</th><th>pins</th></tr>" + rows + "</table>" :
+      "<div class=\"table-scroll\"><table><tr><th>index</th><th>timestamp</th><th>pins</th></tr>" + rows + "</table></div>" :
       "<p>No trace entries yet.</p>";
     drawTracePlot();
   }
@@ -352,7 +352,7 @@
       return "<tr><td>PIN" + p + "</td><td>uio_in[" + p + "] @ (" + PAD_X[p] + ", " + PAD_Y + ") µm</td><td>" +
         ((cur >> p) & 1) + "</td><td>" + c + "</td><td>" + rate.toFixed(4) + " /cycle</td></tr>";
     }).join("");
-    $("sim-activity").innerHTML = "<table><tr><th>logical pin</th><th>pad anchor (layers.json)</th><th>level</th><th>toggles</th><th>activity rate</th></tr>" + rows + "</table>" +
+    $("sim-activity").innerHTML = "<div class=\"table-scroll\"><table><tr><th>logical pin</th><th>pad anchor (layers.json)</th><th>level</th><th>toggles</th><th>activity rate</th></tr>" + rows + "</table></div>" +
       "<p class=\"caption\">Pad markers are the uio_in[i] Metal4.text label anchors on the die's north edge " +
       "(layers.json, 45 anchors; uio_in/out/oe are three views of the same 8 uio pins). " +
       "This is pin-level activity at true pad anchors only — NOT a per-net heatmap: net-level activity " +

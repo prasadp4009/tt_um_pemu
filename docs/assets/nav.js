@@ -98,9 +98,11 @@
   ];
   var nav = document.getElementById("site-nav");
   if (!nav) return;
-  nav.innerHTML = PAGES.map(function (p) {
+  // Links live in their own .nav-links row so narrow screens can scroll
+  // them horizontally while the theme toggle stays visible (see site.css).
+  nav.innerHTML = '<span class="nav-links">' + PAGES.map(function (p) {
     return '<a href="' + p.href + '">' + p.label + "</a>";
-  }).join("");
+  }).join("") + "</span>";
   toggleBtn = document.createElement("button");
   toggleBtn.id = "theme-toggle";
   toggleBtn.className = "theme-toggle";

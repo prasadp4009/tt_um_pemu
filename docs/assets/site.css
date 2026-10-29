@@ -142,6 +142,40 @@ canvas.viewer { width: 100%; height: 560px; border: 1px solid var(--line-strong)
 .infopanel { border: 1px solid var(--line); border-radius: 10px; padding: .7rem 1rem; margin-top: .7rem; font-size: .92rem; background: var(--bg-elev); }
 .infopanel h4 { margin: 0 0 .25rem; }
 footer { color: var(--muted); font-size: .88rem; text-align: center; padding: 1.2rem; }
+/* scrollable wrappers: no-op on desktop (content fits), horizontal scroll
+   on narrow screens instead of overflowing the card. Tables and the dense
+   labeled diagram keep their full width; the user scrolls them. */
+.table-scroll, .diagram-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll > table { margin: .7rem 0; }
+/* ---- narrow widths: real-phone layout (desktop rules above untouched) ---- */
+@media (max-width: 760px) {
+  /* nav: one scrollable link row + always-visible theme toggle (no wrap
+     stack eating the viewport; the toggle never scrolls away). */
+  nav#site-nav { flex-wrap: nowrap; padding: .5rem .8rem; gap: .2rem .8rem; }
+  nav#site-nav .nav-links { display: flex; flex-wrap: nowrap; gap: .2rem 1rem;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; flex: 1 1 auto; }
+  nav#site-nav .nav-links a { white-space: nowrap; font-size: .92rem; }
+  button.theme-toggle { margin-left: 0; flex: none; min-height: 44px; }
+  /* reclaim horizontal space: tighter page + card + hero padding */
+  main { padding: .75rem .8rem 2rem; }
+  section.card { padding: 1rem .9rem; margin: 1rem 0; }
+  header.hero { padding: 1.6rem .9rem 1.3rem; }
+  h2 { font-size: 1.3rem; }
+  table { font-size: .88rem; }
+  /* comfortable touch targets (was ~30 px tall) */
+  button { min-height: 44px; padding: .55rem .9rem; }
+  .layerlist input[type=checkbox], .controls input[type=checkbox] {
+    width: 1.25rem; height: 1.25rem; vertical-align: middle; }
+  /* canvases: shorter so they don't dominate the viewport; touch-action
+     stays none so custom pan/pinch keep working (swipe outside a canvas
+     to scroll the page — the captions say so). */
+  canvas.viewer { height: 380px; }
+  /* dense labeled diagram: keep readable width, scroll it horizontally */
+  .diagram-scroll img.diagram { min-width: 620px; }
+  /* iOS Safari auto-zooms on focus for inputs under 16 px: keep form
+     controls at 1 rem on phones so tapping one never reflows the page. */
+  input, select, textarea { font-size: 1rem; }
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
