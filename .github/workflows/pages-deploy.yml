@@ -1,0 +1,183 @@
+# Deploy Pages site (docs + viewer) — merged single deployment.
+#
+# Why this workflow exists: the Tiny Tapeout template's viewer job deploys
+# its own site via actions/deploy-pages, and a Pages deployment REPLACES the
+# whole site (last deployment wins). So the template viewer job cannot
+# coexist with this repo's docs site (docs/ + simulator). Instead of
+# deploying twice, this workflow deploys ONCE: the docs site as the root
+# plus the viewer model files under /viewer/, with a landing page that
+# links out to Tiny Tapeout's hosted 3D viewer and Explorer.
+#
+# The viewer content replicates what TinyTapeout/tt-gds-action/viewer does:
+# it takes the gds job's tt_submission artifact (*.gds, *.oas, pdk.json)
+# and gds_render artifact (render PNG), serves them as tinytapeout.gds /
+# tinytapeout.oas / gds_render.png, and points the hosted viewers at the
+# served .oas file. The only difference from the template is the merge:
+# the viewer is a subdirectory of the docs deployment, not a deployment
+# of its own.
+#
+# Triggers:
+#   - push to main touching docs/** or this file: re-deploy the site,
+#     reusing the latest successful gds run's viewer files (docs pushes
+#     never change the design, so the previous run's files stay valid).
+#   - workflow_run on gds completion (success, main only): re-deploy with
+#     the fresh gds run's viewer files.
+#   - workflow_dispatch: first deploy after the Pages switch to Actions
+#     mode, and manual recovery.
+#
+# This workflow only ever runs its deploy from main. Branch pushes do not
+# deploy (push trigger is branches: [main]; workflow_run fires from the
+# default branch's version of this file).
+#
+# NOTE: deploy-pages requires Pages source = "GitHub Actions" mode. Until
+# that switch is made, the deploy job will fail with "Missing environment"
+# — that is expected pre-switch, not a workflow bug. The branch-mode site
+# keeps serving until the switch + first successful deploy land.
+
+name: Deploy Pages site (docs + viewer)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/pages-deploy.yml'
+  workflow_run:
+    workflows: ['gds']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A Pages deployment must not race another one: deploys queue, never cancel.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  viewer:
+    name: Fetch viewer files
+    runs-on: ubuntu-24.04
+    outputs:
+      pdk: ${{ steps.stage.outputs.pdk }}
+      run_id: ${{ steps.find.outputs.run_id }}
+    steps:
+      - name: Find source gds run
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Source run: for workflow_run events, the triggering gds run
+          # itself (it just completed successfully on main). Otherwise,
+          # the newest completed gds run on main whose *gds job*
+          # succeeded. The run-level conclusion is NOT the criterion:
+          # pre-viewer-removal runs failed overall on the viewer job
+          # while their gds job passed and their artifacts are valid.
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+              echo "::error::Triggering gds run did not succeed; refusing to deploy stale viewer files."
+              exit 1
+            fi
+            if [ "${{ github.event.workflow_run.head_branch }}" != "main" ]; then
+              echo "::error::Triggering gds run was not on main."
+              exit 1
+            fi
+            echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+            echo "Using triggering gds run ${{ github.event.workflow_run.id }}."
+            exit 0
+          fi
+          RUN_ID=""
+          for CAND in $(gh api "repos/${{ github.repository }}/actions/workflows/gds.yaml/runs?branch=main&status=completed&per_page=10" --jq '.workflow_runs[].id'); do
+            if gh api "repos/${{ github.repository }}/actions/runs/$CAND/jobs?per_page=100" --jq -e '.jobs[] | select(.name == "gds" and .conclusion == "success")' > /dev/null; then
+              RUN_ID="$CAND"
+              break
+            fi
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::No completed gds run on main with a successful gds job; refusing to deploy without viewer files."
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Using gds run $RUN_ID."
+
+      - name: Download gds artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="${{ steps.find.outputs.run_id }}"
+          gh run download "$RUN_ID" --repo "${{ github.repository }}" -n tt_submission -D tt_submission
+          gh run download "$RUN_ID" --repo "${{ github.repository }}" -n gds_render -D gds_render
+          ls -la tt_submission gds_render
+
+      - name: Stage viewer files
+        id: stage
+        run: |
+          # Fixed served names, independent of the artifacts' internals.
+          mkdir -p viewer-files
+          cp tt_submission/*.gds viewer-files/tinytapeout.gds
+          cp tt_submission/*.oas viewer-files/tinytapeout.oas
+          cp gds_render/*.png viewer-files/gds_render.png
+          PDK=$(jq -r '.PDK' tt_submission/pdk.json)
+          if [ -z "$PDK" ] || [ "$PDK" = "null" ]; then
+            echo "::error::Could not read PDK from tt_submission/pdk.json."
+            exit 1
+          fi
+          echo "pdk=$PDK" >> "$GITHUB_OUTPUT"
+          echo "PDK=$PDK"
+          ls -la viewer-files
+
+      - name: Upload viewer files
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-files
+          path: viewer-files
+          if-no-files-found: error
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: viewer
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download viewer files
+        uses: actions/download-artifact@v7
+        with:
+          name: viewer-files
+          path: viewer-files
+
+      - name: Assemble site
+        run: |
+          # Site root = docs/ exactly as committed (branch-mode layout is
+          # preserved: docs/ IS the site root, so index/simulator/assets
+          # resolve identically under Actions mode).
+          rm -rf site
+          mkdir -p site/viewer
+          cp -r docs/. site/
+          cp viewer-files/tinytapeout.gds viewer-files/tinytapeout.oas viewer-files/gds_render.png site/viewer/
+          # Inject the PDK into the viewer landing page (the committed page
+          # carries a __PDK__ placeholder; never a hardcoded PDK string).
+          sed -i "s/__PDK__/${{ needs.viewer.outputs.pdk }}/g" site/viewer/index.html
+          grep -F "${{ needs.viewer.outputs.pdk }}" site/viewer/index.html > /dev/null \
+            || { echo "::error::PDK injection into viewer landing page failed."; exit 1; }
+          echo "Assembled site contents:"
+          ls site | head -30
+          echo "Viewer contents:"
+          ls -la site/viewer
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

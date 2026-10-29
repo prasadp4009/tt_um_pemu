@@ -94,7 +94,8 @@
     { href: base + "#explorer", label: "GDS explorer" },
     { href: base + "#view3d", label: "3D stack" },
     { href: base + "#limitations", label: "Limitations" },
-    { href: "simulator.html", label: "Simulator" }
+    { href: "simulator.html", label: "Simulator" },
+    { href: "viewer/", label: "GDS Viewer" }
   ];
   var nav = document.getElementById("site-nav");
   if (!nav) return;

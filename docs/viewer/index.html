@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEMPO — GDS viewer</title>
+<script id="tempo-theme-init">(function(){try{var t=localStorage.getItem("tempo-theme");if(t!=="dark"&&t!=="light")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+.viewer-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.2rem 0; }
+.viewer-btn { display: inline-block; padding: .7rem 1.3rem; border-radius: 999px;
+  font-weight: 700; text-decoration: none; }
+.viewer-btn.primary { background: var(--grad); color: #1c1917; }
+.viewer-btn.secondary { border: 1px solid var(--line-strong); color: var(--accent); }
+.viewer-btn[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+.viewer-preview img { max-width: 100%; height: auto; border: 1px solid var(--line);
+  border-radius: 8px; background: var(--canvas-bg); }
+.viewer-note { background: var(--warn-bg); border-left: 4px solid var(--warn-line);
+  color: var(--warn-ink); padding: .8rem 1rem; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>TEMPO — GDS viewer</h1>
+  <p class="tag">Tiny Tapeout viewer</p>
+  <p>Inspect the submitted TEMPO layout in Tiny Tapeout's hosted viewers.
+  The model files are served from this site, from the latest successful
+  GDS run on main.</p>
+</header>
+<main>
+<p><a href="../">&larr; Back to TEMPO docs</a></p>
+<section class="card">
+  <h2>Open the layout</h2>
+  <p>The buttons below open the same GDS model in Tiny Tapeout's 3D viewer
+  and Explorer. The model URL is built from this page's own location, so the
+  links work wherever the site is served from.</p>
+  <div class="viewer-actions">
+    <a id="tt-3d" class="viewer-btn primary" href="#">Open in Tiny Tapeout 3D Viewer</a>
+    <a id="tt-explorer" class="viewer-btn secondary" href="#">Open in Tiny Tapeout Explorer</a>
+  </div>
+  <p id="viewer-missing" class="viewer-note" hidden>The GDS model files are
+  not deployed under this page yet (for example, if you are reading the
+  branch-mode site before the first merged Pages deployment). The buttons
+  above stay disabled until <code>tinytapeout.oas</code> is served from
+  this directory.</p>
+  <figure class="viewer-preview">
+    <img src="gds_render.png" alt="Rendered preview of the TEMPO GDS layout"
+      onerror="this.closest('figure').style.display='none'">
+    <figcaption>Render of the submitted GDS (from the GDS run that produced
+    the model files below).</figcaption>
+  </figure>
+  <h3>Model files served from this site</h3>
+  <ul>
+    <li><a href="tinytapeout.oas">tinytapeout.oas</a> — OASIS layout model (what the hosted viewers load)</li>
+    <li><a href="tinytapeout.gds">tinytapeout.gds</a> — GDSII layout model</li>
+  </ul>
+  <p>These files are refreshed on every successful GDS run on main by the
+  Pages deploy workflow; they are not hand-committed.</p>
+</section>
+</main>
+<script>
+(function () {
+  // PDK is injected at deploy time by the Pages deploy workflow, which
+  // replaces __PDK__ with the value from the gds run's pdk.json. It is
+  // deliberately NOT hardcoded here: the committed page must not pin a
+  // PDK the workflow did not produce.
+  var PDK = "__PDK__";
+  var btn3d = document.getElementById("tt-3d");
+  var btnEx = document.getElementById("tt-explorer");
+  var note = document.getElementById("viewer-missing");
+  function disable() {
+    [btn3d, btnEx].forEach(function (b) {
+      b.setAttribute("aria-disabled", "true");
+      b.removeAttribute("href");
+    });
+    note.hidden = false;
+  }
+  if (!PDK || PDK.indexOf("__PDK__") !== -1) { disable(); return; }
+  var model = new URL("tinytapeout.oas", window.location.href).href;
+  btn3d.href = "https://gds-viewer.tinytapeout.com/?pdk=" + encodeURIComponent(PDK)
+    + "&model=" + encodeURIComponent(model);
+  btnEx.href = "https://gds-explorer.tinytapeout.com/viewer?file=" + encodeURIComponent(model)
+    + "&pdk=" + encodeURIComponent(PDK);
+  // Graceful degradation: if the model file is absent, do not offer
+  // buttons that open a viewer with nothing to load.
+  try {
+    fetch("tinytapeout.oas", { method: "HEAD" }).then(function (r) {
+      if (!r.ok) disable();
+    }).catch(function () { disable(); });
+  } catch (e) { disable(); }
+})();
+</script>
+</body>
+</html>
