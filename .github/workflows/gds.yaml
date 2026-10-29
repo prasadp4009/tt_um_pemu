@@ -37,11 +37,13 @@ jobs:
       - name: GL test
         uses: TinyTapeout/tt-gds-action/gl_test@ihp-cmos5l
 
-  viewer:
-    needs: gds
-    runs-on: ubuntu-24.04
-    permissions:
-      pages: write # to deploy to Pages
-      id-token: write # to verify the deployment originates from an appropriate source
-    steps:
-      - uses: TinyTapeout/tt-gds-action/viewer@ihp-cmos5l
+# NOTE (2026-10-29): the Tiny Tapeout viewer job was removed deliberately.
+# It deploys the GDS viewer to GitHub Pages via actions/deploy-pages, which
+# requires Pages source = "GitHub Actions" mode. This repo serves its docs
+# site from Pages in "deploy from branch" mode (main/docs), so the viewer
+# deployment always failed with "Missing environment", and switching modes
+# would let the viewer deployment overwrite the docs site. The viewer is
+# redundant here: the docs site already has a GDS explorer + 3D stack.
+# To restore: re-add the viewer job (needs: gds, permissions pages:write +
+# id-token:write, uses TinyTapeout/tt-gds-action/viewer@ihp-cmos5l) AND
+# switch Pages source to GitHub Actions mode (which displaces the docs site).
