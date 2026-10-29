@@ -1,4 +1,4 @@
-/* TEMPO docs site — design system. Plain CSS, no frameworks, no external requests.
+/* Tarang docs site — design system. Plain CSS, no frameworks, no external requests.
    Two themes, one token set. The theme is chosen before first paint by a tiny
    inline script in <head> (localStorage "tempo-theme", else OS preference) that
    sets data-theme on <html>; nav.js keeps the toggle, the diagram variants and

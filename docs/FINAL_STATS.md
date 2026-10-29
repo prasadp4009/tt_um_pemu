@@ -1,4 +1,4 @@
-# tt_um_pemu (TEMPO) — Final Hardening Stats
+# tt_um_pemu (Tarang) — Final Hardening Stats
 
 **Source of truth:** GitHub Actions run **40575084383** on HEAD **76451e0** (branch `cmos5l` → `main`, repo prasadp4009/tt_um_pemu, PRIVATE).
 gds job ✅ SUCCESS (20:06:41Z → 20:45:03Z, **38 min 22 s**). precheck ✅ SUCCESS (first ever). test ✅, docs ✅.

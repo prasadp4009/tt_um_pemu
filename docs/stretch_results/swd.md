@@ -1,4 +1,4 @@
-# SWD (ARM Serial Wire Debug, DP) — TEMPO stretch campaign result
+# SWD (ARM Serial Wire Debug, DP) — Tarang stretch campaign result
 
 **Verdict: PROVEN** (golden + RTL co-sim, protocol-specific wire checker)
 
@@ -68,7 +68,7 @@ Every RTL cycle matched the golden record (pins, regs, flags, FIFOs, observer st
 
 ## Zybo / real-hardware needs (not run — HW is a separate gate)
 
-- A real SWD target, e.g. any Cortex-M dev board (STM32 Nucleo/Blue Pill, nRF52, RP2040) with its SWD header exposed: wire TEMPO pin0→SWCLK, pin1→SWDIO, plus common GND; target powered at 3.3 V logic (TEMPO pin levels must match the target's VTref — do not drive a 1.8 V target at 3.3 V).
+- A real SWD target, e.g. any Cortex-M dev board (STM32 Nucleo/Blue Pill, nRF52, RP2040) with its SWD header exposed: wire Tarang pin0→SWCLK, pin1→SWDIO, plus common GND; target powered at 3.3 V logic (Tarang pin levels must match the target's VTref — do not drive a 1.8 V target at 3.3 V).
 - Real-world SWDIO practice differs from this firmware: debuggers normally put a **~100 Ω series resistor** on SWDIO (and the line is shared through it) because real targets begin driving with less strict turnaround separation. This firmware is push-pull both ways and relies on the verified 1-clock released turnaround; on real hardware keep the resistor, keep leads short, and be prepared to lengthen the turnaround (the DP samples with its own timing margins at 1.56 MHz, which is slow by SWD standards and should be forgiving).
 - The on-chip IDCODE of a real target will differ from the modeled 0x2BA01477 (that's a Cortex-M3 DP IDCODE); the checker/firmware are value-agnostic except for the modeled scenario — firmware computes parity from whatever it receives and reports ACK verbatim.
 - Not covered, by design of the task: AP accesses, WAIT/FAULT ACK handling, overrun mode, SWD-to-JTAG switching sequence, multidrop — DP IDCODE read only.

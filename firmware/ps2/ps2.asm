@@ -1,5 +1,5 @@
 ; ============================================================================
-; TEMPO-32 firmware: PS/2 host (keyboard) interface, open-drain CLK + DATA
+; Tarang-32 firmware: PS/2 host (keyboard) interface, open-drain CLK + DATA
 ; Stretch-protocol worker -- Jane Street Protocol Emulator ASIC competition
 ; ============================================================================
 ; PIN MAP (logical pins 0..7)

@@ -1,4 +1,4 @@
-// emu_loader.v -- FPGA host-loader for the TEMPO-32 (tt_um_pemu) emulation.
+// emu_loader.v -- FPGA host-loader for the Tarang-32 (tt_um_pemu) emulation.
 //
 // Bit-bangs the chip's 2-wire host port EXACTLY like test/tb_top.v (the
 // golden reference):

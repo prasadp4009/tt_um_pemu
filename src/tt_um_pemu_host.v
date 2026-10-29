@@ -1,7 +1,7 @@
 // ============================================================================
 // tt_um_pemu_host — Worker C: 2-wire host port + PE FIFOs + IMEM loader
 //
-// TEMPO-32 ASIC (Jane Street Protocol Emulator, IHP 130nm CMOS5L / Tiny
+// Tarang-32 ASIC (Jane Street Protocol Emulator, IHP 130nm CMOS5L / Tiny
 // Tapeout, 6x4). Implements the isa_v0.2.yaml `host_port` command set over
 // a 2-wire framed serial link:
 //

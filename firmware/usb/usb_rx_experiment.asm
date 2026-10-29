@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 USB LS RECEIVE experiment (STANDALONE image, NOT the product
+; Tarang-32 USB LS RECEIVE experiment (STANDALONE image, NOT the product
 ; firmware). Purpose: measure whether a PGET sample-at-cell-center loop can
 ; hold the 33.333-cycle LS grid: NRZI decode + de-stuff + byte assembly in
 ; the per-bit loop. See stretch_results/usb.md for the verdict/accounting.

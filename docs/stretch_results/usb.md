@@ -1,4 +1,4 @@
-# USB 1.1 Low-Speed (device TX + RX experiment) — TEMPO stretch campaign
+# USB 1.1 Low-Speed (device TX + RX experiment) — Tarang stretch campaign
 
 **Verdict: TX PROVEN (golden model + independent spec decoder + RTL co-sim).
 RX: loop PROVEN cycle-feasible standalone in the golden model; GAP for integration — the combined image exceeds the 256-word IMEM limit (accounting below).**

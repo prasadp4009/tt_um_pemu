@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 UART firmware — 115200 8N1, bit = 434 cycles @ 50 MHz (20 ns/cycle)
+; Tarang-32 UART firmware — 115200 8N1, bit = 434 cycles @ 50 MHz (20 ns/cycle)
 ; Worker A deliverable, Jane Street Protocol Emulator ASIC competition.
 ;
 ; Pins: TX = pin0 (PE push-pull out, idle high), RX = pin1 (PE in, Hi-Z).

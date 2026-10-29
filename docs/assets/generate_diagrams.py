@@ -198,12 +198,12 @@ def save(name, parts):
 
 # ---------------------------------------------------------------- architecture
 def architecture():
-    p = svg_open(980, 560, "TEMPO system architecture")
-    text(p, 490, 30, "TEMPO system architecture — one die, two independent engines",
+    p = svg_open(980, 560, "Tarang system architecture")
+    text(p, 490, 30, "Tarang system architecture — one die, two independent engines",
          size=17, weight="bold")
     titlebar(p, 490)
     box(p, 60, 80, 300, 170, T["blue_bg"], T["blue"])
-    text(p, 210, 106, "PE core — TEMPO-32 engine", size=14, weight="bold")
+    text(p, 210, 106, "PE core — Tarang-32 engine", size=14, weight="bold")
     text(p, 210, 130, "timed ISA · 16 x 16-bit GPRs", size=12)
     text(p, 210, 150, "WAIT returns elapsed cycles", size=12)
     text(p, 210, 170, "CAP snapshots {timestamp, pins}", size=12)
@@ -247,8 +247,8 @@ def architecture():
 
 # ---------------------------------------------------------------- ISA word
 def isa_word():
-    p = svg_open(980, 330, "TEMPO-32 instruction word format")
-    text(p, 490, 30, "TEMPO-32 instruction word — 32 bits, timing inside the instruction",
+    p = svg_open(980, 330, "Tarang-32 instruction word format")
+    text(p, 490, 30, "Tarang-32 instruction word — 32 bits, timing inside the instruction",
          size=16, weight="bold")
     titlebar(p, 490)
     x0, y, W = 40, 70, 900
@@ -279,7 +279,7 @@ def isa_word():
 
 # ---------------------------------------------------------------- timing contract
 def timing_contract():
-    p = svg_open(980, 420, "TEMPO timing contract")
+    p = svg_open(980, 420, "Tarang timing contract")
     text(p, 490, 30, "Timing contract — the program is the timing diagram", size=16, weight="bold")
     titlebar(p, 490)
     x0 = 150
@@ -306,7 +306,7 @@ def timing_contract():
 
 # ---------------------------------------------------------------- pin map
 def pinmap():
-    p = svg_open(980, 420, "TEMPO 24-pin functional map")
+    p = svg_open(980, 420, "Tarang 24-pin functional map")
     text(p, 490, 30, "Functional pins — Tiny Tapeout 24-pin interface (ui + uo + uio)", size=16, weight="bold")
     titlebar(p, 490)
     # three banks
@@ -336,7 +336,7 @@ def pinmap():
 # ---------------------------------------------------------------- die / tiles
 def die_tiles():
     W, H = 980, 640
-    p = svg_open(W, H, "TEMPO die and 6x4 tile fit")
+    p = svg_open(W, H, "Tarang die and 6x4 tile fit")
     text(p, 490, 30, "Die 1289.28 x 710.64 um — exactly the 6 x 4 tile allotment (0 um^2 overflow)",
          size=16, weight="bold")
     titlebar(p, 490)
@@ -417,12 +417,12 @@ def labeled():
     ml, mt = 130, 215          # margins for labels (pin brackets live above the die)
     W = int(ml + DIE_W * sc + 60)
     H = int(mt + DIE_H * sc + 90)
-    p = svg_open(W, H, "TEMPO labeled GDS top view, IMEM-512 layout")
+    p = svg_open(W, H, "Tarang labeled GDS top view, IMEM-512 layout")
 
     def X(x): return ml + x * sc
     def Y(y): return mt + (DIE_H - y) * sc  # y up -> svg down
 
-    text(p, W / 2, 28, "TEMPO (tt_um_pemu) — labeled top view, IMEM-512 layout (run 40699493628)",
+    text(p, W / 2, 28, "Tarang (tt_um_pemu) — labeled top view, IMEM-512 layout (run 40699493628)",
          size=17, weight="bold")
     text(p, W / 2, 52, "Die + core + SRAM macros at true GDS positions; pin ticks at true Metal4.text label anchors;",
          size=12)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SymbiYosys formal harnesses for TEMPO PE ISA v0.2 timing properties.
+"""Generate SymbiYosys formal harnesses for Tarang PE ISA v0.2 timing properties.
 
 Method: yosys `expose` (after `proc; memory_map`) observes DUT internals as
 additional output ports. No hierarchical references (unsupported by yosys).

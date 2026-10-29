@@ -1,4 +1,4 @@
-# TEMPO tests
+# Tarang tests
 
 Two independent test tracks live here. They share no code on purpose: the
 Tiny Tapeout track proves the chip the way the shuttle flow will see it;

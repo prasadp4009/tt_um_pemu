@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TEMPO-32 PS/2 host firmware test (stretch-protocol worker).
+"""Tarang-32 PS/2 host firmware test (stretch-protocol worker).
 
 TEST={"name":"ps2","proto":"ps2"}
 

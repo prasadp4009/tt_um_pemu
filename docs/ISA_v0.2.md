@@ -1,4 +1,4 @@
-# TEMPO-32 ISA Specification — v0.2 (encoding freeze)
+# Tarang-32 ISA Specification — v0.2 (encoding freeze)
 
 | | |
 |---|---|
@@ -198,7 +198,7 @@ ARCHITECTURE.md §7.4). "Shall" is normative.
 - **T16.** HLT stops the PE cycle counter (clocks gated); wake only on
   host GO or reset.
 - **T17.** Observer adjacency: trigger→trace-commit ≤ **K=6** core
-  cycles; timestamps non-decreasing. TEMPO properties assume only this
+  cycles; timestamps non-decreasing. Tarang properties assume only this
   bound (observer internals are §6's). → F5
 
 **SVA schemas** (parameterized; per-opcode instantiation is a 24-row

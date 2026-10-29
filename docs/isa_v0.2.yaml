@@ -1,6 +1,6 @@
-# TEMPO-32 ISA v0.2 — machine-readable single source of truth
+# Tarang-32 ISA v0.2 — machine-readable single source of truth
 # ============================================================================
-# This file is the ENCODING authority for the TEMPO-32 ISA (v0.2).
+# This file is the ENCODING authority for the Tarang-32 ISA (v0.2).
 # Semantics source: ~/workspace/janestreet-pemu/ARCHITECTURE.md (v0.1 proposal).
 # Human-readable companion: ~/workspace/janestreet-pemu/ISA_v0.2.md
 #
@@ -532,7 +532,7 @@ timing_contract:
     - { id: T14, text: "EVT raises EVTFLAG[imm4] at end of base cycle; d delay cycles run after.", contract: "instr-table", formal: "F1" }
     - { id: T15, text: "ALU/CMP/MOV/LDI/PMASK/MSR results commit at end of base cycle.", contract: "2.2.2-ordering", formal: "F1" }
     - { id: T16, text: "HLT stops the PE cycle counter (clocks gated); wake only on host GO or reset.", contract: "instr-table", formal: "-" }
-    - { id: T17, text: "Observer adjacency: trigger->trace-commit <= K=6 cycles; timestamps non-decreasing. TEMPO properties assume only this bound.", contract: "7.4-F5", formal: "F5" }
+    - { id: T17, text: "Observer adjacency: trigger->trace-commit <= K=6 cycles; timestamps non-decreasing. Tarang properties assume only this bound.", contract: "7.4-F5", formal: "F5" }
   sva_schemas: ["p_LAT(d)", "p_PIN_EFFECT(d)", "p_PIN_VIS", "p_SAMPLE(d)", "p_SYNC2", "p_NO_STALL", "p_WAIT_REPORT(tsel)", "p_CAP_ATOMIC(d)"]
   sva_tbd_binds: ["issue", "issue_next", "eff_commit", "dec_op", "wait_elapsed_cycles", "wait_timed_out", "wait_done", "ts_at_commit", "pins_at_commit"]
   wait_tsel_map: { 0: 256, 1: 4096, 2: 65536, 3: 1048576 }

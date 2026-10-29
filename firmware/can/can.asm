@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 CAN 2.0A (standard 11-bit ID) firmware -- logic level, 1 Mbit/s
+; Tarang-32 CAN 2.0A (standard 11-bit ID) firmware -- logic level, 1 Mbit/s
 ; 50 MHz core -> 20 ns/cycle; 1 Mbit/s -> exactly 50 cycles/bit.
 ;
 ; PINS: pin0 = TXD out (1=recessive, 0=dominant, as a transceiver expects)
@@ -23,7 +23,7 @@
 ;   other           : PUSH 0xFFFF (unknown), `evt 0`, loop.
 ;   DLC > 2         : arg words are consumed and discarded, PUSH 0xFFFF.
 ;
-; DLC CAP = 2 (stated cap): TEMPO has no data RAM and the 16 GPRs are fully
+; DLC CAP = 2 (stated cap): Tarang has no data RAM and the 16 GPRs are fully
 ;   allocated (see register map). The data stream (up to 16 bits) must
 ;   survive the SOF..DLC fields intact in a register while the DLC field's
 ;   own shifter, the ID shifter, and the arbitration flag are also live;
@@ -60,7 +60,7 @@
 ;   entry/exit) is padded to exactly I=10; cell-direct gaps (post-CRC)
 ;   are padded to their own exact values (19/20 cycles).
 ;
-; ARBITRATION: there is NO branch-on-pin instruction in TEMPO. The sample
+; ARBITRATION: there is NO branch-on-pin instruction in Tarang. The sample
 ;   path is PGET -> normalize -> AND-combine in the cell (flag r11), then
 ;   the ID loop tests r11 after each bit (CMP + JMP nz): branch-on-sample
 ;   costs ~3-4 cycles of loop overhead and is absorbed in the gap padding.

@@ -1,4 +1,4 @@
-# CAN 2.0A stretch protocol — TEMPO (tt_um_pemu)
+# CAN 2.0A stretch protocol — Tarang (tt_um_pemu)
 Status: PROVEN — golden PASS + RTL co-sim PASS (both scenarios)
 Plan:
 - [x] can.asm (255/256 words, DLC cap 2 — see header for rationale)
@@ -39,7 +39,7 @@ Total golden cycles for all three commands + halt: 6366.
 - Sample point: PGET at cell cycle 20 (sync-effective ~18). Placement is
   forced: per-bit run+CRC+stuff+arb bookkeeping is 27 fixed cycles of the
   30-cycle cell. Peer/monitor drives each cell for the full 50 cycles.
-- Branch-on-sample characterization: TEMPO has no branch-on-pin. Path is
+- Branch-on-sample characterization: Tarang has no branch-on-pin. Path is
   PGET -> in-cell AND-combine into r11 -> ID-loop CMP+JMP nz (~3-4 cycles,
   absorbed in gap padding). Measured arbitration sample->abort-decision
   latency: 11 cycles; decision lands 19 cycles before the next bit cell
@@ -78,7 +78,7 @@ test/cosim/hex/can.hex, test/cosim/traces/can_trace.bin,
 test/cosim/traces/can_arb_trace.bin.
 
 ## Zybo HW needs
-- TEMPO side is logic-level only: pin0 TXD / pin1 RXD at 3.3 V.
+- Tarang side is logic-level only: pin0 TXD / pin1 RXD at 3.3 V.
 - A 3.3 V CAN transceiver board, e.g. SN65HVD230 (VP230) breakout: TXD<-
   pin0, RXD->pin1, CANH/CANL to the bus, 120 ohm termination at each bus end.
 - A second CAN node to ACK and to arbitrate against: a CAN analyzer

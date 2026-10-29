@@ -1,4 +1,4 @@
-# TEMPO-32 ISA — v0.3 Note (IMEM-512 extension)
+# Tarang-32 ISA — v0.3 Note (IMEM-512 extension)
 
 | | |
 |---|---|

@@ -1,4 +1,4 @@
-"""TEMPO firmware inter-word race regression test.
+"""Tarang firmware inter-word race regression test.
 
 BUG (found 2026-09-27 by the Tiny Tapeout template test): the serial host
 delivers 16-bit command-frame words ~2000 core cycles apart, but the

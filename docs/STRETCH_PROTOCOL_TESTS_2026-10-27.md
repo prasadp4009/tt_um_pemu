@@ -1,7 +1,7 @@
-# TEMPO Stretch-Protocol Tests — USB LS, 10BASE-T, JTAG, SWD, PS/2, CAN
+# Tarang Stretch-Protocol Tests — USB LS, 10BASE-T, JTAG, SWD, PS/2, CAN
 
-**Date:** 2026-10-27 (run overnight into 10-28 CDT) · **Chip:** tt_um_pemu (TEMPO), repo HEAD `e99ff28` (full TT flow GREEN)
-**Method:** the project's own pipeline for every protocol — firmware in TEMPO assembly
+**Date:** 2026-10-27 (run overnight into 10-28 CDT) · **Chip:** tt_um_pemu (Tarang), repo HEAD `e99ff28` (full TT flow GREEN)
+**Method:** the project's own pipeline for every protocol — firmware in Tarang assembly
 (`firmware/tools/asm.py`) → golden-model test with a **protocol-specific checker/decoder**
 (`firmware/tests/test_<proto>.py` via `tools/tb.py` against the cycle-exact golden model
 `sim.py`) → COS1 golden trace (`record_<proto>.py`) → **cycle-exact RTL co-sim replay** on
@@ -150,7 +150,7 @@ point**, **19 cycles before the next bit cell**. So the composite branch-on-samp
 bookkeeping consumes the rest of the cell. That is the honest characterization: the ISA
 supports CAN arbitration with margin, at a firmware-chosen sample point.
 
-**DLC cap (stated limitation):** DLC ≤ 2. Reason: TEMPO has no data RAM — the destuffed
+**DLC cap (stated limitation):** DLC ≤ 2. Reason: Tarang has no data RAM — the destuffed
 bit stream must live in a GPR across SOF..DLC while the CRC accumulates, and a full
 DLC 0..8 implementation did not fit the remaining words at 255/256. Longer frames are a
 firmware-size problem, not a timing or ISA-semantics problem.
@@ -159,7 +159,7 @@ RTL co-sim: TX scenario `COSIM PASS: 3504 cycles verified`; arbitration scenario
 `COSIM PASS: 300 cycles verified`.
 
 **Zybo HW would additionally need:** a 3.3 V CAN transceiver board (e.g., SN65HVD230) —
-TEMPO's side is logic-level TXD/RXD only — plus a second CAN node or analyzer to ACK and
+Tarang's side is logic-level TXD/RXD only — plus a second CAN node or analyzer to ACK and
 to arbitrate against.
 
 ## 6. USB low-speed — TX ✅ PROVEN; RX ⚠️ PARTIAL (integration gap: words, not cycles)
@@ -214,7 +214,7 @@ grounds:
    at ±10 ns = 20 ns peak-to-peak deterministic jitter, which alone exceeds the 802.3
    transmitter jitter limits (±5.5 ns with TPM, ±8.0 ns without — TI SNLA266B) by
    1.82× / 1.25× before any clock or pad jitter. Dither also leaves ≤ ~3 cycles/bit for
-   *all* MAC work (CRC-32, CSMA/CD, preamble) against proven TEMPO protocol mappings at
+   *all* MAC work (CRC-32, CSMA/CD, preamble) against proven Tarang protocol mappings at
    50–500 cycles/bit.
 2. **Clock ceiling.** Green-run STA (run 40575084383, FINAL_STATS.md §5): slow corner
    (1.08 V / 125 °C) WNS −2.933 ns on the 20 ns period → **fmax = 1 / 22.933 ns =
@@ -224,15 +224,15 @@ grounds:
 3. **No analog PHY.** 10BASE-T transmit is a differential waveform template
    (2.2–2.8 V peak into 100 Ω, bounded common-mode) through 1:1 magnetics with a
    common-mode choke, plus 100 ns link-integrity pulses every 16 ms ± 8 ms; receive needs
-   a slicer with squelch. TEMPO's pins are single-ended digital GPIO with fixed
+   a slicer with squelch. Tarang's pins are single-ended digital GPIO with fixed
    thresholds — the analog side does not exist on-chip, for TX or RX.
 
 Escape hatches, closed: faster ASIC clock (STA, above); FPGA at 100 MHz (exact 5-cycle
 half-bits — demonstrates ISA timing scaling only, still fails the analog side:
 **FPGA-only curiosity**); other 10M variants (10BASE-T1L PAM3 @ 7.5 MBd, T1S DME @
-25 MBd — both worse). **External PHY is the one real route:** TEMPO drives a PHY's digital
+25 MBd — both worse). **External PHY is the one real route:** Tarang drives a PHY's digital
 interface — MII at 10 Mb/s is a 2.5 MHz nibble clock = 400 ns = 20 cycles/nibble, and an
-SPI MAC/PHY (ENC28J60 class) is easier still — so *TEMPO + external PHY* is a legitimate
+SPI MAC/PHY (ENC28J60 class) is easier still — so *Tarang + external PHY* is a legitimate
 system-level capability, **provided the claim is stated honestly: the PHY chip performs
 the Ethernet line coding; the ISA does not.**
 

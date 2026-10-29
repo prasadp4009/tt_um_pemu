@@ -1,4 +1,4 @@
-# TEMPO Firmware Phase — FIRMWARE.md
+# Tarang Firmware Phase — FIRMWARE.md
 
 **Status: G3 GATE PASS** (2026-09-27). Four protocol firmware images,
 assembled from YAML-derived encodings, verified bit-exact against the

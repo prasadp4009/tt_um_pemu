@@ -1,4 +1,4 @@
-"""TEMPO USB LS RECEIVE experiment test (standalone RX image).
+"""Tarang USB LS RECEIVE experiment test (standalone RX image).
 
 The product USB firmware (usb.asm, 243 words) has no room for the receiver;
 this test exercises the standalone experiment image

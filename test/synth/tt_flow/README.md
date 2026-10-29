@@ -1,6 +1,6 @@
-# Tiny Tapeout synthesis — TEMPO (`tt_um_pemu`), IHP SG13G2
+# Tiny Tapeout synthesis — Tarang (`tt_um_pemu`), IHP SG13G2
 
-Real Tiny Tapeout / LibreLane synthesis run of the **frozen** TEMPO RTL.
+Real Tiny Tapeout / LibreLane synthesis run of the **frozen** Tarang RTL.
 This is the actual TT flow (LibreLane Classic, IHP PDK), not the older
 hand-rolled Yosys scripts in `test/synth/` (`tempo_synth.ys` etc.).
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extended SymbiYosys proofs for TEMPO (v0.2 ext).
+"""Extended SymbiYosys proofs for Tarang (v0.2 ext).
 
 New vs gen.py: bug-regression properties (carry semantics, HLT PC hold,
 prefetch mux, illegal opcode, no-X) + host FIFO proofs + observer watermark

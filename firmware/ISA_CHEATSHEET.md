@@ -1,4 +1,4 @@
-# TEMPO-32 ISA Cheatsheet (firmware phase)
+# Tarang-32 ISA Cheatsheet (firmware phase)
 
 Authoritative source: `../isa_v0.2.yaml`. This is a convenience summary.
 50 MHz core → **1 cycle = 20 ns**. All instructions: **1+d cycles** (d=0..31),

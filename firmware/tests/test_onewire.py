@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TEMPO-32 1-Wire master firmware test (Worker D).
+"""Tarang-32 1-Wire master firmware test (Worker D).
 
 TEST={"name":"onewire","proto":"onewire"}
 

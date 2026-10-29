@@ -1,14 +1,14 @@
 ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/gds.yaml/badge.svg) ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/docs.yaml/badge.svg) ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/test.yaml/badge.svg) ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/fpga.yaml/badge.svg)
 
-# TEMPO — Timing-Exact Multi-Protocol Observer
+# Tarang — Timing-Exact Programmable Protocol Emulator
 
 **A programmable protocol-emulator ASIC with an independent on-chip logic
 analyser, for the Jane Street Protocol Emulator ASIC Competition**
 (Tiny Tapeout, IHP 130 nm SG13G2 / CMOS5L, 6×4 tiles, submission deadline
 18 January 2027).
 
-TEMPO does not hard-wire a protocol. It executes firmware in a 32-bit
-*timed* instruction set (TEMPO-32 ISA v0.2, extended by the v0.3 note) in
+Tarang does not hard-wire a protocol. It executes firmware in a 32-bit
+*timed* instruction set (Tarang-32 ISA v0.2, extended by the v0.3 note) in
 which timing is part of the program: every instruction carries a delay
 field, pin effects and sampling land on exact cycles, `WAIT` returns the
 cycles actually elapsed, and `CAP` atomically snapshots {timestamp,
@@ -31,9 +31,9 @@ and a peer's.
 example code, FPGA test evidence, and an interactive GDS explorer with
 a 3D exploded-stack view of the real 512-word layout.
 
-## What TEMPO is
+## What Tarang is
 
-A competition entry is usually judged on what it can *do*. TEMPO's bet
+A competition entry is usually judged on what it can *do*. Tarang's bet
 is different: the chip is a **measurement instrument first, a protocol
 implementation second**. The two instructions that make that claim real
 are:
@@ -54,7 +54,7 @@ image, speaks a different protocol.
 
 ![System architecture](docs/assets/diagram-architecture.svg)
 
-- **PE core (`u_pe`)** — TEMPO-32 engine: 16 × 16-bit GPRs, 20 special
+- **PE core (`u_pe`)** — Tarang-32 engine: 16 × 16-bit GPRs, 20 special
   registers (MRS/MSR), ALU + flags, CALL/RET stack, TX/RX FIFOs
   (16 × 16-bit each), 9-bit PC under the v0.3 note.
 - **Observer (`u_obs`)** — independent trace engine: EDGE / PATTERN /
@@ -225,7 +225,7 @@ image.
 ### SPI master: init + command loop (excerpt from `firmware/spi/spi.asm`)
 
 ```asm
-; TEMPO-32 SPI master firmware -- mode 0 (CPOL=0, CPHA=0), 1 MHz
+; Tarang-32 SPI master firmware -- mode 0 (CPOL=0, CPHA=0), 1 MHz
 ; 50 MHz core -> 20 ns/cycle; 1 Mbit/s -> exactly 50 cycles/bit.
 ; HOST COMMAND WORDS (16-bit, via RX FIFO; responses via TX FIFO):
 ;   0x0001  TRANSFER : PULL N (byte count, 0..15), then PULL N data words
@@ -472,7 +472,7 @@ timing guidance above, the T17 decision item below, and these limits.
 - **Phase 7 verification depth** (formal timing contract,
   constrained-random, agentic campaign) — queued, not started; it adds
   depth to already-strong evidence, not existence.
-- **Display-name collision** — another public project uses "Tempo";
+- **Display-name collision** — another public project uses "Tarang";
   the repo name `tt_um_pemu` is fixed by Tiny Tapeout convention, so
   only the display name is at stake. Undecided.
 

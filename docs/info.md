@@ -1,8 +1,8 @@
 ## What it does
 
-TEMPO (Timing-Exact Multi-Protocol Observer) is a programmable serial-protocol
+Tarang (Timing-Exact Programmable Protocol Emulator) is a programmable serial-protocol
 emulator. Instead of hard-wiring one protocol, the chip executes firmware
-written in a 32-bit *timed* instruction set (TEMPO-32 ISA v0.2): every
+written in a 32-bit *timed* instruction set (Tarang-32 ISA v0.2): every
 instruction carries a 5-bit delay field, pin effects and pin sampling happen on
 exact clock cycles, `WAIT` returns the number of cycles actually elapsed, and
 `CAP` takes an atomic {timestamp, pins} snapshot. One engine therefore speaks

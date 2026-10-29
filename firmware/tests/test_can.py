@@ -1,4 +1,4 @@
-"""TEMPO CAN 2.0A test: 1 Mbit/s bit-bang vs bus model + independent monitor.
+"""Tarang CAN 2.0A test: 1 Mbit/s bit-bang vs bus model + independent monitor.
 
 TEST PLAN
   host: [0x0001, 0x123, 2, 0xFF, 0x00]  -> TX frame ID=0x123 DLC=2

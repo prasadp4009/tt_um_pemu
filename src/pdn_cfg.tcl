@@ -1,4 +1,4 @@
-# pdn_cfg.tcl -- TEMPO (tt_um_pemu) PDN configuration.
+# pdn_cfg.tcl -- Tarang (tt_um_pemu) PDN configuration.
 #
 # This is LibreLane's stock scripts/openroad/common/pdn_cfg.tcl with ONE
 # change: the trailing per-macro grid block

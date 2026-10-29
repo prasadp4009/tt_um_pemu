@@ -1,8 +1,8 @@
 /*
- * tt_um_pemu_pe.v — TEMPO-32 PE core (Protocol Emulator, Jane Street ASIC competition)
+ * tt_um_pemu_pe.v — Tarang-32 PE core (Protocol Emulator, Jane Street ASIC competition)
  *
  * Worker A (PE core), Phase 6. Single-cycle, non-pipelined 32-bit datapath
- * implementing all 24 TEMPO-32 instructions per isa_v0.2.yaml + ISA_v0.2.md
+ * implementing all 24 Tarang-32 instructions per isa_v0.2.yaml + ISA_v0.2.md
  * timing contract T1–T17, cycle-exact vs firmware/tools/sim.py.
  *
  * Key microarchitectural decisions (see also intf_pe.md):

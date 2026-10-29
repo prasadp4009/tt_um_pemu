@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 SWD master firmware -- ARM Serial Wire Debug, DP access only
+; Tarang-32 SWD master firmware -- ARM Serial Wire Debug, DP access only
 ; 50 MHz core -> 20 ns/cycle. SWCLK period = 32 cycles exactly within any
 ; clocked phase -> SWCLK = 50 MHz / 32 = 1.5625 MHz.
 ;

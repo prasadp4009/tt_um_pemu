@@ -1,5 +1,5 @@
 ; ======================================================================
-; TEMPO-32 stretch firmware -- 1-Wire master on pin7 (Worker D)
+; Tarang-32 stretch firmware -- 1-Wire master on pin7 (Worker D)
 ; ----------------------------------------------------------------------
 ; 1-Wire master, 50 MHz core (1 cycle = 20 ns; 1 us = 50 cycles).
 ; Pin7 = open-drain + pull-up (pmode bits[15:14] = {1,1}); PSET bit7

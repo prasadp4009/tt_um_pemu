@@ -1,4 +1,4 @@
-# TEMPO generic (pre-techmap) synthesis: sanity cross-check only
+# Tarang generic (pre-techmap) synthesis: sanity cross-check only
 read_verilog -sv src/tt_um_pemu.v
 read_verilog -sv src/tt_um_pemu_pe.v
 read_verilog -sv src/tt_um_pemu_observer.v

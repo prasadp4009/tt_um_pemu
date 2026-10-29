@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 USB 1.1 LOW-SPEED TX+RX merged firmware (IMEM-512 expansion).
+; Tarang-32 USB 1.1 LOW-SPEED TX+RX merged firmware (IMEM-512 expansion).
 ;
 ; Integration of the two proven standalone images, code reused VERBATIM
 ; except for the dispatch-merge items listed below (no bit-loop, timing,

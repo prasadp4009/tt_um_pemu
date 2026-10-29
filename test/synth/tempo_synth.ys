@@ -1,4 +1,4 @@
-# TEMPO full-chip synthesis: IHP SG13G2, typical corner 1.2V 25C
+# Tarang full-chip synthesis: IHP SG13G2, typical corner 1.2V 25C
 # Clock constraint: 50 MHz => 20 ns period => 20000 ps.
 # abc -D <ps> sets ABC's delay target in picoseconds (used by "&nf -D" and "retime -o -D").
 # NOTE: for this liberty abc does NOT map flip-flops (it leaves $_DFF_* generic),

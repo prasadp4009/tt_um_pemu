@@ -1,4 +1,4 @@
-# Coverage Report — Jane Street TEMPO-32 Protocol Emulator ASIC
+# Coverage Report — Jane Street Tarang-32 Protocol Emulator ASIC
 
 **Date:** 2026-09-27  
 **Branch:** cmos5l  

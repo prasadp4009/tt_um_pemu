@@ -1,4 +1,4 @@
-// TEMPO web simulator UI — plain JS, no dependencies.
+// Tarang web simulator UI — plain JS, no dependencies.
 // Playground presentation: transport bar, example cards, live-state
 // dashboard, keyboard shortcuts. Simulation behaviour lives in the
 // tempo-* modules and is untouched by this file's presentation code.

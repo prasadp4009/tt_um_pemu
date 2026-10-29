@@ -1,4 +1,4 @@
-"""TEMPO SPI master test: mode-0 1 MHz bit-bang vs scripted SPI slave peer.
+"""Tarang SPI master test: mode-0 1 MHz bit-bang vs scripted SPI slave peer.
 
 TEST PLAN
   host: [0x0001, 2, 0xA5, 0x3C]  -> 2-byte full-duplex transfer

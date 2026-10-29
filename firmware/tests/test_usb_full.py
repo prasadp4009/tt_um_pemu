@@ -1,4 +1,4 @@
-"""TEMPO USB 1.1 low-speed TX+RX merged-image test (IMEM-512 expansion).
+"""Tarang USB 1.1 low-speed TX+RX merged-image test (IMEM-512 expansion).
 
 The merged image (usb/usb_full.asm, 299 words) carries BOTH the proven
 TX path (usb.asm) and the proven RX path (usb_rx_experiment.asm) in ONE

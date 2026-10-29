@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 ubproof -- upper-bank EXECUTION proof (IMEM-512 expansion, Phase 6)
+; Tarang-32 ubproof -- upper-bank EXECUTION proof (IMEM-512 expansion, Phase 6)
 ;
 ; Purpose: prove on hardware that code fetched from IMEM addresses >= 256
 ; actually EXECUTES (not just loads/verifies). The GENERIC host loader

@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 USB 1.1 LOW-SPEED device-side TRANSMIT firmware
+; Tarang-32 USB 1.1 LOW-SPEED device-side TRANSMIT firmware
 ; 50 MHz core -> 20 ns/cycle. LS bit = 666.67 ns = 33.333 cycles (fractional).
 ; DITHER: per-bit loop is fully cycle-counted; cells are 33,33,34 repeating
 ; (phase counter adds exactly +1 cycle on every 3rd cell) -> average exactly

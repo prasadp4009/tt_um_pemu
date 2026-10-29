@@ -1,4 +1,4 @@
-"""TEMPO SWD master test: DP IDCODE read vs SWD target (DP) peer model.
+"""Tarang SWD master test: DP IDCODE read vs SWD target (DP) peer model.
 
 TEST PLAN
   host: [0x0001] -> line reset (56 SWCLK with SWDIO=1) + DP IDCODE read

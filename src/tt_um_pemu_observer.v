@@ -1,7 +1,7 @@
 // =============================================================================
-// tt_um_pemu_observer.v -- TEMPO-32 Observer capture engine + trace SRAM port
+// tt_um_pemu_observer.v -- Tarang-32 Observer capture engine + trace SRAM port
 //
-// Worker B, TEMPO ASIC RTL phase (Jane Street Protocol Emulator, IHP 130nm).
+// Worker B, Tarang ASIC RTL phase (Jane Street Protocol Emulator, IHP 130nm).
 // Single-writer file. Interface contract:
 //   ~/workspace/janestreet-pemu/_phase6/intf_observer.md
 // Normative refs: ISA_v0.2.md section 6, isa_v0.2.yaml (observer,

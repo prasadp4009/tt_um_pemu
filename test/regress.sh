@@ -1,5 +1,5 @@
 #!/bin/bash
-# TEMPO full verification regression — single command.
+# Tarang full verification regression — single command.
 # Usage (on starklabs): bash test/regress.sh   (from repo root)
 # Stages: formal (32 proofs) -> xcheck -> Verilator benches (591) -> co-sim (4 images).
 # Independent of the Tiny Tapeout track (test/test.py + test/tb.v): no shared code.

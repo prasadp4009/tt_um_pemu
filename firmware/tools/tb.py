@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tbengy-style test-module runner for TEMPO firmware verification.
+"""tbengy-style test-module runner for Tarang firmware verification.
 
 A test module is a Python file defining:
     TEST = {"name": <str>, "proto": <str>}   # required

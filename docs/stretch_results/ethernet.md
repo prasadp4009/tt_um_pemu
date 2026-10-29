@@ -1,4 +1,4 @@
-# 10BASE-T Ethernet — Stretch Feasibility Analysis (TEMPO / tt_um_pemu)
+# 10BASE-T Ethernet — Stretch Feasibility Analysis (Tarang / tt_um_pemu)
 
 **Analysis only.** No firmware was written and no simulation was run for
 this document. Every number below is either quoted from a project file
@@ -16,8 +16,8 @@ on HEAD `e99ff28`, run 40609957985 (SUBMISSION_READINESS_2026-10-27.md).
 
 | Question | Verdict |
 |---|---|
-| (i) TEMPO-as-10BASE-T-PHY on the ASIC — firmware drives the wire directly, ASIC pins are the PHY | **NOT FEASIBLE** — fails on three independent grounds, any one of which is sufficient: (1) half-bit timing is not representable at 50 MHz (2.5 cycles/half-bit; dithered edges violate the 802.3 transmitter jitter limit by 1.25–1.8× before any other jitter source is counted); (2) the slow-corner silicon cannot even sustain the nominal 50 MHz (fmax ≈ **43.61 MHz**, §3), let alone the 100 MHz that would make the half-bit exact; (3) 10BASE-T is an analog specification — differential waveform template, magnetics, squelch receiver — and TEMPO exposes only 3.3 V single-ended digital GPIO with fixed-threshold digital inputs. There is no PHY to speak of. |
-| (ii) TEMPO + external PHY/MAC-PHY chip as a *system* — TEMPO bit-bangs the chip's digital host interface, the chip does the wire | **ASIC CAPABILITY (system-level, honestly labelled)** — trivially feasible on timing (MII nibble at 10 Mb/s = 20 cycles/nibble; SPI-host chips even easier). But the Ethernet protocol emulation is then done by the PHY chip, not by the TEMPO ISA. The competition narrative may claim *"TEMPO controls an external 10BASE-T PHY"*, never *"TEMPO implements 10BASE-T."* See §7c. |
+| (i) Tarang-as-10BASE-T-PHY on the ASIC — firmware drives the wire directly, ASIC pins are the PHY | **NOT FEASIBLE** — fails on three independent grounds, any one of which is sufficient: (1) half-bit timing is not representable at 50 MHz (2.5 cycles/half-bit; dithered edges violate the 802.3 transmitter jitter limit by 1.25–1.8× before any other jitter source is counted); (2) the slow-corner silicon cannot even sustain the nominal 50 MHz (fmax ≈ **43.61 MHz**, §3), let alone the 100 MHz that would make the half-bit exact; (3) 10BASE-T is an analog specification — differential waveform template, magnetics, squelch receiver — and Tarang exposes only 3.3 V single-ended digital GPIO with fixed-threshold digital inputs. There is no PHY to speak of. |
+| (ii) Tarang + external PHY/MAC-PHY chip as a *system* — Tarang bit-bangs the chip's digital host interface, the chip does the wire | **ASIC CAPABILITY (system-level, honestly labelled)** — trivially feasible on timing (MII nibble at 10 Mb/s = 20 cycles/nibble; SPI-host chips even easier). But the Ethernet protocol emulation is then done by the PHY chip, not by the Tarang ISA. The competition narrative may claim *"Tarang controls an external 10BASE-T PHY"*, never *"Tarang implements 10BASE-T."* See §7c. |
 | FPGA Manchester-signalling demo at 100 MHz (Zybo) | **FPGA-ONLY CURIOSITY** — the cycle math closes exactly at 100 MHz, so a Manchester *bit-stream* demo on the FPGA is physically possible. It would prove the ISA timing model scales with clock; it would prove nothing about the ASIC, and it still would not be a compliant 10BASE-T PHY (analog grounds, §6, apply on the FPGA board too). See §7b. |
 
 **ARCHITECTURE.md §5.5 is confirmed, independently and with numbers:**
@@ -91,7 +91,7 @@ of code cleverness. §2 shows 10BASE-T is exactly such a protocol.
 | Half-bit (half-cell) | **50 ns** | 100 ns / 2 |
 | Signalling rate on the wire | 20 Mtransitions/s worst case | 2 per bit cell |
 
-TEMPO at the nominal harness clock:
+Tarang at the nominal harness clock:
 
 | Quantity | Value |
 |---|---|
@@ -257,7 +257,7 @@ suite):
 - **Jitter with Twisted Pair Model (TPM): must be < ±5.5 ns.**
 - **Jitter without TPM: must be < ±8.0 ns.**
 
-Dithered TEMPO output: **±10 ns** of deterministic jitter alone.
+Dithered Tarang output: **±10 ns** of deterministic jitter alone.
 
 ```
 vs. with-TPM limit:    10.0 / 5.5  = 1.82× over the limit
@@ -280,7 +280,7 @@ is a bench anecdote, not a PHY. The competition stretch goal says
 ### 4.3 Dithering does not even fix the receive path
 
 Dithering is a TX-only idea. On RX, the incoming stream's mid-bit
-edges arrive at true 50 ns offsets; TEMPO samples them on its 20 ns
+edges arrive at true 50 ns offsets; Tarang samples them on its 20 ns
 synchronizer grid (§1, T5). The sampling quantisation error is up
 to ±10 ns on every edge measurement — 20% of a half-cell — before
 clock-recovery logic (which itself has only ~2.5 samples per
@@ -303,7 +303,7 @@ STA §3, dither §4, analog/PHY §6, escape hatches §7, verdict §8.*
 
 Sections 2–4 grant, for argument's sake, a perfect digital
 Manchester engine and show it still fails. This section removes the
-grant: 10BASE-T compliance is mostly *analog*, and TEMPO has no
+grant: 10BASE-T compliance is mostly *analog*, and Tarang has no
 analog capability at all. The Tiny Tapeout interface is 24 digital
 pins at 3.3 V; the precheck analog-pin check passes precisely
 because the design contains **no analog pins**
@@ -315,7 +315,7 @@ A compliant 10BASE-T transmitter (802.3 §14.3.1) must deliver, at
 the MDI (i.e. on the *line side* of the isolation magnetics):
 
 1. **Differential signalling** on a dedicated TX pair — equal and
-   opposite voltages on TX+/TX−. TEMPO pins are single-ended
+   opposite voltages on TX+/TX−. Tarang pins are single-ended
    3.3 V CMOS. Two GPIO pins driven in anti-phase approximate a
    differential pair at the pins, but with uncontrolled skew,
    unmatched output impedance, no controlled common-mode, and no
@@ -339,7 +339,7 @@ the MDI (i.e. on the *line side* of the isolation magnetics):
    MDI: typically a 1:1 isolation transformer plus common-mode
    choke (the familiar "magjack"). The transformer provides
    galvanic isolation, common-mode rejection, and part of the
-   waveform shaping. TEMPO's board has TT demo-board GPIO routing,
+   waveform shaping. Tarang's board has TT demo-board GPIO routing,
    not a magnetics front end; adding a magjack to a carrier board
    still leaves items 1–2 unsolved, because the template is
    specified at the MDI and the *driver* behind the transformer
@@ -357,7 +357,7 @@ the MDI (i.e. on the *line side* of the isolation magnetics):
    100 ns single-ended GPIO blip is a pulse of the right width and
    the wrong everything else. Jabber protection (transmitter must
    self-disable after ~20–30 ms of continuous transmission) is
-   likewise a PHY function TEMPO would have to emulate in firmware
+   likewise a PHY function Tarang would have to emulate in firmware
    while simultaneously being the thing it is policing.
 
 ### 6.2 Receive path
@@ -370,7 +370,7 @@ The RX direction fails earlier and harder:
    thresholds are a few hundred mV differential — e.g. 300–585 mV
    in legacy transceiver datasheets) must be rejected as noise/
    idle, and valid-signal detection must unsquelch within a few
-   bit times. TEMPO's inputs are standard digital pads with fixed,
+   bit times. Tarang's inputs are standard digital pads with fixed,
    single-ended, logic-level thresholds (a substantial fraction of
    the 3.3 V rail). They cannot see a ±2.5 V differential signal
    centred on a common-mode set by the magnetics, cannot implement
@@ -402,7 +402,7 @@ what a PHY chip is for.
 |---|---|---|---|
 | a | Clock the ASIC faster | Need 100 MHz for exact half-bits (10 ns cycle). Slow-corner fmax = **43.61 MHz**; typ = 68.21 MHz; fast = 88.35 MHz (§3.1). 100 MHz is 2.29× slow fmax — unreachable at *every* corner. Even nominal 50 MHz exceeds slow-corner fmax. | **CLOSED** |
 | b | Demo it on the FPGA (Zybo) at 100 MHz | 100 MHz ⇒ 10 ns cycle ⇒ 10 cycles/bit, **5 cycles/half-bit, exact**. Cycle math closes. §6 analog failures unchanged. Proves ISA timing scaling; proves nothing about the ASIC. | **OPEN as a demo; CLOSED as evidence for the ASIC** |
-| c | External PHY / MAC-PHY chip | MII @10 Mb/s: TX_CLK = 2.5 MHz, nibble period = **400 ns = 20 cycles @50 MHz** — trivial. SPI-host MAC/PHY (e.g. ENC28J60 class): TEMPO SPI master already proven at ~50 cycles/bit firmware scale (§5.3 mapping) — easier still. PHY chip + magjack do *all* of §§2–6. | **FEASIBLE AS A SYSTEM** — with the claim boundary in §7c |
+| c | External PHY / MAC-PHY chip | MII @10 Mb/s: TX_CLK = 2.5 MHz, nibble period = **400 ns = 20 cycles @50 MHz** — trivial. SPI-host MAC/PHY (e.g. ENC28J60 class): Tarang SPI master already proven at ~50 cycles/bit firmware scale (§5.3 mapping) — easier still. PHY chip + magjack do *all* of §§2–6. | **FEASIBLE AS A SYSTEM** — with the claim boundary in §7c |
 | d | A different 10M variant (10BASE-T1L / T1S) | T1L: PAM3, 4B3T, **7.5 MBd** — three analogue levels a binary GPIO cannot emit, ternary slicing a digital pad cannot do. T1S: DME at **25 MBd** — 40 ns symbols = 2 cycles/symbol, worse than Manchester. Neither relaxes §6. | **CLOSED (worse)** |
 
 ### 7a. "Run the ASIC faster"
@@ -440,7 +440,7 @@ At 100 MHz on the FPGA:
   Manchester TX loop — and plausibly a constrained RX — becomes
   writable. This is a legitimate, interesting firmware exercise.
 
-What it would prove: that the TEMPO timing contract (§1) scales
+What it would prove: that the Tarang timing contract (§1) scales
 with clock exactly as specified — the listing-is-the-proof model
 holds at 10 ns just as at 20 ns. That is a real, if modest,
 methodology data point.
@@ -456,7 +456,7 @@ What it would **not** prove:
 - 10BASE-T compliance. §6 applies verbatim to FPGA GPIO: single-
   ended pads, no template, no magnetics, no squelch receiver.
   The FPGA demo would be a *Manchester signalling* demo. Calling
-  it "10BASE-T on TEMPO" would be wrong on the FPGA for the same
+  it "10BASE-T on Tarang" would be wrong on the FPGA for the same
   analog reasons it is wrong on the ASIC.
 
 Verdict for this hatch: **FPGA-only curiosity.** Build it only if
@@ -465,11 +465,11 @@ it is labelled as exactly that.
 ### 7c. External PHY — feasible system, and the claim boundary
 
 Connect a real 10BASE-T PHY (or integrated MAC+PHY) to the board,
-give it its magjack, and let TEMPO drive its *digital* interface:
+give it its magjack, and let Tarang drive its *digital* interface:
 
 - **MII (10 Mb/s mode):** TX_CLK = 2.5 MHz; data moves one nibble
   per TX_CLK ⇒ **400 ns per nibble = 20 core cycles @50 MHz**.
-  TEMPO has 20 cycles to present 4 bits and manage TX_EN — against
+  Tarang has 20 cycles to present 4 bits and manage TX_EN — against
   proven firmware patterns that do full SPI bytes in ~50 cycles/bit
   (§5.3), this is comfortable, with the Observer free to snoop the
   MII as a bonus demo. RX is symmetric (RX_CLK 2.5 MHz, plus the
@@ -480,30 +480,30 @@ give it its magjack, and let TEMPO drive its *digital* interface:
   benefit at 10 Mb/s). Prefer MII.
 - **SPI-host MAC+PHY chips** (the ENC28J60 class: full MAC + 
   10BASE-T PHY behind an SPI slave interface, needing only the
-  magnetics jack externally) are easier still: TEMPO's SPI-master
+  magnetics jack externally) are easier still: Tarang's SPI-master
   firmware is a *proven, mandatory-protocol* capability, the chip
   absorbs every requirement in §§2–6 including Manchester, CRC,
-  template, NLP and squelch, and TEMPO's job reduces to register
+  template, NLP and squelch, and Tarang's job reduces to register
   writes and frame-buffer transfers at SPI speeds it already meets.
 
-So the *system* — a TEMPO chip, on a board, exchanging real
+So the *system* — a Tarang chip, on a board, exchanging real
 Ethernet frames with a real switch, link LED lit, pings answered —
 is entirely achievable, and would make a fine demo photograph.
 
 The distinction that decides the narrative, stated plainly:
 
 > **In this configuration the protocol emulation is performed by
-> the PHY vendor's silicon. TEMPO is acting as a (very timing-
-> capable) host controller. This demonstrates TEMPO's host-interface
+> the PHY vendor's silicon. Tarang is acting as a (very timing-
+> capable) host controller. This demonstrates Tarang's host-interface
 > competence and its proven SPI/MII-class firmware — it does not
 > demonstrate the timed ISA emulating the Ethernet protocol, which
 > is the competition's premise ("protocols are firmware, not fixed
 > logic" — here the protocol would be neither: it would be someone
 > else's fixed logic).**
 
-Permitted claim: *"TEMPO + external PHY: the chip drives a
+Permitted claim: *"Tarang + external PHY: the chip drives a
 commercial 10BASE-T PHY over MII/SPI and exchanges live Ethernet
-frames."* Prohibited claim: *"TEMPO implements 10 Mbit Ethernet."*
+frames."* Prohibited claim: *"Tarang implements 10 Mbit Ethernet."*
 Judges who know what a PHY is will draw this line themselves; the
 submission is stronger for drawing it first.
 
@@ -527,7 +527,7 @@ submission is stronger for drawing it first.
 
 ## 8. Verdict restated, and the README paragraph
 
-**(i) TEMPO-as-10BASE-T-PHY on the ASIC: NOT FEASIBLE.**
+**(i) Tarang-as-10BASE-T-PHY on the ASIC: NOT FEASIBLE.**
 Three independent, individually sufficient grounds: non-representable
 half-bit timing at any clock the silicon can reach (§§2–4), a
 slow-corner fmax of 43.61 MHz against a 100 MHz requirement (§3),
@@ -535,7 +535,7 @@ and the absence of every analog element the standard defines a
 10BASE-T PHY by (§6). ARCHITECTURE.md §5.5 / decision D8 ("10BASE-T
 out of scope at 50 MHz") stand confirmed.
 
-**(ii) TEMPO + external PHY as a system: ASIC CAPABILITY,
+**(ii) Tarang + external PHY as a system: ASIC CAPABILITY,
 system-level only.** Feasible with large timing margin (§7c), on
 the strict condition that all public wording attributes the
 Ethernet PHY/MAC work to the external chip.
@@ -546,9 +546,9 @@ evidentially worthless for the ASIC, and still not 10BASE-T (§7b).
 
 ### README paragraph (drop-in, plain language)
 
-> **Why TEMPO does not do 10 Mbit Ethernet on-chip — and what it
+> **Why Tarang does not do 10 Mbit Ethernet on-chip — and what it
 > does instead.** 10BASE-T sends data as Manchester code: every
-> 100 ns bit has a transition in its middle, 50 ns in. TEMPO runs
+> 100 ns bit has a transition in its middle, 50 ns in. Tarang runs
 > at 50 MHz, so its pins can only change every 20 ns — that's
 > 5 cycles per bit but only 2.5 cycles per half-bit, and 50 ns
 > simply isn't on the 20 ns grid. Alternating 40 ns and 60 ns
@@ -560,9 +560,9 @@ evidentially worthless for the ASIC, and still not 10BASE-T (§7b).
 > anyway. Even with perfect timing, 10BASE-T is an analogue
 > standard — a shaped differential waveform through isolation
 > magnetics, with a squelch receiver at the other end — and
-> TEMPO's pins are plain digital I/O, so there is no on-chip PHY
-> to build. What TEMPO *can* do is drive an external 10BASE-T PHY
-> chip over its digital interface (an MII nibble lasts 20 TEMPO
+> Tarang's pins are plain digital I/O, so there is no on-chip PHY
+> to build. What Tarang *can* do is drive an external 10BASE-T PHY
+> chip over its digital interface (an MII nibble lasts 20 Tarang
 > cycles; an SPI-attached MAC/PHY is easier still) and exchange
 > real Ethernet frames that way — with the PHY chip, honestly
 > credited, doing the wire protocol. We'd rather publish the

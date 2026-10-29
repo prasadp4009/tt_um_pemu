@@ -1,4 +1,4 @@
-# Makefile -- cocotb replay for TEMPO PE+observer co-simulation.
+# Makefile -- cocotb replay for Tarang PE+observer co-simulation.
 # Usage:
 #   make IMAGE=spi TRACE=/path/spi.bin HEX=/path/spi.hex \
 #        PLOG=/path/spi.plog WAVES=1

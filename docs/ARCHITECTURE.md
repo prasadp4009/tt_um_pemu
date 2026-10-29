@@ -1,4 +1,4 @@
-# TEMPO — Architecture Proposal (Phase 1)
+# Tarang — Architecture Proposal (Phase 1)
 
 **T**iming-**E**xact **M**ulti-**P**rotocol **O**bserver — an entry for the
 Jane Street Protocol Emulator ASIC Competition.
@@ -76,7 +76,7 @@ third-party reference found; re-verify against the flow before tapeout):
 
 ## 1. Architecture overview
 
-**One sentence:** TEMPO is a single-cycle, non-pipelined 32-bit timed-ISA
+**One sentence:** Tarang is a single-cycle, non-pipelined 32-bit timed-ISA
 protocol engine (PE) paired with an independent hardware **Observer** —
 a programmable, cycle-timestamped event-capture unit with its own trace
 memory — sharing one pin fabric, one host port, and one cycle-exact
@@ -92,7 +92,7 @@ the speaker; nobody builds the listener (§8).
 
 ```
                         ┌─────────────────────────────────────────────────┐
-                        │            TEMPO (tt_um_tempo, 6x4)             │
+                        │            Tarang (tt_um_tempo, 6x4)             │
                         │                                                 │
   TT harness            │   ┌──────────┐    ┌──────────┐                  │
   ─────────             │   │  Host    │    │ Instr.   │                  │
@@ -154,7 +154,7 @@ Data paths:
 4. **Area honesty.** §4 budgets in µm² from cited cell areas, and the
    first synthesis run replaces all estimates — no exceptions.
 
-## 2. ISA design — TEMPO-32 (proposal v0.1)
+## 2. ISA design — Tarang-32 (proposal v0.1)
 
 ### 2.1 Shape
 
@@ -255,7 +255,7 @@ accelerators — deliberately deferred, §9.2).
 
 ### 2.4 Why this ISA, vs. the references Jane Street named
 
-| | RP2040 PIO | TI Sitara PRU | TEMPO-32 (this proposal) |
+| | RP2040 PIO | TI Sitara PRU | Tarang-32 (this proposal) |
 |---|---|---|---|
 | Word / regs | 16-bit, 2 scratch + ISR/OSR | 32-bit, 32 GPRs | 32-bit, 16 GPRs × 16-bit |
 | Timing model | **1 cycle + 5-bit delay/sideset** per insn | single-cycle, non-pipelined; timing by cycle-counting NOPs in SW | **1 + 5-bit delay** per insn (PIO's idea), non-pipelined (PRU's determinism) |
@@ -663,7 +663,7 @@ differentiator. Ours:
 1. **The Observer: the chip also listens.** A programmable,
    cycle-timestamped event-capture engine with 204-entry trace SRAM,
    running independently of (and concurrently with) the protocol
-   engine. TEMPO is not just a protocol *speaker* — it is an 8-channel
+   engine. Tarang is not just a protocol *speaker* — it is an 8-channel
    logic analyzer with 20 ns resolution that fits the same die. This
    directly serves the competition's own motivation ("a useful tool for
    hardware debugging and reverse engineering"), and no surveyed entrant
@@ -672,7 +672,7 @@ differentiator. Ours:
    reverse-engineering session.
 2. **Measurement as ISA semantics.** `WAIT` returns elapsed cycles;
    `CAP` snapshots `{timestamp, pins}` atomically. Competing timed-ISAs
-   (PIO included) can *emit* precisely but cannot *measure* — TEMPO
+   (PIO included) can *emit* precisely but cannot *measure* — Tarang
    firmware characterizes unknown peers (autobaud in §5.2 falls out of
    the receive path; pulse-width/period measurement is two
    instructions). Emitter → characterizer is a genuine capability gap.
@@ -884,7 +884,7 @@ on 1, 3, and 4 — provided we execute.
 ### 9.5 Suggested repo layout (build-in-public from day one)
 
 ```
-tempo/
+tarang/
   isa/isa.yaml            # single source of truth (§7.1)
   isa/gen/                # generated: decode.sv, assembler, golden model, docs
   rtl/                    # pe.sv, observer.sv, pinmux.sv, hostport.sv, fifos/...

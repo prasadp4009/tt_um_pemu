@@ -95,11 +95,11 @@ COSIM PASS: 3013 cycles verified, halted=1
 ## What Zybo hardware testing would additionally need
 
 - A real JTAG target on the bench (e.g. another FPGA/SoC board or an ARM
-  MCU debug port) wired to the TEMPO pins: TCK/TMS/TDI/TDO plus a common
+  MCU debug port) wired to the Tarang pins: TCK/TMS/TDI/TDO plus a common
   GND; the logical→physical pin (TT pinout / Zybo PMOD) mapping for the
   board build in use, and the host path to load this image and issue the
   RX-FIFO command words.
-- Level check: TEMPO I/O is 3.3 V logic. A 3.3 V target (most FPGA boards)
+- Level check: Tarang I/O is 3.3 V logic. A 3.3 V target (most FPGA boards)
   connects directly; a 1.8 V target (many modern ARM SoCs) needs a level
   shifter on TCK/TMS/TDI and on TDO. Target VTREF is not sensed by this
   firmware (no spare pin assigned); nTRST/nSRST are not implemented —

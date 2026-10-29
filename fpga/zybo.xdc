@@ -1,4 +1,4 @@
-# zybo.xdc -- pin constraints for the TEMPO-32 emulation on the ORIGINAL Zybo.
+# zybo.xdc -- pin constraints for the Tarang-32 emulation on the ORIGINAL Zybo.
 # Only the 125 MHz board clock is pinned; everything else goes over JTAG
 # (VIO/ILA). 125 MHz comes from the Ethernet PHY on pin L16 (Zybo Rev B
 # reference manual, section 12 "Clock Sources").

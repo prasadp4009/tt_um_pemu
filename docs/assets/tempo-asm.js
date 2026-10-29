@@ -1,4 +1,4 @@
-// TEMPO-32 assembler (in-browser port of firmware/tools/asm.py).
+// Tarang-32 assembler (in-browser port of firmware/tools/asm.py).
 // Two-pass, derived from the same encoding contract as asm.py:
 // opcode numbers and field lanes are from isa_v0.2.yaml / ISA_v0.2.md.
 // Syntax is exactly asm.py's: labels, .org, .word, `, d=N` delay suffix,

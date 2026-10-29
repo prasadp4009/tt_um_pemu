@@ -1,4 +1,4 @@
-// TEMPO-32 cycle-exact PE + Observer simulator (web port).
+// Tarang-32 cycle-exact PE + Observer simulator (web port).
 //
 // Semantics source: firmware/tools/sim.py (the golden model), ISA v0.2 +
 // v0.3 note, and src/tt_um_pemu_pe.v / src/tt_um_pemu_observer.v for the

@@ -1,5 +1,5 @@
 ; ============================================================================
-; TEMPO-32 firmware: I2C master, 100 kHz (bit = 500 cycles @50 MHz)
+; Tarang-32 firmware: I2C master, 100 kHz (bit = 500 cycles @50 MHz)
 ; Worker C — Jane Street Protocol Emulator ASIC competition, firmware phase
 ; ============================================================================
 ; HOST COMMAND / RESPONSE WORDS (16-bit words via RX/TX FIFOs)

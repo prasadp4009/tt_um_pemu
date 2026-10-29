@@ -82,7 +82,7 @@
   var isSim = /simulator\.html$/.test(window.location.pathname);
   var base = isSim ? "index.html" : "";
   var PAGES = [
-    { href: base + "#top", label: "TEMPO" },
+    { href: base + "#top", label: "Tarang" },
     { href: base + "#architecture", label: "Architecture" },
     { href: base + "#spec", label: "Spec" },
     { href: base + "#functionality", label: "Functionality" },

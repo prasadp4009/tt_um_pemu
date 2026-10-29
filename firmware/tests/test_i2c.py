@@ -1,4 +1,4 @@
-"""TEMPO I2C master test: 100 kHz bit-bang vs EEPROM-like I2C slave peer.
+"""Tarang I2C master test: 100 kHz bit-bang vs EEPROM-like I2C slave peer.
 
 TEST PLAN
   host: [0x0001, 0xA0, 3, 0xDE, 0xAD, 0xBE]  -> write 3 bytes to addr 0x50

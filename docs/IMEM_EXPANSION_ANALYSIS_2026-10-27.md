@@ -1,4 +1,4 @@
-# IMEM Expansion Analysis — can TEMPO grow to fit USB TX+RX in one image?
+# IMEM Expansion Analysis — can Tarang grow to fit USB TX+RX in one image?
 
 **Date:** 2026-10-27 · **Scope:** feasibility + impact analysis only. No RTL changed, nothing committed or pushed.
 **Question (Prasad):** "Make sure we are able to incorporate additional words so we support USB as well."

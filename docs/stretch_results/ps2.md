@@ -1,4 +1,4 @@
-# PS/2 (host side) — TEMPO stretch-protocol result
+# PS/2 (host side) — Tarang stretch-protocol result
 
 **Verdict: PROVEN** — firmware + protocol-specific wire checker + golden
 test + RTL co-sim all pass. Files only; no commits, no pushes.
@@ -109,7 +109,7 @@ tracked edits, no commit, no push.
 - A real PS/2 keyboard (or a PS/2-speaking microcontroller as a device
   stand-in) wired to two FPGA GPIOs mapped to logical pins 0/1.
 - **Voltage care — the important part:** PS/2 is a **5 V open-collector**
-  bus; the TEMPO ASIC / Zybo fabric is **3.3 V and NOT 5 V-tolerant**.
+  bus; the Tarang ASIC / Zybo fabric is **3.3 V and NOT 5 V-tolerant**.
   Because the bus is open-collector, the safe hookup is: pull-ups to
   **3.3 V** (not 5 V) on CLK and DATA at the host side — most PS/2
   keyboards tolerate 3.3 V pull-ups since they only ever pull down —

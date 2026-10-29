@@ -1,4 +1,4 @@
-"""TEMPO JTAG (IEEE 1149.1) master test: IDCODE read + BYPASS test vs a
+"""Tarang JTAG (IEEE 1149.1) master test: IDCODE read + BYPASS test vs a
 faithful TAP-controller target model.
 
 TEST PLAN

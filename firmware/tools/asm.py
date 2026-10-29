@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TEMPO-32 assembler — derived from isa_v0.2.yaml (never hand-encoded).
+"""Tarang-32 assembler — derived from isa_v0.2.yaml (never hand-encoded).
 
 Two-pass assembler. All encodings (opcode numbers, field positions,
 delay policy, reserved-bit rules) are read from the YAML at startup;

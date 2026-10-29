@@ -1,4 +1,4 @@
-"""UART TX + RX test for TEMPO-32 firmware/uart/uart.asm.
+"""UART TX + RX test for Tarang-32 firmware/uart/uart.asm.
 
 TEST={"name": "uart", "proto": "uart"}.
 

@@ -1,4 +1,4 @@
-"""TEMPO USB 1.1 low-speed device TX test: independent spec decoder.
+"""Tarang USB 1.1 low-speed device TX test: independent spec decoder.
 
 TEST PLAN
   host: [0x0001, 4, 0xFF, 0x3C, 0xFF, 0xA5]  -> TX two packets

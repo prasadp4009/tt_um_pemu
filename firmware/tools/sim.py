@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TEMPO-32 cycle-exact ISA simulator (golden model for the firmware phase).
+"""Tarang-32 cycle-exact ISA simulator (golden model for the firmware phase).
 
 Single-cycle, non-pipelined PE per isa_v0.2.yaml + ISA_v0.2.md timing
 contract T1-T17. Decodes via the YAML (opcode -> field map), so the
@@ -629,7 +629,7 @@ class Sim:
     def vcd(self, path, regs=(0, 1, 2, 3, 4, 5, 6, 7)):
         ids = {}
         with open(path, "w") as f:
-            f.write("$timescale 1ns $end\n$scope module tempo $end\n")
+            f.write("$timescale 1ns $end\n$scope module tarang $end\n")
             def var(name, width):
                 vid = f"s{len(ids)}"
                 ids[name] = vid

@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 SPI master firmware -- mode 0 (CPOL=0, CPHA=0), 1 MHz
+; Tarang-32 SPI master firmware -- mode 0 (CPOL=0, CPHA=0), 1 MHz
 ; 50 MHz core -> 20 ns/cycle; 1 Mbit/s -> exactly 50 cycles/bit.
 ;
 ; HOST COMMAND WORDS (16-bit, via RX FIFO; responses via TX FIFO):

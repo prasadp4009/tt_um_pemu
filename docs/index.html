@@ -3,20 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TEMPO — Timing-Exact Multi-Protocol Observer</title>
+<title>Tarang — Timing-Exact Programmable Protocol Emulator</title>
 <script id="tempo-theme-init">(function(){try{var t=localStorage.getItem("tempo-theme");if(t!=="dark"&&t!=="light")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
 <header class="hero" id="top">
-  <h1>TEMPO — Timing-Exact Multi-Protocol Observer</h1>
+  <h1>Tarang — Timing-Exact Programmable Protocol Emulator</h1>
   <p class="tag">The debugger's chip.</p>
   <p>A programmable protocol-emulator ASIC with an independent on-chip logic
   analyser, for the Jane Street Protocol Emulator ASIC Competition
   (Tiny Tapeout, IHP 130&nbsp;nm SG13G2 / CMOS5L, 6&times;4 tiles, submission
   deadline 18 January 2027).</p>
-  <p>TEMPO does not hard-wire a protocol. It executes firmware in a 32-bit
-  <em>timed</em> instruction set (TEMPO-32 ISA v0.2 + v0.3 note): every
+  <p>Tarang does not hard-wire a protocol. It executes firmware in a 32-bit
+  <em>timed</em> instruction set (Tarang-32 ISA v0.2 + v0.3 note): every
   instruction carries a delay field, pin effects land on exact cycles,
   <code>WAIT</code> returns the cycles actually elapsed, and <code>CAP</code>
   atomically snapshots {timestamp, pins}. Change the program, change the
@@ -29,7 +29,7 @@
 
 <section class="card" id="simulator">
   <h2>Interactive simulator</h2>
-  <p><a href="simulator.html"><strong>Run TEMPO firmware in your browser</strong></a>:
+  <p><a href="simulator.html"><strong>Run Tarang firmware in your browser</strong></a>:
   a cycle-exact port of the golden model (ISA v0.2 + v0.3) with the as-built
   WAIT / illegal-opcode / Observer divergences, an in-browser assembler,
   live registers and STATUS, step/run/free-run controls, a pin waveform,
@@ -39,9 +39,9 @@
 
 <section class="card" id="architecture">
   <h2>Architecture</h2>
-  <img class="diagram" src="assets/diagram-architecture.svg" data-dark-src="assets/diagram-architecture-dark.svg" alt="TEMPO system architecture diagram">
+  <img class="diagram" src="assets/diagram-architecture.svg" data-dark-src="assets/diagram-architecture-dark.svg" alt="Tarang system architecture diagram">
   <ul>
-    <li><strong>PE core (<code>u_pe</code>)</strong> — TEMPO-32 engine: 16 &times; 16-bit GPRs,
+    <li><strong>PE core (<code>u_pe</code>)</strong> — Tarang-32 engine: 16 &times; 16-bit GPRs,
     20 special registers, ALU + flags, CALL/RET stack, TX/RX FIFOs (16 &times; 16-bit each), 9-bit PC (v0.3).</li>
     <li><strong>Observer (<code>u_obs</code>)</strong> — EDGE / PATTERN / PULSE triggers,
     prescaler, watermark, 204-entry trace SRAM (<code>u_tmem</code>). Configured by firmware via MSR
@@ -54,9 +54,9 @@
     <code>u_tmem</code> 1024 &times; 8-bit trace memory.</li>
   </ul>
   <h3>Instruction word</h3>
-  <img class="diagram" src="assets/diagram-isa-word.svg" data-dark-src="assets/diagram-isa-word-dark.svg" alt="TEMPO-32 instruction word format">
+  <img class="diagram" src="assets/diagram-isa-word.svg" data-dark-src="assets/diagram-isa-word-dark.svg" alt="Tarang-32 instruction word format">
   <h3>Timing contract</h3>
-  <img class="diagram" src="assets/diagram-timing-contract.svg" data-dark-src="assets/diagram-timing-contract-dark.svg" alt="TEMPO timing contract diagram">
+  <img class="diagram" src="assets/diagram-timing-contract.svg" data-dark-src="assets/diagram-timing-contract-dark.svg" alt="Tarang timing contract diagram">
   <p>Every instruction executes in <strong>1 + d cycles</strong>; <code>PGET</code> reads the
   2-FF-synchronised pins (2-cycle architectural latency, accounted for in every firmware image);
   <code>SLEEP</code> is exactly <strong>1 + imm13</strong> cycles; a <code>WAIT</code> whose condition
@@ -152,7 +152,7 @@
 <section class="card" id="code">
   <h2>Example code — real firmware, not pseudocode</h2>
   <h3>SPI master: init + command loop (excerpt from <code>firmware/spi/spi.asm</code>)</h3>
-<pre>; TEMPO-32 SPI master -- mode 0, 1 MHz; 50 MHz core -&gt; 50 cycles/bit.
+<pre>; Tarang-32 SPI master -- mode 0, 1 MHz; 50 MHz core -&gt; 50 cycles/bit.
 ; Host words: 0x0001 TRANSFER (PULL N, then N data words; PUSH rx bytes,
 ;   then 0x0000 status, evt 0) · 0x0003 SET MODE (unsupported -&gt; 0xFFFF)
 ;   · 0x00FF HALT · other -&gt; 0xFFFF.
@@ -367,7 +367,7 @@ cmd_have:
 
 </main>
 <footer>
-  TEMPO (tt_um_pemu) — Jane Street Protocol Emulator ASIC Competition entry. Repo docs:
+  Tarang (tt_um_pemu) — Jane Street Protocol Emulator ASIC Competition entry. Repo docs:
   <a href="OPEN_ITEMS_AUDIT.md">open-items audit</a> ·
   <a href="CHARACTERIZED_LIMITS.md">characterized limits</a> ·
   <a href="FIRMWARE.md">firmware</a>. This site is fully static

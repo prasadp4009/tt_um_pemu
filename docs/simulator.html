@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TEMPO simulator — Timing-Exact Multi-Protocol Observer</title>
+<title>Tarang simulator — Timing-Exact Programmable Protocol Emulator</title>
 <script id="tempo-theme-init">(function(){try{var t=localStorage.getItem("tempo-theme");if(t!==\"dark\"&&t!==\"light\")t=window.matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\";document.documentElement.setAttribute(\"data-theme\",t);}catch(e){document.documentElement.setAttribute(\"data-theme\",\"light\");}})();</script>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/simulator.css">
 </head>
 <body>
 <header class="hero">
-  <h1>TEMPO simulator</h1>
+  <h1>Tarang simulator</h1>
   <p class="tag">Run the chip's firmware in your browser.</p>
-  <p>A cycle-exact port of the TEMPO-32 golden model (ISA v0.2 + v0.3 9-bit
+  <p>A cycle-exact port of the Tarang-32 golden model (ISA v0.2 + v0.3 9-bit
   activation) with the as-built RTL divergences: WAIT tsel 2/3 fall back to
   256/4096 cycles + CONFIG_ERR (no 65536/1048576 presets, no saturation);
   illegal opcodes, CALL overflow, RET underflow and AND fn=11 are NOP +
@@ -181,7 +181,7 @@
 </section>
 </main>
 <footer>
-  TEMPO (tt_um_pemu) — interactive simulator. Sources: docs/assets/tempo-asm.js,
+  Tarang (tt_um_pemu) — interactive simulator. Sources: docs/assets/tempo-asm.js,
   tempo-core.js, tempo-peers.js, tempo-examples.js, simulator.js.
 </footer>
 <script src="assets/nav.js"></script>

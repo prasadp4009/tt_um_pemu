@@ -1,5 +1,5 @@
 ; =============================================================================
-; TEMPO-32 JTAG (IEEE 1149.1) master firmware -- stretch protocol
+; Tarang-32 JTAG (IEEE 1149.1) master firmware -- stretch protocol
 ; 50 MHz core -> 20 ns/cycle.
 ;
 ; PIN MAP (logical pins 0..7):

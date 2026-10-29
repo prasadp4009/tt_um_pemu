@@ -1,4 +1,4 @@
-// emu_top.v -- Zybo (xc7z010clg400-1) top for TEMPO-32 FPGA emulation.
+// emu_top.v -- Zybo (xc7z010clg400-1) top for Tarang-32 FPGA emulation.
 //
 // Clocking: 125 MHz board clock (pin L16, from the Ethernet PHY) ->
 //   MMCM -> single test clock at the frequency chosen at build time

@@ -1,4 +1,4 @@
-# TEMPO PE Formal Verification (ISA v0.2 Timing)
+# Tarang PE Formal Verification (ISA v0.2 Timing)
 
 SymbiYosys proofs for ISA v0.2 timing properties. No RTL modifications.
 

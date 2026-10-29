@@ -1,4 +1,4 @@
-"""COS2 golden-trace recorder for TEMPO co-simulation.
+"""COS2 golden-trace recorder for Tarang co-simulation.
 
 Regenerates test/cosim/traces/*.bin from the ISA golden model (sim.py)
 after firmware changes. The old recorder was lost; this one replicates its

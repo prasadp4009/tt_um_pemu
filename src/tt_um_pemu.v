@@ -1,9 +1,9 @@
 /*
- * tt_um_pemu.v -- TEMPO-32 Protocol Emulator ASIC top level (Tiny Tapeout).
+ * tt_um_pemu.v -- Tarang-32 Protocol Emulator ASIC top level (Tiny Tapeout).
  *
  * Worker D (integration), Phase 6. Integrates the three committed blocks
  * with the two foundry SRAM macros:
- *   - tt_um_pemu_pe       : TEMPO-32 PE core (Worker A)
+ *   - tt_um_pemu_pe       : Tarang-32 PE core (Worker A)
  *   - tt_um_pemu_observer : trace observer (Worker B)
  *   - tt_um_pemu_host     : 2-wire host port (Worker C, amended Worker D)
  *   - RM_IHPSG13_1P_512x32_c2_bm_bist  : IMEM  (512x32, program store)
