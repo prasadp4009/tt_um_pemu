@@ -1,0 +1,125 @@
+   0  pdir 0xFF
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  ldi r8, 0x0002
+   5  ldi r9, 0x00FE
+   6  add r9, r9, r15
+   7  ldi r10, 0xFFFE
+   8  add r10, r10, r15
+   9  ldi r11, 0xFFFE
+  10  ldi r12, 0xFFFC
+  11  add r12, r12, r15
+  12  ldi r13, 0x0200
+  13  ldi r14, 0x0004
+  14  pdir 0x01
+  15  pset 0x01
+  16  jmp gotcmd, rxne
+  17  jmp cmdloop
+  18  pull r0
+  19  cmp r0, r15
+  20  jmp txdemo, z
+  21  cmp r0, r8
+  22  jmp rxdemo, z
+  23  cmp r0, r9
+  24  jmp dohlt, z
+  25  push r10
+  26  evt 0
+  27  jmp cmdloop
+  28  hlt 
+  29  ldi r3, 0x0000
+  30  ldi r4, 0x00FE
+  31  or r4, r4, r15
+  32  jmp tx_n_have, rxne
+  33  jmp tx_n_wait
+  34  pull r0
+  35  mrs r1, STATUS
+  36  and r1, r1, r14
+  37  jmp tx_underrun, nz
+  38  mov r5, r0
+  39  cmp r5, r3
+  40  jmp txdone, z
+  41  jmp tx_d_have, rxne
+  42  jmp txloop
+  43  pull r0
+  44  mrs r1, STATUS
+  45  and r1, r1, r14
+  46  jmp tx_underrun, nz
+  47  and r0, r0, r4
+  48  shl r7, r0, r15
+  49  or r7, r7, r13
+  50  ldi r6, 10
+  51  psetr r7
+  52  shr r7, r7, r15
+  53  sleep 430
+  54  djnz r6, txbit
+  55  djnz r5, txloop
+  56  ldi r0, 0x0000
+  57  push r0
+  58  evt 0
+  59  jmp cmdloop
+  60  msr r14, STATUS
+  61  push r12
+  62  evt 0
+  63  jmp cmdloop
+  64  ldi r3, 0x0000
+  65  ldi r4, 0x0002
+  66  ldi r2, 6
+  67  jmp rx_n_have, rxne
+  68  jmp rx_n_wait
+  69  pull r0
+  70  mrs r1, STATUS
+  71  and r1, r1, r14
+  72  jmp rx_underrun, nz
+  73  mov r5, r0
+  74  cmp r5, r3
+  75  jmp rxdone, z
+  76  wait 1, 0, level, 1, r1
+  77  jmp rx_timeout, tmo
+  78  mov r7, r3
+  79  ldi r6, 8
+  80  sleep 648
+  81  pget r1
+  82  and r1, r1, r4
+  83  shl r1, r1, r2
+  84  shr r7, r7, r15
+  85  or r7, r7, r1
+  86  sleep 427
+  87  djnz r6, rxbit
+  88  pget r1
+  89  and r1, r1, r4
+  90  jmp stop_ok, nz
+  91  wait 1, 1, level, 1, r1
+  92  jmp brk1, tmo
+  93  jmp frame_err
+  94  msr r15, STATUS
+  95  wait 1, 1, level, 1, r1
+  96  jmp brk2, tmo
+  97  msr r15, STATUS
+  98  jmp frame_err
+  99  msr r15, STATUS
+ 100  push r11
+ 101  evt 2
+ 102  wait 1, 1, level, 1, r1
+ 103  jmp rxrsync_c, tmo
+ 104  jmp rxrsync2
+ 105  msr r15, STATUS
+ 106  jmp rxresync
+ 107  wait 1, 0, level, 1, r1
+ 108  jmp rx_timeout, tmo
+ 109  jmp rx_sample
+ 110  push r10
+ 111  djnz r5, rxloop
+ 112  jmp rxdone
+ 113  push r7
+ 114  djnz r5, rxloop
+ 115  evt 0
+ 116  jmp cmdloop
+ 117  msr r15, STATUS
+ 118  push r10
+ 119  evt 1
+ 120  jmp cmdloop
+ 121  msr r14, STATUS
+ 122  push r12
+ 123  evt 0
+ 124  jmp cmdloop

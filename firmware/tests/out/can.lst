@@ -1,0 +1,255 @@
+   0  pmask 0xFF
+   1  pset 0x01
+   2  pdir 0x01
+   3  pset 0x01, d=4
+   4  pget r15
+   5  ldi r14, 0x0002
+   6  sub r15, r15, r14
+   7  jmp rone_ok, c
+   8  add r15, r15, r14
+   9  pmask 0x01
+  10  pdir 0x01
+  11  xor r0, r0, r0
+  12  ldi r12, 0x8B32
+  13  ldi r14, 0x0004
+  14  add r14, r14, r15
+  15  jmp cmd_have, rxne
+  16  jmp cmd_loop
+  17  pull r6
+  18  cmp r6, r15
+  19  jmp do_tx, z
+  20  add r2, r15, r15
+  21  cmp r6, r2
+  22  jmp do_arb, z
+  23  ldi r2, 0x0100
+  24  sub r2, r2, r15
+  25  cmp r6, r2
+  26  jmp do_hlt, z
+  27  jmp push_ffff
+  28  hlt 
+  29  ldi r4, 0xFFFE
+  30  add r4, r4, r15
+  31  push r4
+  32  evt 0
+  33  jmp cmd_loop
+  34  jmp wait_rx_done, rxne
+  35  jmp wait_rx
+  36  ret 
+  37  call wait_rx
+  38  pull r11
+  39  call wait_rx
+  40  pull r13
+  41  ldi r2, 0x0002
+  42  add r2, r2, r15
+  43  sub r4, r13, r2
+  44  jmp dlc_big, c
+  45  jmp pull_data
+  46  call wait_rx
+  47  pull r11
+  48  xor r13, r13, r13
+  49  jmp pull_data
+  50  mov r7, r13
+  51  call wait_rx
+  52  pull r4
+  53  djnz r7, dlc_big_loop
+  54  jmp push_ffff
+  55  cmp r13, r0
+  56  jmp frame, z
+  57  call wait_rx
+  58  pull r4
+  59  msr r4, EDGE_MASK
+  60  sub r2, r13, r15
+  61  jmp frame, z
+  62  call wait_rx
+  63  pull r4
+  64  msr r4, EDGE_CFG0
+  65  mov r6, r13
+  66  xor r13, r13, r13
+  67  cmp r6, r0
+  68  jmp hi_done, z
+  69  mrs r4, EDGE_MASK
+  70  call align8
+  71  or r13, r13, r4
+  72  ldi r2, 0x0002
+  73  cmp r6, r2
+  74  jmp hi_done, z
+  75  mrs r4, EDGE_CFG0
+  76  call align8
+  77  or r13, r13, r4
+  78  mov r4, r6
+  79  xor r2, r2, r2
+  80  ldi r7, 0x0004
+  81  shr r4, r4, r15
+  82  jmp rev_set, c
+  83  shl r2, r2, r15
+  84  jmp rev_next
+  85  shl r2, r2, r15
+  86  or r2, r2, r15
+  87  djnz r7, rev_loop
+  88  msr r2, EDGE_CFG0
+  89  mov r2, r6
+  90  add r2, r2, r2
+  91  add r2, r2, r2
+  92  add r2, r2, r2
+  93  msr r2, EDGE_CFG1
+  94  ldi r2, 0x000E
+  95  add r2, r2, r15
+  96  msr r2, WMARK
+  97  mov r1, r11
+  98  ldi r2, 0x0004
+  99  add r2, r2, r15
+ 100  shl r1, r1, r15
+ 101  djnz r2, id_align
+ 102  xor r8, r8, r8
+ 103  xor r9, r9, r9
+ 104  xor r11, r11, r11
+ 105  mov r5, r15
+ 106  cmp r6, r0
+ 107  jmp sof, nz
+ 108  add r5, r5, r15
+ 109  add r5, r5, r15
+ 110  xor r4, r4, r4
+ 111  mov r6, r15
+ 112  call send_bit
+ 113  sleep 3
+ 114  ldi r7, 0x000A
+ 115  add r7, r7, r15
+ 116  shl r1, r1, r15
+ 117  jmp id_b1, c
+ 118  ldi r4, 0x0000
+ 119  jmp id_send
+ 120  mov r4, r15
+ 121  mov r0, r0
+ 122  call send_bit
+ 123  cmp r11, r0
+ 124  jmp abort, nz
+ 125  sleep 2
+ 126  djnz r7, id_loop
+ 127  xor r4, r4, r4
+ 128  xor r6, r6, r6
+ 129  sleep 1
+ 130  call send_bit
+ 131  xor r4, r4, r4
+ 132  sleep 8
+ 133  call send_bit
+ 134  xor r4, r4, r4
+ 135  sleep 8
+ 136  call send_bit
+ 137  mov r1, r13
+ 138  mrs r13, EDGE_CFG0
+ 139  ldi r7, 0x0004
+ 140  sleep 1
+ 141  jmp dlc_loop
+ 142  sleep 4
+ 143  mov r2, r13
+ 144  and r2, r2, r15
+ 145  mov r4, r2
+ 146  shr r13, r13, r15
+ 147  call send_bit
+ 148  djnz r7, dlc_loop_pad
+ 149  sub r2, r5, r15
+ 150  jmp data_entry, z
+ 151  xor r5, r5, r5
+ 152  mrs r7, WMARK
+ 153  jmp crc_loop
+ 154  mrs r7, EDGE_CFG1
+ 155  sleep 0
+ 156  jmp data_loop
+ 157  sleep 4
+ 158  shl r1, r1, r15
+ 159  jmp dat_b1, c
+ 160  ldi r4, 0x0000
+ 161  jmp dat_send
+ 162  mov r4, r15
+ 163  mov r0, r0
+ 164  call send_bit
+ 165  djnz r7, data_loop_pad
+ 166  xor r5, r5, r5
+ 167  mrs r7, WMARK
+ 168  sleep 1
+ 169  jmp crc_loop
+ 170  sleep 4
+ 171  shl r8, r8, r15
+ 172  jmp crc_b1, c
+ 173  ldi r4, 0x0000
+ 174  jmp crc_send
+ 175  mov r4, r15
+ 176  mov r0, r0
+ 177  call send_bit
+ 178  djnz r7, crc_loop_pad
+ 179  mov r4, r15
+ 180  sleep 16
+ 181  call cell
+ 182  mov r4, r15
+ 183  sleep 18
+ 184  call cell
+ 185  mov r13, r3
+ 186  mov r4, r15
+ 187  sleep 17
+ 188  call cell
+ 189  mov r4, r15
+ 190  sleep 18
+ 191  ldi r7, 0x000A
+ 192  call cell
+ 193  sleep 18
+ 194  djnz r7, eof_loop
+ 195  push r13
+ 196  evt 0
+ 197  jmp cmd_loop
+ 198  pset 0x01
+ 199  ldi r4, 0xFFA0
+ 200  push r4
+ 201  evt 0
+ 202  jmp cmd_loop
+ 203  ldi r2, 0x0008
+ 204  shl r4, r4, r15
+ 205  djnz r2, al8_loop
+ 206  ret 
+ 207  msr r4, VALUE
+ 208  cmp r9, r14
+ 209  jmp sb_main, nz
+ 210  msr r5, MASK
+ 211  mov r4, r10
+ 212  xor r4, r4, r15
+ 213  xor r5, r5, r5
+ 214  mov r0, r0
+ 215  call cell
+ 216  mrs r5, MASK
+ 217  mrs r4, VALUE
+ 218  sleep 16
+ 219  jmp sb_cell
+ 220  sleep 4
+ 221  call cell
+ 222  ret 
+ 223  psetr r4
+ 224  cmp r4, r10
+ 225  jmp cell_same, z
+ 226  mov r9, r15
+ 227  mov r10, r4
+ 228  jmp cell_rd
+ 229  add r9, r9, r15
+ 230  sleep 1
+ 231  cmp r5, r0
+ 232  jmp cell_nc, z
+ 233  mov r2, r8
+ 234  shl r2, r2, r15
+ 235  jmp cell_fb1, c
+ 236  mov r2, r4
+ 237  jmp cell_fbd
+ 238  xor r2, r4, r15
+ 239  mov r0, r0
+ 240  shl r8, r8, r15
+ 241  sub r2, r0, r2
+ 242  and r2, r2, r12
+ 243  xor r8, r8, r2
+ 244  jmp cell_cd
+ 245  sleep 9
+ 246  sleep 2
+ 247  pget r3
+ 248  shr r3, r3, r15
+ 249  and r3, r3, r15
+ 250  xor r2, r3, r15
+ 251  and r2, r2, r4
+ 252  and r2, r2, r6
+ 253  or r11, r11, r2
+ 254  ret 

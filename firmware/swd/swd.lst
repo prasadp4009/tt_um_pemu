@@ -1,0 +1,111 @@
+   0  pdir 0x01
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  xor r0, r0, r0
+   5  pmask 0x03
+   6  pset 0x00
+   7  pdir 0x03
+   8  ldi r14, 0x0100
+   9  sub r14, r14, r15
+  10  jmp cmd_have, rxne
+  11  jmp cmd_loop
+  12  pull r6
+  13  cmp r6, r15
+  14  jmp do_txn, z
+  15  cmp r6, r14
+  16  jmp do_hlt, z
+  17  jmp do_unk
+  18  ldi r6, 0xFFFE
+  19  add r6, r6, r15
+  20  push r6
+  21  evt 0
+  22  jmp cmd_loop
+  23  hlt 
+  24  ldi r8, 56
+  25  pset 0x02
+  26  sleep 14
+  27  pset 0x03
+  28  sleep 13
+  29  djnz r8, reset_loop
+  30  ldi r7, 8
+  31  ldi r4, 0x00A4
+  32  add r4, r4, r15
+  33  shr r4, r4, r15
+  34  jmp tx_one, c
+  35  ldi r1, 0x00
+  36  jmp tx_go
+  37  ldi r1, 0x02
+  38  jmp tx_go
+  39  psetr r1
+  40  sleep 13
+  41  or r2, r1, r15
+  42  psetr r2
+  43  sleep 9
+  44  djnz r7, tx_loop
+  45  pdir 0x01
+  46  pset 0x00
+  47  sleep 14
+  48  pset 0x01
+  49  sleep 13
+  50  ldi r7, 2
+  51  add r7, r7, r15
+  52  call rx_bits
+  53  mov r9, r5
+  54  ldi r7, 16
+  55  call rx_bits
+  56  mov r10, r5
+  57  ldi r7, 16
+  58  call rx_bits
+  59  mov r11, r5
+  60  mov r7, r15
+  61  call rx_bits
+  62  mov r12, r5
+  63  pset 0x00
+  64  sleep 14
+  65  pset 0x01
+  66  sleep 13
+  67  pset 0x00
+  68  pdir 0x03
+  69  xor r6, r10, r11
+  70  ldi r8, 8
+  71  shr r7, r6, r8
+  72  xor r6, r6, r7
+  73  ldi r8, 4
+  74  shr r7, r6, r8
+  75  xor r6, r6, r7
+  76  add r8, r15, r15
+  77  shr r7, r6, r8
+  78  xor r6, r6, r7
+  79  shr r7, r6, r15
+  80  xor r6, r6, r7
+  81  and r6, r6, r15
+  82  cmp r6, r12
+  83  jmp pok, z
+  84  mov r13, r0
+  85  jmp push_seq
+  86  mov r13, r15
+  87  push r9
+  88  push r10
+  89  push r11
+  90  push r13
+  91  evt 0
+  92  jmp cmd_loop
+  93  mov r4, r15
+  94  ldi r5, 0x0000
+  95  pset 0x00
+  96  sleep 13
+  97  pget r2
+  98  pset 0x01
+  99  shr r3, r2, r15
+ 100  and r3, r3, r15
+ 101  cmp r3, r0
+ 102  jmp rx_add, nz
+ 103  mov r6, r6
+ 104  jmp rx_cont
+ 105  or r5, r5, r4
+ 106  jmp rx_cont
+ 107  shl r4, r4, r15
+ 108  sleep 6
+ 109  djnz r7, rx_loop
+ 110  ret 

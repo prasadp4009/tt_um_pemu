@@ -1,0 +1,7 @@
+   0  pdir 0x01
+   1  pset 0x01
+   2  wait 1, 0, level, 1, r0
+   3  cap r1
+   4  push r0
+   5  push r1
+   6  hlt 

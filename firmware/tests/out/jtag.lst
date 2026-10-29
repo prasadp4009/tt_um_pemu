@@ -1,0 +1,169 @@
+   0  pdir 0x01
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  pmask 0x07
+   5  pset 0x00
+   6  pdir 0x07
+   7  xor r0, r0, r0
+   8  add r12, r15, r15
+   9  add r11, r12, r15
+  10  mov r13, r12
+  11  ldi r14, 0x0100
+  12  sub r14, r14, r15
+  13  jmp cmd_have, rxne
+  14  jmp cmd_loop
+  15  pull r6
+  16  cmp r6, r15
+  17  jmp do_idcode, z
+  18  cmp r6, r13
+  19  jmp do_bypass, z
+  20  cmp r6, r14
+  21  jmp do_hlt, z
+  22  jmp do_unk
+  23  psetr r8
+  24  sleep 10
+  25  pget r3
+  26  shr r3, r3, r11
+  27  and r3, r3, r15
+  28  mov r7, r8
+  29  or r7, r7, r15
+  30  psetr r7
+  31  sleep 10
+  32  psetr r8
+  33  ret 
+  34  ldi r8, 0x02
+  35  ldi r6, 4
+  36  add r6, r6, r15
+  37  call clock_bit
+  38  djnz r6, tr_loop
+  39  ret 
+  40  ldi r8, 0x02
+  41  call clock_bit
+  42  ldi r8, 0x02
+  43  call clock_bit
+  44  ldi r8, 0x00
+  45  call clock_bit
+  46  ldi r8, 0x00
+  47  call clock_bit
+  48  ret 
+  49  ldi r6, 2
+  50  add r6, r6, r15
+  51  and r2, r4, r15
+  52  shl r2, r2, r12
+  53  mov r8, r2
+  54  shr r4, r4, r15
+  55  call clock_bit
+  56  djnz r6, sir_loop
+  57  and r2, r4, r15
+  58  shl r2, r2, r12
+  59  mov r8, r2
+  60  or r8, r8, r12
+  61  call clock_bit
+  62  ret 
+  63  ldi r8, 0x02
+  64  call clock_bit
+  65  ldi r8, 0x00
+  66  call clock_bit
+  67  ldi r8, 0x02
+  68  call clock_bit
+  69  ldi r8, 0x00
+  70  call clock_bit
+  71  ldi r8, 0x00
+  72  call clock_bit
+  73  ret 
+  74  ldi r8, 0x02
+  75  call clock_bit
+  76  ldi r8, 0x00
+  77  call clock_bit
+  78  ret 
+  79  call tap_reset
+  80  ldi r8, 0x00
+  81  call clock_bit
+  82  call goto_shift_ir
+  83  mov r4, r15
+  84  call shift_ir
+  85  call goto_shift_dr
+  86  ldi r9, 0x0000
+  87  mov r10, r0
+  88  mov r5, r15
+  89  ldi r6, 14
+  90  add r6, r6, r15
+  91  ldi r8, 0x00
+  92  call clock_bit
+  93  cmp r3, r0
+  94  jmp drlo_one, nz
+  95  jmp drlo_done
+  96  or r9, r9, r5
+  97  shl r5, r5, r15
+  98  djnz r6, drlo_loop
+  99  call clock_bit
+ 100  cmp r3, r0
+ 101  jmp dr15_one, nz
+ 102  jmp dr15_done
+ 103  or r9, r9, r5
+ 104  mov r5, r15
+ 105  ldi r6, 14
+ 106  add r6, r6, r15
+ 107  call clock_bit
+ 108  cmp r3, r0
+ 109  jmp drhi_one, nz
+ 110  jmp drhi_done
+ 111  or r10, r10, r5
+ 112  shl r5, r5, r15
+ 113  djnz r6, drhi_loop
+ 114  ldi r8, 0x02
+ 115  call clock_bit
+ 116  cmp r3, r0
+ 117  jmp dr31_one, nz
+ 118  jmp dr31_done
+ 119  or r10, r10, r5
+ 120  call exit_to_rti
+ 121  push r9
+ 122  push r10
+ 123  evt 0
+ 124  jmp cmd_loop
+ 125  call tap_reset
+ 126  ldi r8, 0x00
+ 127  call clock_bit
+ 128  call goto_shift_ir
+ 129  ldi r4, 14
+ 130  add r4, r4, r15
+ 131  call shift_ir
+ 132  call goto_shift_dr
+ 133  ldi r4, 0x00A4
+ 134  add r4, r4, r15
+ 135  mov r9, r0
+ 136  mov r5, r15
+ 137  ldi r6, 6
+ 138  add r6, r6, r15
+ 139  and r2, r4, r15
+ 140  shl r2, r2, r12
+ 141  mov r8, r2
+ 142  shr r4, r4, r15
+ 143  call clock_bit
+ 144  cmp r3, r0
+ 145  jmp byp_one, nz
+ 146  jmp byp_done
+ 147  or r9, r9, r5
+ 148  shl r5, r5, r15
+ 149  djnz r6, byp_loop
+ 150  and r2, r4, r15
+ 151  shl r2, r2, r12
+ 152  mov r8, r2
+ 153  or r8, r8, r12
+ 154  call clock_bit
+ 155  cmp r3, r0
+ 156  jmp byf_one, nz
+ 157  jmp byf_done
+ 158  or r9, r9, r5
+ 159  call exit_to_rti
+ 160  push r9
+ 161  evt 0
+ 162  jmp cmd_loop
+ 163  ldi r6, 0xFFFE
+ 164  add r6, r6, r15
+ 165  push r6
+ 166  evt 0
+ 167  jmp cmd_loop
+ 168  hlt 

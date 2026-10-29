@@ -1,0 +1,63 @@
+   0  pdir 0x04
+   1  pmask 0xFF
+   2  pset 0x04, d=4
+   3  pget r15
+   4  ldi r3, 2
+   5  shr r15, r15, r3
+   6  xor r0, r0, r0
+   7  add r3, r3, r15
+   8  ldi r11, 0x80
+   9  pmask 0x03
+  10  pdir 0x00
+  11  xor r5, r5, r5
+  12  ldi r6, 8
+  13  ldi r8, 6
+  14  xor r10, r10, r10
+  15  ldi r2, 2
+  16  wait 0, 1, rising, 1, r7
+  17  sleep 8
+  18  sleep 4
+  19  pget r4
+  20  cmp r4, r0
+  21  jmp rx_not_eop, nz
+  22  jmp rx_eop
+  23  xor r13, r4, r2
+  24  mov r2, r4
+  25  cmp r8, r0
+  26  jmp rx_nostuff, nz
+  27  ldi r8, 6
+  28  sleep 12
+  29  jmp rx_tail
+  30  cmp r13, r0
+  31  jmp rx_ob0, nz
+  32  sub r8, r8, r15
+  33  mov r0, r0
+  34  jmp rx_store
+  35  ldi r8, 6
+  36  mov r0, r0
+  37  mov r0, r0
+  38  shr r5, r5, r15
+  39  cmp r13, r0
+  40  jmp rx_shd0, nz
+  41  or r5, r5, r11
+  42  jmp rx_shd
+  43  mov r0, r0
+  44  mov r0, r0
+  45  djnz r6, rx_tailpad
+  46  push r5
+  47  xor r5, r5, r5
+  48  ldi r6, 8
+  49  jmp rx_tail
+  50  mov r0, r0
+  51  mov r0, r0
+  52  mov r0, r0
+  53  mov r0, r0
+  54  add r10, r10, r15
+  55  cmp r10, r3
+  56  jmp rx_nowrap, nz
+  57  xor r10, r10, r10
+  58  sleep 1
+  59  jmp rx_bit
+  60  push r0
+  61  evt 0
+  62  hlt 

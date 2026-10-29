@@ -1,0 +1,299 @@
+   0  pdir 0x01
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  xor r0, r0, r0
+   5  ldi r3, 2
+   6  add r3, r3, r15
+   7  pmask 0x03
+   8  pset 0x02
+   9  pdir 0x03
+  10  jmp cmd_have, rxne
+  11  jmp cmd_loop
+  12  pull r6
+  13  cmp r6, r15
+  14  jmp do_tx, z
+  15  ldi r14, 0x0100
+  16  sub r14, r14, r15
+  17  cmp r6, r14
+  18  jmp do_hlt, z
+  19  ldi r14, 2
+  20  cmp r6, r14
+  21  jmp do_rx, z
+  22  ldi r6, 0xFFFE
+  23  add r6, r6, r15
+  24  push r6
+  25  evt 0
+  26  jmp cmd_loop
+  27  hlt 
+  28  pset 0x02
+  29  pdir 0x03
+  30  jmp tx_nh, rxne
+  31  jmp do_tx_poll
+  32  pull r1
+  33  mov r13, r1
+  34  add r13, r13, r15
+  35  ldi r10, 8
+  36  djnz r13, pb0_pull
+  37  jmp pk_done
+  38  pull r4
+  39  mov r2, r4
+  40  jmp pb1
+  41  djnz r13, pb1_pull
+  42  jmp pk_done
+  43  pull r4
+  44  shl r4, r4, r10
+  45  or r2, r2, r4
+  46  jmp pb2
+  47  djnz r13, pb2_pull
+  48  jmp pk_done
+  49  pull r4
+  50  mov r12, r4
+  51  jmp pb3
+  52  djnz r13, pb3_pull
+  53  jmp pk_done
+  54  pull r4
+  55  shl r4, r4, r10
+  56  or r12, r12, r4
+  57  jmp pb4
+  58  djnz r13, pb4_pull
+  59  jmp pk_done
+  60  pull r4
+  61  mov r14, r4
+  62  jmp pb5
+  63  djnz r13, pb5_pull
+  64  jmp pk_done
+  65  pull r4
+  66  shl r4, r4, r10
+  67  or r14, r14, r4
+  68  jmp pb6
+  69  djnz r13, pb6_pull
+  70  jmp pk_done
+  71  pull r4
+  72  mov r11, r4
+  73  jmp pb7
+  74  djnz r13, pb7_pull
+  75  jmp pk_done
+  76  pull r4
+  77  shl r4, r4, r10
+  78  or r11, r11, r4
+  79  call pkt_pre
+  80  ldi r4, 0x2D80
+  81  ldi r5, 16
+  82  call lsb_loop
+  83  ldi r4, 0xD004
+  84  add r4, r4, r15
+  85  ldi r5, 16
+  86  sleep 3
+  87  call lsb_loop
+  88  call eop_from_lsb
+  89  sleep 300
+  90  call pkt_pre
+  91  ldi r4, 0xC380
+  92  ldi r5, 16
+  93  call lsb_loop
+  94  ldi r6, 0xFFFE
+  95  add r6, r6, r15
+  96  ldi r7, 0xA000
+  97  add r7, r7, r15
+  98  mov r4, r2
+  99  ldi r5, 8
+ 100  sleep 0
+ 101  call lsb_loop
+ 102  djnz r1, load1
+ 103  jmp crc_path
+ 104  ldi r13, 8
+ 105  mov r4, r2
+ 106  shr r4, r4, r13
+ 107  ldi r5, 8
+ 108  sleep 1
+ 109  call lsb_loop
+ 110  djnz r1, load2
+ 111  jmp crc_path
+ 112  mov r4, r12
+ 113  ldi r5, 8
+ 114  sleep 3
+ 115  call lsb_loop
+ 116  djnz r1, load3
+ 117  jmp crc_path
+ 118  ldi r13, 8
+ 119  mov r4, r12
+ 120  shr r4, r4, r13
+ 121  ldi r5, 8
+ 122  sleep 1
+ 123  call lsb_loop
+ 124  djnz r1, load4
+ 125  jmp crc_path
+ 126  mov r4, r14
+ 127  ldi r5, 8
+ 128  sleep 3
+ 129  call lsb_loop
+ 130  djnz r1, load5
+ 131  jmp crc_path
+ 132  ldi r13, 8
+ 133  mov r4, r14
+ 134  shr r4, r4, r13
+ 135  ldi r5, 8
+ 136  sleep 1
+ 137  call lsb_loop
+ 138  djnz r1, load6
+ 139  jmp crc_path
+ 140  mov r4, r11
+ 141  ldi r5, 8
+ 142  sleep 3
+ 143  call lsb_loop
+ 144  djnz r1, load7
+ 145  jmp crc_path
+ 146  ldi r13, 8
+ 147  mov r4, r11
+ 148  shr r4, r4, r13
+ 149  ldi r5, 8
+ 150  sleep 1
+ 151  call lsb_loop
+ 152  sleep 0
+ 153  jmp crc_path
+ 154  sub r4, r0, r15
+ 155  xor r4, r4, r6
+ 156  ldi r5, 16
+ 157  sleep 1
+ 158  call lsb_loop
+ 159  call eop_from_lsb
+ 160  push r0
+ 161  evt 0
+ 162  jmp cmd_loop
+ 163  ldi r9, 2
+ 164  ldi r8, 6
+ 165  xor r10, r10, r10
+ 166  xor r7, r7, r7
+ 167  xor r6, r6, r6
+ 168  ldi r4, 0x80
+ 169  ldi r5, 8
+ 170  ret 
+ 171  xor r9, r9, r3
+ 172  ldi r8, 6
+ 173  sleep 8
+ 174  ret 
+ 175  cmp r8, r0
+ 176  jmp lsb_core, nz
+ 177  call stuff_pre
+ 178  psetr r9, d=4
+ 179  add r10, r10, r15
+ 180  cmp r10, r3
+ 181  jmp lsb_snod, nz
+ 182  xor r10, r10, r10
+ 183  sleep 8
+ 184  jmp lsb_head
+ 185  and r13, r4, r15
+ 186  shr r4, r4, r15
+ 187  cmp r13, r15
+ 188  jmp lsb_bit0, nz
+ 189  sub r8, r8, r15
+ 190  mov r0, r0
+ 191  jmp lsb_crc
+ 192  ldi r8, 6
+ 193  xor r9, r9, r3
+ 194  mov r0, r0
+ 195  shr r6, r6, r15
+ 196  jmp lsb_cset, c
+ 197  cmp r13, r15
+ 198  jmp lsb_cskip, nz
+ 199  xor r6, r6, r7
+ 200  jmp lsb_emit
+ 201  cmp r13, r15
+ 202  jmp lsb_cskip, z
+ 203  xor r6, r6, r7
+ 204  jmp lsb_emit
+ 205  mov r0, r0
+ 206  mov r0, r0
+ 207  psetr r9, d=4
+ 208  add r10, r10, r15
+ 209  cmp r10, r3
+ 210  jmp lsb_nod, nz
+ 211  xor r10, r10, r10
+ 212  djnz r5, lsb_pad
+ 213  ret 
+ 214  sleep 7
+ 215  jmp lsb_head
+ 216  cmp r8, r0
+ 217  jmp eop_lsb_go, nz
+ 218  xor r4, r4, r4
+ 219  mov r5, r15
+ 220  sleep 4
+ 221  call lsb_core
+ 222  sleep 1
+ 223  sleep 14
+ 224  jmp eop_setup
+ 225  xor r9, r9, r9
+ 226  ldi r5, 2
+ 227  mov r0, r0
+ 228  sleep 1
+ 229  psetr r9, d=6
+ 230  add r10, r10, r15
+ 231  cmp r10, r3
+ 232  jmp eop_nod, nz
+ 233  xor r10, r10, r10
+ 234  sleep 15
+ 235  djnz r5, eop_pad
+ 236  cmp r9, r0
+ 237  jmp eop_done, nz
+ 238  mov r0, r0
+ 239  ldi r9, 2
+ 240  mov r5, r15
+ 241  jmp eop_loop
+ 242  ret 
+ 243  sleep 4
+ 244  jmp eop_loop
+ 245  pdir 0x00
+ 246  ldi r11, 0x80
+ 247  xor r5, r5, r5
+ 248  ldi r6, 8
+ 249  ldi r8, 6
+ 250  xor r10, r10, r10
+ 251  ldi r2, 2
+ 252  wait 0, 1, rising, 1, r7
+ 253  sleep 8
+ 254  sleep 4
+ 255  pget r4
+ 256  cmp r4, r0
+ 257  jmp rx_not_eop, nz
+ 258  jmp rx_eop
+ 259  xor r13, r4, r2
+ 260  mov r2, r4
+ 261  cmp r8, r0
+ 262  jmp rx_nostuff, nz
+ 263  ldi r8, 6
+ 264  sleep 12
+ 265  jmp rx_tail
+ 266  cmp r13, r0
+ 267  jmp rx_ob0, nz
+ 268  sub r8, r8, r15
+ 269  mov r0, r0
+ 270  jmp rx_store
+ 271  ldi r8, 6
+ 272  mov r0, r0
+ 273  mov r0, r0
+ 274  shr r5, r5, r15
+ 275  cmp r13, r0
+ 276  jmp rx_shd0, nz
+ 277  or r5, r5, r11
+ 278  jmp rx_shd
+ 279  mov r0, r0
+ 280  mov r0, r0
+ 281  djnz r6, rx_tailpad
+ 282  push r5
+ 283  xor r5, r5, r5
+ 284  ldi r6, 8
+ 285  jmp rx_tail
+ 286  mov r0, r0
+ 287  mov r0, r0
+ 288  mov r0, r0
+ 289  mov r0, r0
+ 290  add r10, r10, r15
+ 291  cmp r10, r3
+ 292  jmp rx_nowrap, nz
+ 293  xor r10, r10, r10
+ 294  sleep 1
+ 295  jmp rx_bit
+ 296  push r0
+ 297  evt 0
+ 298  jmp cmd_loop

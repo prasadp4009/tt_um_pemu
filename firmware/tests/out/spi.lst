@@ -1,0 +1,71 @@
+   0  pdir 0x01
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  pmask 0x2C
+   5  pset 0x20
+   6  pdir 0x2E
+   7  xor r0, r0, r0
+   8  ldi r9, 4
+   9  ldi r14, 0x0100
+  10  sub r14, r14, r15
+  11  ldi r12, 8
+  12  add r13, r15, r15
+  13  add r13, r13, r15
+  14  jmp cmd_have, rxne
+  15  jmp cmd_loop
+  16  pull r6
+  17  cmp r6, r15
+  18  jmp do_xfer, z
+  19  cmp r6, r13
+  20  jmp do_mode, z
+  21  cmp r6, r14
+  22  jmp do_hlt, z
+  23  jmp do_unk
+  24  jmp xfer_n_have, rxne
+  25  jmp do_xfer
+  26  pull r8
+  27  pset 0x00
+  28  cmp r8, r0
+  29  jmp xfer_done, z
+  30  jmp byte_have, rxne
+  31  jmp byte_next
+  32  pull r4
+  33  and r4, r4, r14
+  34  shl r4, r4, r12
+  35  ldi r5, 0x0000
+  36  ldi r7, 8
+  37  shl r4, r4, r15
+  38  jmp mbit1, c
+  39  ldi r1, 0x00
+  40  jmp mbitx
+  41  ldi r1, 0x08
+  42  jmp mbitx
+  43  psetr r1
+  44  sleep 16
+  45  or r2, r1, r9
+  46  psetr r2
+  47  sleep 3
+  48  pget r3
+  49  shr r3, r3, r9
+  50  and r3, r3, r15
+  51  shl r5, r5, r15
+  52  or r5, r5, r3
+  53  sleep 14
+  54  psetr r1
+  55  djnz r7, bit_loop
+  56  push r5
+  57  djnz r8, byte_next
+  58  pset 0x20
+  59  push r0
+  60  evt 0
+  61  jmp cmd_loop
+  62  jmp mode_have, rxne
+  63  jmp do_mode
+  64  pull r6
+  65  ldi r6, 0xFFFE
+  66  add r6, r6, r15
+  67  push r6
+  68  evt 0
+  69  jmp cmd_loop
+  70  hlt 

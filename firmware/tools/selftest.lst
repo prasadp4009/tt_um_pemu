@@ -1,0 +1,37 @@
+   0  pdir 0xFF
+   1  pmask 0xFF
+   2  pset 0xA5
+   3  pget r1
+   4  sleep 3
+   5  pget r2
+   6  ldi r3, 0x1234
+   7  mov r4, r3
+   8  add r5, r3, r4
+   9  sub r6, r4, r3
+  10  and r7, r3, r4
+  11  or r8, r3, r4
+  12  xor r9, r3, r4
+  13  shl r10, r3, r4
+  14  shr r11, r3, r4
+  15  cmp r3, r4
+  16  jmp jz_taken, z
+  17  ldi r12, 0xBEEE
+  18  ldi r13, 6
+  19  djnz r13, djnz_loop
+  20  call subr
+  21  jmp after_sub
+  22  ldi r14, 0xCAFE
+  23  ret 
+  24  push r3
+  25  push r4
+  26  pull r0
+  27  pull r1
+  28  cap r2
+  29  mrs r3, CYCLES_LO
+  30  mrs r4, OBS_PTR
+  31  pset 0x01, d=4
+  32  pget r5
+  33  msr r5, TRIG_MODE
+  34  mrs r6, TRIG_MODE
+  35  evt 3
+  36  hlt 

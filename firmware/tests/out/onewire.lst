@@ -1,0 +1,132 @@
+   0  pdir 0xFF
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  ldi r0, 0xC000
+   5  pmode r0
+   6  pmask 0x80
+   7  pdir 0x80
+   8  pset 0x80
+   9  jmp cmd_have, rxne
+  10  jmp cmd_loop, al
+  11  pull r7
+  12  ldi r0, 0
+  13  add r0, r0, r15
+  14  cmp r7, r0
+  15  jmp do_reset, z
+  16  add r0, r0, r15
+  17  cmp r7, r0
+  18  jmp do_write, z
+  19  add r0, r0, r15
+  20  cmp r7, r0
+  21  jmp do_read, z
+  22  add r0, r0, r15
+  23  cmp r7, r0
+  24  jmp do_demo, z
+  25  ldi r0, 0x00FE
+  26  add r0, r0, r15
+  27  cmp r7, r0
+  28  jmp do_hlt, z
+  29  ldi r0, 0xFFFE
+  30  add r0, r0, r15
+  31  push r0
+  32  evt 1
+  33  jmp cmd_loop, al
+  34  hlt 
+  35  call ow_reset
+  36  cmp r0, r15
+  37  jmp dr_yes, z
+  38  ldi r0, 0
+  39  push r0
+  40  evt 1
+  41  jmp cmd_loop, al
+  42  push r15
+  43  evt 0
+  44  jmp cmd_loop, al
+  45  pset 0x00
+  46  sleep 7999
+  47  sleep 7999
+  48  sleep 7999
+  49  pset 0x80
+  50  wait 7, 1, level, 0, r4
+  51  wait 7, 0, level, 1, r4
+  52  jmp or_nopres, tmo
+  53  ldi r6, 4
+  54  mrs r0, STATUS
+  55  msr r0, STATUS
+  56  wait 7, 1, level, 1, r4
+  57  jmp or_rise_nxt, tmo
+  58  jmp or_present, al
+  59  djnz r6, or_rise
+  60  jmp or_nopres, al
+  61  sleep 8191
+  62  sleep 8191
+  63  ldi r0, 0
+  64  add r0, r0, r15
+  65  ret 
+  66  ldi r0, 0
+  67  ret 
+  68  jmp dw_have, rxne
+  69  jmp do_write
+  70  pull r2
+  71  call ow_write_byte
+  72  ldi r0, 0
+  73  push r0
+  74  evt 0
+  75  jmp cmd_loop, al
+  76  ldi r1, 8
+  77  shr r2, r2, r15
+  78  jmp ow_w1, c
+  79  pset 0x00
+  80  sleep 3048
+  81  pset 0x80
+  82  sleep 444
+  83  jmp ow_wnxt, al
+  84  pset 0x00
+  85  sleep 298
+  86  pset 0x80
+  87  sleep 3195
+  88  djnz r1, ow_wbit
+  89  ret 
+  90  call ow_read_byte
+  91  push r2
+  92  evt 0
+  93  jmp cmd_loop, al
+  94  ldi r1, 8
+  95  ldi r2, 0
+  96  ldi r4, 0x0080
+  97  ldi r0, 6
+  98  add r0, r0, r15
+  99  pset 0x00
+ 100  sleep 298
+ 101  pset 0x80
+ 102  sleep 451
+ 103  pget r3
+ 104  shr r3, r3, r0
+ 105  shr r2, r2, r15
+ 106  cmp r3, r15
+ 107  jmp ow_rb0, nz
+ 108  or r2, r2, r4
+ 109  jmp ow_rbnxt, al
+ 110  sleep 1
+ 111  sleep 2738
+ 112  djnz r1, ow_rbit
+ 113  ret 
+ 114  call ow_reset
+ 115  cmp r0, r15
+ 116  jmp dd_yes, z
+ 117  ldi r0, 0
+ 118  push r0
+ 119  evt 1
+ 120  jmp cmd_loop, al
+ 121  ldi r2, 0xCC
+ 122  call ow_write_byte
+ 123  ldi r2, 0xBE
+ 124  call ow_write_byte
+ 125  ldi r6, 8
+ 126  add r6, r6, r15
+ 127  call ow_read_byte
+ 128  push r2
+ 129  djnz r6, dd_rd
+ 130  evt 0
+ 131  jmp cmd_loop, al

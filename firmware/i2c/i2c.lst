@@ -1,0 +1,209 @@
+   0  pdir 0xFF
+   1  pmask 0xFF
+   2  pset 0x01, d=4
+   3  pget r15
+   4  ldi r0, 0xF000
+   5  pmode r0
+   6  pdir 0xC0
+   7  pmask 0xC0
+   8  ldi r8, 0xC0
+   9  pset 0xC0
+  10  ldi r6, 0x0040
+  11  ldi r7, 0x0080
+  12  ldi r5, 0xFFE0
+  13  ldi r4, 0x0006
+  14  add r4, r4, r15
+  15  ldi r3, 0xFFFE
+  16  jmp cmd_loop
+  17  jmp cmd_have, rxne
+  18  jmp cmd_loop
+  19  pull r0
+  20  ldi r1, 0x0000
+  21  add r1, r1, r15
+  22  cmp r0, r1
+  23  jmp do_write, z
+  24  ldi r1, 0x00FE
+  25  add r1, r1, r15
+  26  cmp r0, r1
+  27  jmp do_hlt, z
+  28  ldi r1, 0x0002
+  29  cmp r0, r1
+  30  jmp do_read, z
+  31  jmp cmd_loop
+  32  hlt 
+  33  jmp ww_a_have, rxne
+  34  jmp do_write
+  35  pull r11
+  36  jmp ww_n_have, rxne
+  37  jmp ww_n_wait
+  38  pull r12
+  39  msr r15, STATUS
+  40  and r11, r11, r3
+  41  ldi r0, 0
+  42  ldi r14, 0
+  43  mov r13, r11
+  44  call i2c_start
+  45  call wr_byte
+  46  jmp ww_ack, z
+  47  or r11, r5, r14
+  48  jmp nack_abort
+  49  cmp r12, r0
+  50  jmp wr_end, z
+  51  jmp ww_d_have, rxne
+  52  jmp wr_loop
+  53  pull r13
+  54  add r14, r14, r15
+  55  call wr_byte
+  56  jmp ww_ack2, z
+  57  or r11, r5, r14
+  58  jmp nack_abort
+  59  djnz r12, wr_loop
+  60  call i2c_stop
+  61  ldi r11, 0
+  62  push r11
+  63  evt 0
+  64  jmp cmd_loop
+  65  jmp rw_a_have, rxne
+  66  jmp do_read
+  67  pull r11
+  68  jmp rw_n_have, rxne
+  69  jmp rw_n_wait
+  70  pull r12
+  71  msr r15, STATUS
+  72  or r11, r11, r15
+  73  ldi r0, 0
+  74  ldi r14, 0
+  75  mov r13, r11
+  76  call i2c_start
+  77  call wr_byte
+  78  jmp rw_ack, z
+  79  or r11, r5, r14
+  80  jmp nack_abort
+  81  cmp r12, r0
+  82  jmp rd_end, z
+  83  call rd_byte
+  84  push r13
+  85  djnz r12, rd_ackmore
+  86  ldi r0, 0
+  87  call mackbit
+  88  jmp rd_end
+  89  mov r0, r15
+  90  call mackbit
+  91  jmp rd_loop
+  92  call i2c_stop
+  93  evt 0
+  94  jmp cmd_loop
+  95  and r8, r8, r6
+  96  psetr r8
+  97  sleep 100
+  98  and r8, r8, r7
+  99  psetr r8
+ 100  sleep 200
+ 101  ret 
+ 102  and r8, r8, r6
+ 103  psetr r8
+ 104  sleep 60
+ 105  or r8, r8, r6
+ 106  psetr r8
+ 107  wait 6, 1, level, 1, r9
+ 108  sleep 60
+ 109  or r8, r8, r7
+ 110  psetr r8
+ 111  sleep 240
+ 112  ldi r8, 0xC0
+ 113  ret 
+ 114  and r8, r8, r6
+ 115  jmp txb1, c
+ 116  jmp txb0
+ 117  or r8, r8, r7
+ 118  psetr r8
+ 119  sleep 19
+ 120  or r8, r8, r6
+ 121  psetr r8
+ 122  wait 6, 1, level, 1, r9
+ 123  jmp tmo_abort, tmo
+ 124  sleep 243
+ 125  and r8, r8, r7
+ 126  psetr r8
+ 127  sleep 220
+ 128  ret 
+ 129  ldi r14, 8
+ 130  shl r13, r13, r15
+ 131  djnz r14, wal
+ 132  ldi r14, 8
+ 133  shl r13, r13, r15
+ 134  call txbit
+ 135  djnz r14, wbl
+ 136  or r8, r8, r7
+ 137  psetr r8
+ 138  sleep 19
+ 139  call ackbit
+ 140  ret 
+ 141  or r8, r8, r6
+ 142  psetr r8
+ 143  wait 6, 1, level, 1, r9
+ 144  jmp tmo_abort, tmo
+ 145  sleep 119
+ 146  pget r10
+ 147  sleep 121
+ 148  and r8, r8, r7
+ 149  psetr r8
+ 150  sleep 204
+ 151  and r10, r10, r7
+ 152  ret 
+ 153  or r8, r8, r7
+ 154  psetr r8
+ 155  sleep 22
+ 156  or r8, r8, r6
+ 157  psetr r8
+ 158  wait 6, 1, level, 1, r9
+ 159  jmp tmo_abort, tmo
+ 160  sleep 118
+ 161  pget r10
+ 162  shr r10, r10, r4
+ 163  shl r13, r13, r15
+ 164  or r13, r13, r10
+ 165  sleep 120
+ 166  and r8, r8, r7
+ 167  psetr r8
+ 168  sleep 220
+ 169  ret 
+ 170  ldi r14, 8
+ 171  ldi r13, 0
+ 172  call rxbit
+ 173  djnz r14, rbl
+ 174  ret 
+ 175  and r8, r8, r6
+ 176  and r1, r0, r0
+ 177  jmp mck_ack, nz
+ 178  or r8, r8, r7
+ 179  psetr r8
+ 180  sleep 19
+ 181  call pulse250
+ 182  ret 
+ 183  or r8, r8, r6
+ 184  psetr r8
+ 185  wait 6, 1, level, 1, r9
+ 186  jmp tmo_abort, tmo
+ 187  sleep 243
+ 188  and r8, r8, r7
+ 189  psetr r8
+ 190  sleep 216
+ 191  ret 
+ 192  sleep 40
+ 193  pset 0x40
+ 194  wait 6, 1, level, 1, r9
+ 195  pset 0xC0
+ 196  sleep 30
+ 197  evt 1
+ 198  jmp abort_common
+ 199  ldi r11, 0xFFFC
+ 200  add r11, r11, r15
+ 201  pset 0xC0
+ 202  sleep 20
+ 203  evt 3
+ 204  jmp abort_common
+ 205  push r11
+ 206  ldi r8, 0xC0
+ 207  msr r15, STATUS
+ 208  jmp cmd_loop

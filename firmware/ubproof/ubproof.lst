@@ -1,0 +1,21 @@
+   0  jmp main
+      .org 280
+ 280  pdir 0x01
+ 281  pmask 0xFF
+ 282  pset 0x01, d=4
+ 283  pget r15
+ 284  xor r0, r0, r0
+ 285  jmp have, rxne
+ 286  jmp poll
+ 287  pull r6
+ 288  ldi r14, 0x0100
+ 289  sub r14, r14, r15
+ 290  cmp r6, r14
+ 291  jmp is_halt, z
+ 292  jmp poll
+ 293  ldi r7, 0xBEF0
+ 294  sub r7, r7, r15
+ 295  push r7
+ 296  ldi r7, 0x0512
+ 297  push r7
+ 298  hlt 
