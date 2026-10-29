@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TEMPO — Timing-Exact Multi-Protocol Observer</title>
+<script id="tempo-theme-init">(function(){try{var t=localStorage.getItem("tempo-theme");if(t!=="dark"&&t!=="light")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
@@ -38,7 +39,7 @@
 
 <section class="card" id="architecture">
   <h2>Architecture</h2>
-  <img class="diagram" src="assets/diagram-architecture.svg" alt="TEMPO system architecture diagram">
+  <img class="diagram" src="assets/diagram-architecture.svg" data-dark-src="assets/diagram-architecture-dark.svg" alt="TEMPO system architecture diagram">
   <ul>
     <li><strong>PE core (<code>u_pe</code>)</strong> — TEMPO-32 engine: 16 &times; 16-bit GPRs,
     20 special registers, ALU + flags, CALL/RET stack, TX/RX FIFOs (16 &times; 16-bit each), 9-bit PC (v0.3).</li>
@@ -53,9 +54,9 @@
     <code>u_tmem</code> 1024 &times; 8-bit trace memory.</li>
   </ul>
   <h3>Instruction word</h3>
-  <img class="diagram" src="assets/diagram-isa-word.svg" alt="TEMPO-32 instruction word format">
+  <img class="diagram" src="assets/diagram-isa-word.svg" data-dark-src="assets/diagram-isa-word-dark.svg" alt="TEMPO-32 instruction word format">
   <h3>Timing contract</h3>
-  <img class="diagram" src="assets/diagram-timing-contract.svg" alt="TEMPO timing contract diagram">
+  <img class="diagram" src="assets/diagram-timing-contract.svg" data-dark-src="assets/diagram-timing-contract-dark.svg" alt="TEMPO timing contract diagram">
   <p>Every instruction executes in <strong>1 + d cycles</strong>; <code>PGET</code> reads the
   2-FF-synchronised pins (2-cycle architectural latency, accounted for in every firmware image);
   <code>SLEEP</code> is exactly <strong>1 + imm13</strong> cycles; a <code>WAIT</code> whose condition
@@ -91,8 +92,8 @@
   <strong>Run at &le; 43.8 MHz if setup must be guaranteed at the slow corner; 50 MHz is met with
   margin at typical and fast corners only.</strong> The competition sets no clock target. A timing-closure
   redesign is out of scope for this submission.</div>
-  <img class="diagram" src="assets/diagram-die-tiles.svg" alt="Die and 6x4 tile fit diagram">
-  <img class="diagram" src="assets/diagram-pinmap.svg" alt="24-pin functional map">
+  <img class="diagram" src="assets/diagram-die-tiles.svg" data-dark-src="assets/diagram-die-tiles-dark.svg" alt="Die and 6x4 tile fit diagram">
+  <img class="diagram" src="assets/diagram-pinmap.svg" data-dark-src="assets/diagram-pinmap-dark.svg" alt="24-pin functional map">
   <p class="caption">Pin functions: <code>ui[0]</code> = HP_RX, <code>uo[0]</code> = HP_TX,
   <code>uio[0..7]</code> = PIN0–PIN7 (protocol pins, per-pin direction via <code>PDIR</code>,
   open-drain via <code>PMODE</code>). Other ui/uo bits are unused/tied. Example SPI map: SCLK = PIN2,
@@ -138,10 +139,10 @@
 
 <section class="card" id="waveforms">
   <h2>Waveforms (schematic — cycle counts are measured, shapes are illustrative)</h2>
-  <img class="diagram narrow" src="assets/wave-spi.svg" alt="SPI waveform">
-  <img class="diagram narrow" src="assets/wave-uart.svg" alt="UART waveform">
-  <img class="diagram narrow" src="assets/wave-i2c.svg" alt="I2C waveform">
-  <img class="diagram narrow" src="assets/wave-usb.svg" alt="USB low-speed waveform">
+  <img class="diagram narrow" src="assets/wave-spi.svg" data-dark-src="assets/wave-spi-dark.svg" alt="SPI waveform">
+  <img class="diagram narrow" src="assets/wave-uart.svg" data-dark-src="assets/wave-uart-dark.svg" alt="UART waveform">
+  <img class="diagram narrow" src="assets/wave-i2c.svg" data-dark-src="assets/wave-i2c-dark.svg" alt="I2C waveform">
+  <img class="diagram narrow" src="assets/wave-usb.svg" data-dark-src="assets/wave-usb-dark.svg" alt="USB low-speed waveform">
 </section>
 
 <section class="card" id="code">
@@ -252,7 +253,7 @@ cmd_have:
 
 <section class="card" id="layout">
   <h2>Labeled layout — the real 512-word die</h2>
-  <img class="diagram" src="assets/labeled-top-view.svg" alt="Labeled GDS top view, IMEM-512 layout">
+  <img class="diagram" src="assets/labeled-top-view.svg" data-dark-src="assets/labeled-top-view-dark.svg" alt="Labeled GDS top view, IMEM-512 layout">
   <p class="caption">Die, core, and SRAM macros at true GDS positions (IMEM-512 run 40699493628);
   pin ticks at true Metal4.text label anchors (all 45; group-bracketed because anchors are 3.84 &micro;m
   apart). Logic-block outlines are placement regions from the final DEF: solid = 5–95 percentile
@@ -360,9 +361,9 @@ cmd_have:
   <ul>
     <li><strong>Formal competition entry</strong> — form not yet published by Jane Street; deadline
     18 January 2027. A perfect chip with no entry scores zero.</li>
-    <li><strong>GitHub Pages / viewer job</strong> — CI green on gds, precheck, gl_test, test, docs;
-    viewer fails only because Pages is not enabled on this private repo. That toggle is the submitter's
-    settings call and is not changed here.</li>
+    <li><strong>GitHub Pages / viewer job</strong> — repo public since 2026-10-29, Pages enabled
+    from main + <code>/docs</code>, site live. The viewer job's old Pages-404 cause is gone; its
+    verdict on the current gds run is pending at the time of writing.</li>
     <li><strong>Phase 7 verification depth</strong> — queued, not started; adds depth, not existence.</li>
     <li><strong>Display-name collision</strong> — another public project uses “Tempo”; repo name
     <code>tt_um_pemu</code> is fixed by Tiny Tapeout convention. Undecided.</li>

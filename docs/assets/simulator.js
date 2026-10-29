@@ -33,6 +33,16 @@
   var PAD_X = [148.8, 144.96, 141.12, 137.28, 133.44, 129.6, 125.76, 121.92];
   var PAD_Y = 710.14;
 
+  // Theme-aware canvas palette (nav.js TempoTheme) with light fallback.
+  function pal() {
+    return (window.TempoTheme ? window.TempoTheme.pal() : null) || {
+      canvasBg: "#ffffff", grid: "#e2e8f0", label: "#475569",
+      die: "#0f172a", core: "#2563eb",
+      macroFill: "rgba(254,243,199,0.7)", macroStroke: "#92400e", macroLabel: "#92400e",
+      wave: ["#2563eb", "#047857"], trace: "#b45309", cursor: "#dc2626",
+      padHigh: "#22c55e", padLow: "#334155" };
+  }
+
   function fmtNs(cycles) {
     var ns = cycles * 20;
     if (ns < 1000) return ns + " ns";
@@ -139,13 +149,14 @@
 
   // ------------------------------------------------------------- waveform
   function drawWave() {
+    var P = pal();
     var cv = $("sim-wave"), ctx = cv.getContext("2d");
     var w = cv.clientWidth || 800, h = 200;
     if (cv.width !== w) cv.width = w;
     cv.height = h;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
-    if (!current) { ctx.fillStyle = "#475569"; ctx.fillText("No program loaded.", 10, 20); return; }
+    ctx.fillStyle = P.canvasBg; ctx.fillRect(0, 0, w, h);
+    if (!current) { ctx.fillStyle = P.label; ctx.fillText("No program loaded.", 10, 20); return; }
     var sim = current.sim, hist = sim.history;
     var win = viewWindow === 0 ? Math.max(hist.length, 1) : viewWindow;
     var start = Math.min(viewStart, Math.max(0, hist.length - 1));
@@ -153,9 +164,9 @@
     ctx.font = "11px monospace";
     for (var pin = 0; pin < 8; pin++) {
       var y0 = pin * rowH, mid = y0 + rowH / 2;
-      ctx.strokeStyle = "#e2e8f0"; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke();
-      ctx.fillStyle = "#475569"; ctx.fillText("PIN" + pin, 4, y0 + 12);
-      ctx.strokeStyle = pin % 2 ? "#059669" : "#2563eb"; ctx.lineWidth = 1.5;
+      ctx.strokeStyle = P.grid; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke();
+      ctx.fillStyle = P.label; ctx.fillText("PIN" + pin, 4, y0 + 12);
+      ctx.strokeStyle = P.wave[pin % 2]; ctx.lineWidth = 1.5;
       ctx.beginPath();
       var prev = null;
       for (var px = 40; px < w; px++) {
@@ -171,10 +182,10 @@
     // current-cycle cursor
     if (sim.cycle >= start && sim.cycle <= start + win) {
       var cx = 40 + (sim.cycle - start) / win * (w - 40);
-      ctx.strokeStyle = "#dc2626"; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+      ctx.strokeStyle = P.cursor; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
     }
     // time axis labels
-    ctx.fillStyle = "#475569";
+    ctx.fillStyle = P.label;
     for (var g = 0; g <= 4; g++) {
       var cycG = Math.round(start + win * g / 4);
       var gx = 40 + (w - 40) * g / 4;
@@ -210,12 +221,13 @@
 
   // ------------------------------------------------------------- trace plot
   function drawTracePlot() {
+    var P = pal();
     var cv = $("sim-trace-plot"), ctx = cv.getContext("2d");
     var w = cv.clientWidth || 800, h = 180;
     if (cv.width !== w) cv.width = w;
     cv.height = h;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = P.canvasBg; ctx.fillRect(0, 0, w, h);
     if (!current) return;
     var tr = current.sim.trace;
     $("sim-trace-info").textContent = "Observer state: " + current.sim.traceState() +
@@ -224,7 +236,7 @@
         tr.length ? "" : " · no entries yet (arm the Observer with MSR: TRIG_MODE, then OBS_CTL OBS_EN)") +
       " · PULSE mode watches PIN 0 only (top-level tie; see note below).";
     if (tr.length < 2) {
-      ctx.fillStyle = "#475569"; ctx.fillText(tr.length ? "One entry captured; need 2+ to draw a stepped plot." : "No trace entries yet.", 10, 20);
+      ctx.fillStyle = P.label; ctx.fillText(tr.length ? "One entry captured; need 2+ to draw a stepped plot." : "No trace entries yet.", 10, 20);
       return;
     }
     var t0 = tr[0][0], t1 = tr[tr.length - 1][0], span = Math.max(t1 - t0, 1);
@@ -232,9 +244,9 @@
     ctx.font = "11px monospace";
     for (var pin = 0; pin < 8; pin++) {
       var y0 = pin * rowH;
-      ctx.strokeStyle = "#e2e8f0"; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke();
-      ctx.fillStyle = "#475569"; ctx.fillText("PIN" + pin, 4, y0 + 12);
-      ctx.strokeStyle = "#b45309"; ctx.lineWidth = 1.5; ctx.beginPath();
+      ctx.strokeStyle = P.grid; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke();
+      ctx.fillStyle = P.label; ctx.fillText("PIN" + pin, 4, y0 + 12);
+      ctx.strokeStyle = P.trace; ctx.lineWidth = 1.5; ctx.beginPath();
       for (var i = 0; i < tr.length; i++) {
         var x = 40 + (tr[i][0] - t0) / span * (w - 40);
         var y = ((tr[i][1] >> pin) & 1) ? y0 + 4 : y0 + rowH - 4;
@@ -243,7 +255,7 @@
       }
       ctx.stroke(); delete ctx._ly;
     }
-    ctx.fillStyle = "#475569";
+    ctx.fillStyle = P.label;
     ctx.fillText("ts " + t0, 42, h - 2);
     ctx.fillText("ts " + t1 + " (" + fmtNs(t1 - t0) + " span)", w - 160, h - 2);
   }
@@ -270,6 +282,7 @@
     return counts;
   }
   function drawDie(histOverride) {
+    var P = pal();
     var cv = $("sim-die"), ctx = cv.getContext("2d");
     var w = cv.clientWidth || 800, h = Math.round(w * DIE_H / DIE_W);
     if (cv.width !== w) cv.width = w;
@@ -278,16 +291,16 @@
     function X(x) { return x * s; }
     function Y(y) { return (DIE_H - y) * s; } // GDS y-up -> screen y-down
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2;
+    ctx.fillStyle = P.canvasBg; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = P.die; ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, DIE_W * s, DIE_H * s);
-    ctx.setLineDash([6, 4]); ctx.strokeStyle = "#2563eb";
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = P.core;
     ctx.strokeRect(2.88 * s, Y(3.78 + 703.08), 1283.52 * s, 703.08 * s);
     ctx.setLineDash([]);
     MACROS.forEach(function (m) {
-      ctx.fillStyle = "rgba(254,243,199,0.7)"; ctx.fillRect(X(m.x), Y(m.y + m.h), m.w * s, m.h * s);
-      ctx.strokeStyle = "#92400e"; ctx.strokeRect(X(m.x), Y(m.y + m.h), m.w * s, m.h * s);
-      ctx.fillStyle = "#92400e"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = P.macroFill; ctx.fillRect(X(m.x), Y(m.y + m.h), m.w * s, m.h * s);
+      ctx.strokeStyle = P.macroStroke; ctx.strokeRect(X(m.x), Y(m.y + m.h), m.w * s, m.h * s);
+      ctx.fillStyle = P.macroLabel; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
       ctx.fillText(m.name, X(m.x + m.w / 2), Y(m.y + m.h) + 16);
     });
     var hist = histOverride !== undefined ? histOverride :
@@ -298,9 +311,9 @@
       var cx = X(PAD_X[p]), cy = Y(PAD_Y);
       var lvl = (cur >> p) & 1;
       ctx.beginPath(); ctx.arc(cx, cy + 12, 11, 0, 7);
-      ctx.fillStyle = lvl ? "#22c55e" : "#334155"; ctx.fill();
+      ctx.fillStyle = lvl ? P.padHigh : P.padLow; ctx.fill();
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = "#0f172a"; ctx.font = "11px monospace";
+      ctx.fillStyle = P.label; ctx.font = "11px monospace";
       ctx.fillText("PIN" + p, cx, cy + 32);
     }
   }
@@ -473,6 +486,7 @@
     $("sim-replay-info").textContent = "Scrubbed to cycle " + Math.max(1, idx) + " / " + hist.length + ".";
   });
   window.addEventListener("resize", function () { drawWave(); drawTracePlot(); drawDie(); });
+  if (window.TempoTheme) window.TempoTheme.onChange(function () { renderAll(); });
 
   // Boot: load SPI first (the golden-validated example).
   loadExample(Examples.EXAMPLES[0]);

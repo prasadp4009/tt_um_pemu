@@ -16,6 +16,15 @@
   var dragging = false, lx = 0, ly = 0;
   var hoverPin = null;
 
+  // Theme-aware canvas palette (nav.js TempoTheme). Falls back to the old
+  // light colors if the theme module is absent, so the view never breaks.
+  function pal() {
+    return (window.TempoTheme ? window.TempoTheme.pal() : null) || {
+      canvasBg: "#ffffff", die: "#0f172a", core: "#2563eb",
+      macroFill: "rgba(254,243,199,0.55)", macroStroke: "#92400e",
+      macroLabel: "#92400e", pin: "#dc2626" };
+  }
+
   function meta(id) {
     for (var i = 0; i < window.TempoLayers.META.length; i++)
       if (window.TempoLayers.META[i].id === id) return window.TempoLayers.META[i];
@@ -58,10 +67,11 @@
   }
   function draw() {
     if (!data) return;
+    var P = pal();
     var r = cv.getBoundingClientRect();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, r.width, r.height);
+    ctx.fillStyle = P.canvasBg; ctx.fillRect(0, 0, r.width, r.height);
     applyTransform();
     // layers bottom->top as shipped
     data.layers.forEach(function (L) {
@@ -73,25 +83,25 @@
     ctx.globalAlpha = 1;
     // core outline
     var c = data.core;
-    ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 1.5 / scale;
+    ctx.strokeStyle = P.core; ctx.lineWidth = 1.5 / scale;
     ctx.setLineDash([8 / scale, 5 / scale]);
     ctx.strokeRect(c[0], c[1], c[2], c[3]);
     ctx.setLineDash([]);
     // die outline
-    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2 / scale;
+    ctx.strokeStyle = P.die; ctx.lineWidth = 2 / scale;
     ctx.strokeRect(0, 0, dieW, dieH);
     // macros
     if (window.TempoLayers.state.showMacros) {
       window.TempoLayers.MACROS.forEach(function (m) {
-        ctx.fillStyle = "rgba(254,243,199,0.55)";
+        ctx.fillStyle = P.macroFill;
         ctx.fillRect(m.x, m.y, m.w, m.h);
-        ctx.strokeStyle = "#92400e"; ctx.lineWidth = 2 / scale;
+        ctx.strokeStyle = P.macroStroke; ctx.lineWidth = 2 / scale;
         ctx.strokeRect(m.x, m.y, m.w, m.h);
       });
     }
     // pins
     if (window.TempoLayers.state.showPins) {
-      ctx.fillStyle = "#dc2626";
+      ctx.fillStyle = P.pin;
       (data.pins || []).forEach(function (p) {
         ctx.beginPath(); ctx.arc(p.x, p.y, 4 / scale, 0, 7); ctx.fill();
       });
@@ -99,7 +109,7 @@
     // screen-space labels for macros (unscaled text)
     if (window.TempoLayers.state.showMacros) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.font = "bold 13px sans-serif"; ctx.fillStyle = "#92400e";
+      ctx.font = "bold 13px sans-serif"; ctx.fillStyle = P.macroLabel;
       ctx.textAlign = "center";
       window.TempoLayers.MACROS.forEach(function (m) {
         var sx = ox + (m.x + m.w / 2) * scale;
@@ -151,6 +161,7 @@
     if (window.TempoDraw3D) window.TempoDraw3D();
   }
   window.TempoLayers.onChange(syncList);
+  if (window.TempoTheme) window.TempoTheme.onChange(draw);
 
   document.getElementById("btn-all").addEventListener("click", function () {
     window.TempoLayers.preset("all"); syncList();

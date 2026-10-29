@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="330" viewBox="0 0 980 330" font-family="DejaVu Sans, Arial, sans-serif" role="img" aria-label="TEMPO-32 instruction word format">
+<title>TEMPO-32 instruction word format</title>
+<defs>
+<linearGradient id="gradCopper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f97316"/></linearGradient>
+</defs>
+<rect width="100%" height="100%" fill="#0f172a"/>
+<text x="490" y="30" font-size="16" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >TEMPO-32 instruction word — 32 bits, timing inside the instruction</text>
+<rect x="430" y="42" width="120" height="4" rx="2" fill="url(#gradCopper)"/>
+<rect x="40" y="70" width="168.75" height="64" fill="#60a5fa" fill-opacity="0.30" stroke="#60a5fa" stroke-width="2"/>
+<text x="124.375" y="98" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >opcode</text>
+<text x="124.375" y="120" font-size="12" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >6 bits</text>
+<rect x="208.75" y="70" width="140.625" height="64" fill="#34d399" fill-opacity="0.30" stroke="#34d399" stroke-width="2"/>
+<text x="279.0625" y="98" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >delay d</text>
+<text x="279.0625" y="120" font-size="12" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >5 bits</text>
+<rect x="349.375" y="70" width="590.625" height="64" fill="#fbbf24" fill-opacity="0.30" stroke="#fbbf24" stroke-width="2"/>
+<text x="644.6875" y="98" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >operands / target / immediate</text>
+<text x="644.6875" y="120" font-size="12" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >21 bits</text>
+<text x="40" y="160" font-size="12" fill="#e2e8f0" text-anchor="start" font-weight="normal" font-family="DejaVu Sans Mono, monospace">[31:26]</text>
+<text x="250" y="160" font-size="12" fill="#e2e8f0" text-anchor="start" font-weight="normal" font-family="DejaVu Sans Mono, monospace">[25:21]  0–31 cycles</text>
+<text x="560" y="160" font-size="12" fill="#e2e8f0" text-anchor="start" font-weight="normal" font-family="DejaVu Sans Mono, monospace">[20:0]</text>
+<text x="490" y="195" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >Every instruction executes in 1 + d cycles. Pin effects and samples land on exact cycles.</text>
+<text x="490" y="220" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >WAIT cfg, rd — wait for a pin condition; rd = cycles actually elapsed (timeout: TIMEOUT sticky).</text>
+<text x="490" y="245" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >CAP rd — atomically snapshot {32-bit cycle counter, synchronized pins}.</text>
+<text x="490" y="270" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >v0.3 (IMEM-512): JMP / CALL target9 = instr[20:12], DJNZ target9 = instr[16:8]; PC is 9 bits (0–511).</text>
+<text x="490" y="295" font-size="12" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >WAIT timeouts as built: tsel 0 → 256 cycles, tsel 1 → 4096 cycles; tsel 2/3 fall back + CONFIG_ERR (see Limitations).</text>
+</svg>

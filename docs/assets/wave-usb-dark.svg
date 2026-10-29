@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="300" viewBox="0 0 980 300" font-family="DejaVu Sans, Arial, sans-serif" role="img" aria-label="USB low-speed token + DATA0 — 33/34-cycle dither, NRZI (schematic)">
+<title>USB low-speed token + DATA0 — 33/34-cycle dither, NRZI (schematic)</title>
+<defs>
+<linearGradient id="gradCopper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f97316"/></linearGradient>
+</defs>
+<rect width="100%" height="100%" fill="#0f172a"/>
+<text x="490" y="30" font-size="16" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >USB low-speed token + DATA0 — 33/34-cycle dither, NRZI (schematic)</text>
+<rect x="430" y="42" width="120" height="4" rx="2" fill="url(#gradCopper)"/>
+<text x="122" y="87" font-size="12" fill="#e2e8f0" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">D+ </text>
+<polyline points="130,96 198,96 198,70 266,70 266,96 334,96 334,70 470,70 470,96 606,96 606,70 674,70 674,96 742,96 742,70 810,70 810,96 878,96" fill="none" stroke="#60a5fa" stroke-width="2"/>
+<text x="122" y="139" font-size="12" fill="#e2e8f0" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">D- </text>
+<polyline points="130,122 198,122 198,148 266,148 266,122 334,122 334,148 470,148 470,122 606,122 606,148 674,148 674,122 742,122 742,148 810,148 810,122 878,122" fill="none" stroke="#34d399" stroke-width="2"/>
+<text x="122" y="191" font-size="12" fill="#e2e8f0" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">SE0</text>
+<polyline points="130,200 878,200" fill="none" stroke="#fbbf24" stroke-width="2"/>
+<text x="490" y="250" font-size="12" fill="#94a3b8" text-anchor="middle" font-weight="normal" >Bit cells dither 33,33,34 cycles (average exactly 33.333); max edge deviation from ideal grid 1 cycle (20 ns).</text>
+<text x="490" y="272" font-size="12" fill="#94a3b8" text-anchor="middle" font-weight="normal" >SETUP token (ADDR 5, ENDP 0, CRC5 residue 01100) + DATA0 (CRC16 residue checked by an independent decoder).</text>
+<text x="490" y="294" font-size="12" fill="#94a3b8" text-anchor="middle" font-weight="normal" >EOP = SE0 for 66 cycles. J (idle) = D+=0, D-=1; K = D+=1, D-=0; NRZI: 0 = transition, 1 = hold.</text>
+</svg>

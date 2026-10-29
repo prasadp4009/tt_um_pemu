@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1376" height="958" viewBox="0 0 1376 958" font-family="DejaVu Sans, Arial, sans-serif" role="img" aria-label="TEMPO labeled GDS top view, IMEM-512 layout">
+<title>TEMPO labeled GDS top view, IMEM-512 layout</title>
+<defs>
+<linearGradient id="gradCopper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f97316"/></linearGradient>
+</defs>
+<rect width="100%" height="100%" fill="#0f172a"/>
+<text x="688.0" y="28" font-size="17" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >TEMPO (tt_um_pemu) — labeled top view, IMEM-512 layout (run 40699493628)</text>
+<text x="688.0" y="52" font-size="12" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >Die + core + SRAM macros at true GDS positions; pin ticks at true Metal4.text label anchors;</text>
+<text x="688.0" y="70" font-size="12" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >logic-block outlines are placement regions from the final DEF (see note below) — approximate, overlapping by design.</text>
+<rect x="628.0" y="80" width="120" height="4" rx="2" fill="url(#gradCopper)"/>
+<rect x="130.0" y="215.0" width="1186.1" height="653.8" fill="#16213a" stroke="#e2e8f0" stroke-width="2.5"/>
+<text x="138.0" y="233.0" font-size="12" fill="#e2e8f0" text-anchor="start" font-weight="bold" >die 1289.28 x 710.64 um</text>
+<rect x="132.6" y="218.5" width="1180.8" height="646.8" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="8,5"/>
+<text x="140.6496" y="252.47759999999997" font-size="11" fill="#60a5fa" text-anchor="start" font-weight="normal" >core 1283.52 x 703.08 um</text>
+<line x1="327.7" y1="215.0" x2="327.7" y2="868.8" stroke="#1e293b"/>
+<line x1="525.4" y1="215.0" x2="525.4" y2="868.8" stroke="#1e293b"/>
+<line x1="723.1" y1="215.0" x2="723.1" y2="868.8" stroke="#1e293b"/>
+<line x1="920.8" y1="215.0" x2="920.8" y2="868.8" stroke="#1e293b"/>
+<line x1="1118.4" y1="215.0" x2="1118.4" y2="868.8" stroke="#1e293b"/>
+<line x1="130.0" y1="705.3" x2="1316.1" y2="705.3" stroke="#1e293b"/>
+<line x1="130.0" y1="541.9" x2="1316.1" y2="541.9" stroke="#1e293b"/>
+<line x1="130.0" y1="378.4" x2="1316.1" y2="378.4" stroke="#1e293b"/>
+<rect x="141.5" y="319.3" width="708.8" height="288.6" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="6,4"/>
+<rect x="214.8" y="329.8" width="524.2" height="236.5" fill="#60a5fa" fill-opacity="0.08" stroke="#60a5fa" stroke-width="2"/>
+<rect x="736.3" y="430.6" width="567.5" height="139.1" fill="none" stroke="#34d399" stroke-width="1.5" stroke-dasharray="6,4"/>
+<rect x="769.9" y="444.5" width="520.2" height="104.3" fill="#34d399" fill-opacity="0.08" stroke="#34d399" stroke-width="2"/>
+<rect x="134.4" y="371.5" width="1055.9" height="365.1" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6,4"/>
+<rect x="185.6" y="399.3" width="917.6" height="302.6" fill="#fbbf24" fill-opacity="0.08" stroke="#fbbf24" stroke-width="2"/>
+<text x="214.78719999999998" y="321.7608" font-size="12" fill="#60a5fa" text-anchor="start" font-weight="bold" >PE core (u_pe) — 1,754 cells</text>
+<text x="769.8784" y="436.5216" font-size="12" fill="#34d399" text-anchor="start" font-weight="bold" >Observer (u_obs) — 273 cells</text>
+<text x="185.64159999999998" y="391.3128" font-size="12" fill="#fbbf24" text-anchor="start" font-weight="bold" >Host port (u_host) — 2,552 cells</text>
+<rect x="319.2256" y="689.0668000000001" width="383.3088" height="176.2444" rx="2" fill="#451a03" stroke="#fbbf24" stroke-width="2"/>
+<text x="510.88" y="711.0668000000001" font-size="14" fill="#e2e8f0" text-anchor="middle" font-weight="bold" font-family="DejaVu Sans Mono, monospace">u_imem</text>
+<text x="510.88" y="729.0668000000001" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">RM_IHPSG13_1P_512x32</text>
+<text x="510.88" y="744.0668000000001" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">c2_bm_bist</text>
+<text x="510.88" y="759.0668000000001" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">416.64 x 191.57 um</text>
+<text x="510.88" y="774.0668000000001" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">@ (205.68, 3.78) FS</text>
+<text x="510.88" y="789.0668000000001" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">512 x 32-bit instruction SRAM</text>
+<rect x="1167.1712" y="555.5564" width="135.1296" height="309.7548" rx="2" fill="#451a03" stroke="#fbbf24" stroke-width="2"/>
+<text x="1234.736" y="577.5564" font-size="14" fill="#e2e8f0" text-anchor="middle" font-weight="bold" font-family="DejaVu Sans Mono, monospace">u_tmem</text>
+<text x="1234.736" y="595.5564" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">RM_IHPSG13_1P_1024x8</text>
+<text x="1234.736" y="610.5564" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">c2_bm_bist</text>
+<text x="1234.736" y="625.5564" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">146.88 x 336.69 um</text>
+<text x="1234.736" y="640.5564" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">@ (1127.36, 3.78) FS</text>
+<text x="1234.736" y="655.5564" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">1024 x 8-bit trace SRAM</text>
+<text x="1234.736" y="670.5564" font-size="9" fill="#e2e8f0" text-anchor="middle" font-weight="normal" font-family="DejaVu Sans Mono, monospace">(204 entries)</text>
+<line x1="138.3" y1="541.9" x2="124.3" y2="541.9" stroke="#f87171" stroke-width="2"/>
+<line x1="143.5" y1="541.9" x2="129.5" y2="541.9" stroke="#f87171" stroke-width="2"/>
+<line x1="302.2" y1="215.5" x2="302.2" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="305.8" y1="215.5" x2="305.8" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="298.7" y1="215.5" x2="298.7" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="295.2" y1="215.5" x2="295.2" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="291.6" y1="215.5" x2="291.6" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="288.1" y1="215.5" x2="288.1" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="284.6" y1="215.5" x2="284.6" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="281.0" y1="215.5" x2="281.0" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="277.5" y1="215.5" x2="277.5" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="274.0" y1="215.5" x2="274.0" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="270.4" y1="215.5" x2="270.4" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="266.9" y1="215.5" x2="266.9" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="263.4" y1="215.5" x2="263.4" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="259.8" y1="215.5" x2="259.8" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="256.3" y1="215.5" x2="256.3" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="252.8" y1="215.5" x2="252.8" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="249.2" y1="215.5" x2="249.2" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="245.7" y1="215.5" x2="245.7" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="242.2" y1="215.5" x2="242.2" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="182.1" y1="215.5" x2="182.1" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="178.6" y1="215.5" x2="178.6" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="175.0" y1="215.5" x2="175.0" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="171.5" y1="215.5" x2="171.5" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="168.0" y1="215.5" x2="168.0" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="164.4" y1="215.5" x2="164.4" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="160.9" y1="215.5" x2="160.9" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="157.4" y1="215.5" x2="157.4" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="210.4" y1="215.5" x2="210.4" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="206.8" y1="215.5" x2="206.8" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="203.3" y1="215.5" x2="203.3" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="199.8" y1="215.5" x2="199.8" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="196.2" y1="215.5" x2="196.2" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="192.7" y1="215.5" x2="192.7" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="189.2" y1="215.5" x2="189.2" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="185.6" y1="215.5" x2="185.6" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="238.6" y1="215.5" x2="238.6" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="235.1" y1="215.5" x2="235.1" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="231.6" y1="215.5" x2="231.6" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="228.0" y1="215.5" x2="228.0" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="224.5" y1="215.5" x2="224.5" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="221.0" y1="215.5" x2="221.0" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="217.4" y1="215.5" x2="217.4" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<line x1="213.9" y1="215.5" x2="213.9" y2="201.5" stroke="#f87171" stroke-width="2"/>
+<text x="157.3792" y="197.0" font-size="11" fill="#f87171" text-anchor="start" font-weight="normal" >uio_oe[0..7] (3 views of the same 8 uio pins: in / out / oe)</text>
+<text x="185.64159999999998" y="179.0" font-size="11" fill="#f87171" text-anchor="start" font-weight="normal" >uio_out[0..7]</text>
+<text x="213.904" y="161.0" font-size="11" fill="#f87171" text-anchor="start" font-weight="normal" >uo_out[0..7] — uo[0] = HP_TX</text>
+<text x="242.1664" y="143.0" font-size="11" fill="#f87171" text-anchor="start" font-weight="normal" >uio_in[0..7] = PIN0–PIN7</text>
+<text x="270.4288" y="125.0" font-size="11" fill="#f87171" text-anchor="start" font-weight="normal" >ui_in[0..7] — ui[0] = HP_RX · clk · rst_n · ena</text>
+<text x="123.47800000000001" y="541.8944" font-size="11" fill="#f87171" text-anchor="end" font-weight="normal" >VPWR / VGND</text>
+<text x="130.0" y="894.7888" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="normal" >Legend: solid = 5–95 percentile concentration of DEF-attributed cells · dashed = full min/max bbox · gold = SRAM macro (true GDS rect)</text>
+<text x="130.0" y="914.7888" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="normal" >Method note: final-DEF component names are flattened, so cells were attributed by the hierarchy prefix of the nets they connect to</text>
+<text x="130.0" y="932.7888" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="normal" >(u_pe. / u_obs. / u_host.). 12,022 non-fill cells sit on top-level-only nets (clock tree, ties, pin-fabric glue) and have no region.</text>
+<text x="130.0" y="950.7888" font-size="11" fill="#e2e8f0" text-anchor="start" font-weight="normal" >Placement interleaves blocks, so regions overlap — the overlap is real. Pin ticks: all 45 Metal4.text anchors from layers.json.</text>
+</svg>

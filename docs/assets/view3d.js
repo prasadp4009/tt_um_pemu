@@ -17,6 +17,13 @@
 
   var data = null, rasters = {};   // layer id -> offscreen canvas
   var dieW = 1289.28, dieH = 710.64;
+
+  // Theme-aware canvas palette (nav.js TempoTheme) with light fallback.
+  function pal() {
+    return (window.TempoTheme ? window.TempoTheme.pal() : null) || {
+      canvasBg: "#ffffff",
+      macro3d: { side1: "#b45309", side2: "#92400e", top: "#fde68a", topStroke: "#92400e", topLabel: "#451a03" } };
+  }
   var az = -0.6, el = 35 * Math.PI / 180, zoom = 1, explode = 30;
   var cx = 0, cy = 0;              // pan offset (screen px)
   var pointers = new Map(), lastPinch = 0;
@@ -99,14 +106,15 @@
             proj(m.x + m.w, m.y + m.h, z), proj(m.x, m.y + m.h, z)];
   }
   function drawMacro(m, zBase) {
+    var M = pal().macro3d;
     var H = 30, z = zBase + H;
     var top = macroTop(m, z);
     var bot = macroTop(m, zBase);
     // sides first, then top
-    poly([bot[0], bot[1], top[1], top[0]], "#b45309");
-    poly([bot[1], bot[2], top[2], top[1]], "#92400e");
-    poly(top, "#fde68a", "#92400e");
-    ctx.font = "bold 12px sans-serif"; ctx.fillStyle = "#451a03";
+    poly([bot[0], bot[1], top[1], top[0]], M.side1);
+    poly([bot[1], bot[2], top[2], top[1]], M.side2);
+    poly(top, M.top, M.topStroke);
+    ctx.font = "bold 12px sans-serif"; ctx.fillStyle = M.topLabel;
     ctx.textAlign = "center";
     var c = { x: (top[0].x + top[2].x) / 2, y: (top[0].y + top[2].y) / 2 };
     ctx.fillText(m.name, c.x, c.y - 4);
@@ -116,7 +124,7 @@
     var r = cv.getBoundingClientRect();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, r.width, r.height);
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, r.width, r.height);
+    ctx.fillStyle = pal().canvasBg; ctx.fillRect(0, 0, r.width, r.height);
     var sramIdx = 0;
     data.layers.forEach(function (L, i) { if (L.id === "sram") sramIdx = i; });
     data.layers.forEach(function (L, i) {
@@ -130,6 +138,7 @@
   }
   window.TempoDraw3D = draw;
   window.TempoLayers.onChange(draw);
+  if (window.TempoTheme) window.TempoTheme.onChange(draw);
 
   function layerInfo(L) {
     var m = meta(L.id) || {};

@@ -31,7 +31,7 @@
     { id: "cont", name: "Cont", gds: "6/0", polys: 858,
       role: "Contacts (FEOL)",
       fidelity: "coverage raster — 3 um tiles, >=2% covered; a tile is NOT a via",
-      color: "#475569" },
+      color: "#64748b" },
     { id: "metal1", name: "Metal1", gds: "8/0", polys: 7,
       role: "Metal 1 routing",
       fidelity: "mass silhouette (grow 0.3 um + merge, snap 2.0 um) — individual wires NOT resolvable",
@@ -67,7 +67,7 @@
     { id: "metal4pin", name: "Metal4.pin", gds: "50/2", polys: 192,
       role: "Metal 4 pins (PDN stripes + macro pins)",
       fidelity: "true merged geometry (native)",
-      color: "#7c3aed" }
+      color: "#8b5cf6" }
   ];
   // layers.json ships layers bottom->top in physical stack order; this
   // table is in the same order, so index i is the stack position.
@@ -79,10 +79,13 @@
       x: 1127.36, y: 3.78, w: 146.88, h: 336.69, orient: "FS",
       note: "1024 x 8-bit trace SRAM = 204 entries x {timestamp[31:0], pins[7:0]}. GDS-measured bbox; LEF size is 336.46 um tall." }
   ];
-  window.TempoLayers.MACROS = MACROS;
   var state = { visible: {}, showMacros: true, showPins: true };
   LAYERS.forEach(function (l) { state.visible[l.id] = true; });
-  window.TempoLayers = { META: LAYERS, state: state, listeners: [],
+  // NOTE (2026-10-29): MACROS used to be assigned here as
+  // `window.TempoLayers.MACROS = MACROS` BEFORE window.TempoLayers existed,
+  // which threw on load and broke the explorer + 3D view outright. It now
+  // lives in the object literal below, assigned exactly once.
+  window.TempoLayers = { META: LAYERS, MACROS: MACROS, state: state, listeners: [],
     onChange: function (fn) { this.listeners.push(fn); },
     set: function (id, v) {
       this.state.visible[id] = v;

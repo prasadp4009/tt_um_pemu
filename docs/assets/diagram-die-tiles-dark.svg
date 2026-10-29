@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="640" viewBox="0 0 980 640" font-family="DejaVu Sans, Arial, sans-serif" role="img" aria-label="TEMPO die and 6x4 tile fit">
+<title>TEMPO die and 6x4 tile fit</title>
+<defs>
+<linearGradient id="gradCopper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f97316"/></linearGradient>
+</defs>
+<rect width="100%" height="100%" fill="#0f172a"/>
+<text x="490" y="30" font-size="16" fill="#e2e8f0" text-anchor="middle" font-weight="bold" >Die 1289.28 x 710.64 um — exactly the 6 x 4 tile allotment (0 um^2 overflow)</text>
+<rect x="430" y="42" width="120" height="4" rx="2" fill="url(#gradCopper)"/>
+<rect x="60.0" y="70.0" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="126.61280000000001" y="129.0746" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >1,4</text>
+<rect x="193.2" y="70.0" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="259.83840000000004" y="129.0746" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >2,4</text>
+<rect x="326.5" y="70.0" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="393.064" y="129.0746" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >3,4</text>
+<rect x="459.7" y="70.0" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="526.2896000000001" y="129.0746" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >4,4</text>
+<rect x="592.9" y="70.0" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="659.5152" y="129.0746" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >5,4</text>
+<rect x="726.1" y="70.0" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="792.7408" y="129.0746" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >6,4</text>
+<rect x="60.0" y="180.1" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="126.61280000000001" y="239.2238" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >1,3</text>
+<rect x="193.2" y="180.1" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="259.83840000000004" y="239.2238" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >2,3</text>
+<rect x="326.5" y="180.1" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="393.064" y="239.2238" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >3,3</text>
+<rect x="459.7" y="180.1" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="526.2896000000001" y="239.2238" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >4,3</text>
+<rect x="592.9" y="180.1" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="659.5152" y="239.2238" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >5,3</text>
+<rect x="726.1" y="180.1" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="792.7408" y="239.2238" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >6,3</text>
+<rect x="60.0" y="290.3" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="126.61280000000001" y="349.373" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >1,2</text>
+<rect x="193.2" y="290.3" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="259.83840000000004" y="349.373" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >2,2</text>
+<rect x="326.5" y="290.3" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="393.064" y="349.373" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >3,2</text>
+<rect x="459.7" y="290.3" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="526.2896000000001" y="349.373" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >4,2</text>
+<rect x="592.9" y="290.3" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="659.5152" y="349.373" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >5,2</text>
+<rect x="726.1" y="290.3" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="792.7408" y="349.373" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >6,2</text>
+<rect x="60.0" y="400.4" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="126.61280000000001" y="459.52219999999994" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >1,1</text>
+<rect x="193.2" y="400.4" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="259.83840000000004" y="459.52219999999994" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >2,1</text>
+<rect x="326.5" y="400.4" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="393.064" y="459.52219999999994" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >3,1</text>
+<rect x="459.7" y="400.4" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="526.2896000000001" y="459.52219999999994" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >4,1</text>
+<rect x="592.9" y="400.4" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="659.5152" y="459.52219999999994" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >5,1</text>
+<rect x="726.1" y="400.4" width="133.2" height="110.1" fill="#16213a" stroke="#1e293b"/>
+<text x="792.7408" y="459.52219999999994" font-size="10" fill="#64748b" text-anchor="middle" font-weight="normal" >6,1</text>
+<rect x="61.8" y="72.3" width="795.8" height="435.9" fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="8,5"/>
+<text x="69.7856" y="90.34359999999998" font-size="12" fill="#60a5fa" text-anchor="middle" font-weight="normal" >core 1283.52 x 703.08 um</text>
+<rect x="187.5216" y="389.47979999999995" width="258.3168" height="118.7734" rx="2" fill="#451a03" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="316.68" y="446.8665" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="bold" font-family="DejaVu Sans Mono, monospace">u_imem</text>
+<text x="316.68" y="464.8665" font-size="10" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >416.64 x 191.57 um</text>
+<rect x="758.9631999999999" y="299.5054" width="91.0656" height="208.74779999999998" rx="2" fill="#451a03" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="804.4959999999999" y="401.8793" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="bold" font-family="DejaVu Sans Mono, monospace">u_tmem</text>
+<text x="804.4959999999999" y="419.8793" font-size="10" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >146.88 x 336.69 um</text>
+<text x="490" y="538.5968" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >Per-tile unit: 214.88 x 177.66 um. Both SRAMs sit on the bottom edge, pins facing into the die (FS).</text>
+<text x="490" y="560.5968" font-size="13" fill="#e2e8f0" text-anchor="middle" font-weight="normal" >u_imem spans tile columns 1–3, row 1; u_tmem spans column 6, rows 1–2. Nothing protrudes past the core.</text>
+</svg>
