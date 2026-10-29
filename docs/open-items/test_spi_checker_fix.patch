@@ -1,0 +1,49 @@
+--- a/firmware/tests/test_spi.py
++++ b/firmware/tests/test_spi.py
+@@ -159,7 +159,7 @@
+         errs.append(f"peer sent {_slave.sent} != resp {RESP_BYTES}")
+ 
+     # 4. SCLK period: every rising->rising delta == 50 cycles, except the
+-    #    inter-byte gap delta == 57 (measured; = 25 fall + 32 gap).
++    #    inter-byte gap delta == 58 (measured; = 25 fall + 33 gap; was 57 — see audit 2026-10-29).
+     rises, falls = _pin_transitions(sim.vcd_signals, SCLK)
+     nbits = len(TX_BYTES) * 8
+     if len(rises) != nbits:
+@@ -167,29 +167,29 @@
+     else:
+         deltas = [b - a for a, b in zip(rises, rises[1:])]
+         bad = [(i, d) for i, d in enumerate(deltas)
+-               if d != (57 if (i + 1) % 8 == 0 else 50)]
++               if d != (58 if (i + 1) % 8 == 0 else 50)]
+         if bad:
+-            errs.append(f"SCLK period deviations (want 50, 57 at byte "
++            errs.append(f"SCLK period deviations (want 50, 58 at byte "
+                         f"boundary): {bad[:8]}")
+         else:
+             n50 = sum(1 for d in deltas if d == 50)
+             n56 = sum(1 for d in deltas) - n50
+-            rep.append(f"SCLK period: {n50}x50c + {n56}x57c(byte gap), "
++            rep.append(f"SCLK period: {n50}x50c + {n56}x58c(byte gap), "
+                        f"zero deviation")
+-            rep.append("byte-gap placement OK (57c every 8th delta)")
++            rep.append("byte-gap placement OK (58c every 8th delta)")
+         # duty: first bit high time == 25 cycles
+         if falls and falls[0] - rises[0] != 25:
+             errs.append(f"SCLK high time bit0 = {falls[0]-rises[0]}, want 25")
+         else:
+             rep.append("SCLK duty 25c high / 25c low (bit 0)")
+ 
+-    # 5. cycles/byte: first rising edge of byte k -> byte k+1 == 407
++    # 5. cycles/byte: first rising edge of byte k -> byte k+1 == 408 (was 407)
+     if len(rises) == nbits:
+         byte_time = rises[8] - rises[0]
+-        if byte_time != 407:
+-            errs.append(f"cycles/byte={byte_time}, want 407 (=400+7)")
++        if byte_time != 408:
++            errs.append(f"cycles/byte={byte_time}, want 408 (=400+8)")
+         else:
+-            rep.append(f"cycles/byte = 407 = 400 + 7 overhead (theory match)")
++            rep.append(f"cycles/byte = 408 = 400 + 8 overhead (theory match)")
+ 
+     # 6. CS# low window covers exactly each transaction.
+     #    rises[0] is the init 0->1 (pin undriven->driven-high); transaction

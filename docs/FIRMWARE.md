@@ -37,10 +37,10 @@ Tools (all in `firmware/tools/`, committed):
 **UART** (434 cycles/bit): TX bit cell 434 exact; byte pitch 4349 ×3, zero
 deviation; RX first-sample offset +1 from ideal mid-bit (CAP-calibrated);
 sample spacing 434 exact; back-to-back margin ±216; break → EVT2+0xFFFE;
-TX underrun → 0xFFFD, no hang. Zero warnings.
+TX host starvation blocks in the RXNE wait (no 0xFFFD abort on this path; see OPEN_ITEMS_AUDIT.md item 3b). Zero warnings.
 
 **SPI** (50 cycles/bit): SCLK period 50 ×14, zero deviation; duty 25/25;
-cycles/byte 407 = 400+7 theory; MISO `~MOSI` loopback (`0xA5→0x5A`,
+cycles/byte 408 = 400+8 (checker expectation corrected 2026-10-29; see OPEN_ITEMS_AUDIT.md item 3a); MISO `~MOSI` loopback (`0xA5→0x5A`,
 `0x3C→0xC3`); CS# brackets SCLK; N=0 → 3-cycle pulse, no SCLK. Zero warnings.
 
 **I2C** (500 cycles/bit nominal): 73 data clocks at exactly 499c
