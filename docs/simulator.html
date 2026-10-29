@@ -29,7 +29,7 @@
     <span class="runstate is-ready" id="sim-runstate" role="status" aria-live="polite">READY</span>
   </div>
   <ol class="howto">
-    <li><strong>SPI is loaded.</strong> Press Run, or pick another example below.</li>
+    <li><strong id="sim-howto-loaded">SPI is loaded.</strong> Press Run, or pick another example below.</li>
     <li><strong>Watch the chip.</strong> Registers, pins and the waveform update live.</li>
     <li><strong>Dig deeper.</strong> Step cycle-by-cycle, or open the trace and die panels.</li>
   </ol>
@@ -39,12 +39,12 @@
     <button id="sim-pause" type="button">Pause</button>
     <button id="sim-step-cycle" type="button">Step Cycle</button>
     <button id="sim-step-instr" type="button">Step Instruction</button>
-    <label class="transport-field">Speed <input id="sim-speed" type="number" value="5000" min="1" max="1000000"> cycles/sec</label>
+    <label class="transport-field">Speed (Free-run) <input id="sim-speed" type="number" value="5000" min="1" max="1000000"> cycles/sec</label>
     <label class="transport-field">Run-N <input id="sim-ncycles" type="number" value="100" min="0"> cycles</label>
     <button id="sim-run-n" type="button">Run N cycles</button>
   </div>
-  <p class="shortcuts">Keyboard: <kbd>Space</kbd> Run / Pause · <kbd>S</kbd> Step Cycle · <kbd>I</kbd> Step Instruction · <kbd>N</kbd> Run N · <kbd>R</kbd> Reset. Shortcuts are ignored while typing in the editor or any input, and while a button has focus.</p>
-  <p class="caption">Step Cycle advances exactly one clock cycle. Step Instruction
+  <p class="shortcuts">Keyboard: <kbd>Space</kbd> Free-run / Pause · <kbd>S</kbd> Step Cycle · <kbd>I</kbd> Step Instruction · <kbd>N</kbd> Run N · <kbd>R</kbd> Reset. Shortcuts are ignored while typing in the editor or any input, and while a button has focus.</p>
+  <p class="caption">Speed paces Free-run only; Run (until HALT) always runs full-speed. Step Cycle advances exactly one clock cycle. Step Instruction
   completes the in-flight instruction (a multi-cycle WAIT runs to its exit
   instead of looking frozen). Run-N executes exactly N cycles, then pauses
   with registers, PC, waveform and CAP trace at that exact point — unless

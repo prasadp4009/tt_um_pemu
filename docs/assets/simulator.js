@@ -120,6 +120,8 @@
       "<br>Host preload (RX FIFO): " + (ex.preload.length ? ex.preload.map(function (w) { return hex(w, 4); }).join(" ") : "(none)") +
       "<br>Peer model: " + esc(ex.peer === "none" ? "none (firmware drives the pins; no device attached)" : ex.peer) +
       "<br>Proven status: " + esc(ex.proven);
+    var howto = $("sim-howto-loaded");
+    if (howto) howto.textContent = ex.title + " is loaded.";
     renderAll("Loaded " + ex.title + " (" + words.length + " words). Press Run, Step, or Free-run.");
   }
 
@@ -539,7 +541,7 @@
     if (e.key === " ") {
       e.preventDefault();
       if (loopTimer) { stopLoop(); if (current) renderAll("Paused at cycle " + current.sim.cycle + "."); }
-      else if (current && !current.sim.halted) startLoop("run");
+      else if (current && !current.sim.halted) startLoop("free");
       return;
     }
     if (!current) return;
