@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TEMPO simulator — Timing-Exact Multi-Protocol Observer</title>
-<script id="tempo-theme-init">(function(){try{var t=localStorage.getItem("tempo-theme");if(t!=="dark"&&t!=="light")t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();</script>
+<script id="tempo-theme-init">(function(){try{var t=localStorage.getItem("tempo-theme");if(t!==\"dark\"&&t!==\"light\")t=window.matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\";document.documentElement.setAttribute(\"data-theme\",t);}catch(e){document.documentElement.setAttribute(\"data-theme\",\"light\");}})();</script>
 <link rel="stylesheet" href="assets/site.css">
 <link rel="stylesheet" href="assets/simulator.css">
 </head>
@@ -22,44 +22,28 @@
   example runs against the same device behaviour the golden model used.</p>
 </header>
 <nav id="site-nav"></nav>
-<main>
-<section class="card">
-  <h2>Example programs</h2>
-  <p>One click loads the project's actual firmware (verbatim source),
-  its golden-test host preload, and its golden-test peer model. Teaching
-  programs are labelled as such. The SPI example loads first.</p>
-  <div class="controls" id="sim-examples"></div>
-  <div class="infopanel" id="sim-example-meta"></div>
-</section>
-
-<section class="card">
-  <h2>Editor + assembler</h2>
-  <p>Write in the project's assembler syntax (same mnemonics and
-  <code>, d=N</code> delay suffix as <code>firmware/tools/asm.py</code>;
-  SLEEP/WAIT/HLT reject a nonzero delay). Errors report line numbers.
-  Peer model and host preload follow the loaded example, even after edits.</p>
-  <textarea id="sim-editor" rows="22" spellcheck="false"></textarea>
-  <div class="controls">
-    <button id="sim-load">Assemble editor</button>
-    <button id="sim-reset">Reset</button>
+<main class="sim">
+<section class="card transport" aria-label="Run controls">
+  <div class="transport-head">
+    <h2>Playground</h2>
+    <span class="runstate is-ready" id="sim-runstate" role="status" aria-live="polite">READY</span>
   </div>
-  <div id="sim-asm-error" class="asm-error" style="display:none"></div>
-  <h3>Assembly listing</h3>
-  <pre id="sim-listing"></pre>
-</section>
-
-<section class="card">
-  <h2>Execution</h2>
-  <div class="controls">
-    <button id="sim-run">Run (until HALT)</button>
-    <button id="sim-free">Free-run</button>
-    <button id="sim-pause">Pause</button>
-    <button id="sim-step-cycle">Step Cycle</button>
-    <button id="sim-step-instr">Step Instruction</button>
-    <label>Speed <input id="sim-speed" type="number" value="5000" min="1" max="1000000"> cycles/sec (free-run)</label>
-    <label>Run-N <input id="sim-ncycles" type="number" value="100" min="0"> cycles</label>
-    <button id="sim-run-n">Run N cycles</button>
+  <ol class="howto">
+    <li><strong>SPI is loaded.</strong> Press Run, or pick another example below.</li>
+    <li><strong>Watch the chip.</strong> Registers, pins and the waveform update live.</li>
+    <li><strong>Dig deeper.</strong> Step cycle-by-cycle, or open the trace and die panels.</li>
+  </ol>
+  <div class="transport-row">
+    <button class="btn-primary" id="sim-run" type="button">▶ Run (until HALT)</button>
+    <button id="sim-free" type="button">Free-run</button>
+    <button id="sim-pause" type="button">Pause</button>
+    <button id="sim-step-cycle" type="button">Step Cycle</button>
+    <button id="sim-step-instr" type="button">Step Instruction</button>
+    <label class="transport-field">Speed <input id="sim-speed" type="number" value="5000" min="1" max="1000000"> cycles/sec</label>
+    <label class="transport-field">Run-N <input id="sim-ncycles" type="number" value="100" min="0"> cycles</label>
+    <button id="sim-run-n" type="button">Run N cycles</button>
   </div>
+  <p class="shortcuts">Keyboard: <kbd>Space</kbd> Run / Pause · <kbd>S</kbd> Step Cycle · <kbd>I</kbd> Step Instruction · <kbd>N</kbd> Run N · <kbd>R</kbd> Reset. Shortcuts are ignored while typing in the editor or any input, and while a button has focus.</p>
   <p class="caption">Step Cycle advances exactly one clock cycle. Step Instruction
   completes the in-flight instruction (a multi-cycle WAIT runs to its exit
   instead of looking frozen). Run-N executes exactly N cycles, then pauses
@@ -67,11 +51,14 @@
   the program halts first, in which case it stops at HALT. HLT itself
   performs no tick (clocks gated), exactly as in the golden model, so
   Step Cycle on HLT leaves the cycle counter unchanged.</p>
-  <h3>Live state (updates during free-run)</h3>
+</section>
+
+<section class="card" aria-label="Live state">
+  <h2>Live state <span class="card-hint">updates during free-run</span></h2>
   <div class="infopanel" id="sim-state"></div>
 </section>
 
-<section class="card">
+<section class="card" aria-label="Waveform">
   <h2>Waveform — 8 logical pins vs cycle</h2>
   <p>20 ns per cycle. The time axis is labelled in ns/µs. The red cursor is
   the current cycle.</p>
@@ -87,9 +74,9 @@
       <option value="0">All cycles</option>
     </select></label>
     <label><input id="sim-follow" type="checkbox" checked> Auto-follow current cycle</label>
-    <button id="sim-scroll-start">⏮ Start</button>
+    <button id="sim-scroll-start" type="button">⏮ Start</button>
     <input id="sim-scroll" type="range" min="0" max="0" value="0">
-    <button id="sim-scroll-end">Follow ⏭</button>
+    <button id="sim-scroll-end" type="button">Follow ⏭</button>
   </div>
   <p class="caption">Scrolling, zooming, or mouse-wheeling the waveform pauses
   auto-follow until you re-enable it (checkbox or Follow button).</p>
@@ -97,8 +84,33 @@
   <div id="sim-caps"></div>
 </section>
 
-<section class="card">
-  <h2>Trace RAM — Observer capture (separate from the live waveform)</h2>
+<section class="card" aria-label="Example programs">
+  <h2>Example programs <span class="card-hint">pick a level — one click loads it</span></h2>
+  <p>One click loads the project's actual firmware (verbatim source),
+  its golden-test host preload, and its golden-test peer model. Teaching
+  programs are labelled as such. The SPI example loads first.</p>
+  <div class="example-grid" id="sim-examples"></div>
+  <div class="infopanel" id="sim-example-meta"></div>
+</section>
+
+<section class="card" aria-label="Editor and assembler">
+  <h2>Editor + assembler</h2>
+  <p>Write in the project's assembler syntax (same mnemonics and
+  <code>, d=N</code> delay suffix as <code>firmware/tools/asm.py</code>;
+  SLEEP/WAIT/HLT reject a nonzero delay). Errors report line numbers.
+  Peer model and host preload follow the loaded example, even after edits.</p>
+  <textarea id="sim-editor" rows="22" spellcheck="false"></textarea>
+  <div class="controls">
+    <button id="sim-load" type="button">Assemble editor</button>
+    <button id="sim-reset" type="button">Reset</button>
+  </div>
+  <div id="sim-asm-error" class="asm-error" style="display:none"></div>
+  <h3>Assembly listing</h3>
+  <pre id="sim-listing"></pre>
+</section>
+
+<details class="card" open>
+  <summary><h2>Trace RAM — Observer capture (separate from the live waveform)</h2></summary>
   <p>This plot shows <em>only</em> what the Observer captured: one stepped
   trace per pin, plotted against the CAP timestamps of the trace entries
   themselves — not a resampling of the live waveform. The live waveform
@@ -115,16 +127,16 @@
   <canvas id="sim-trace-plot" class="wave"></canvas>
   <div class="readout" id="sim-trace-info"></div>
   <div id="sim-trace-list"></div>
-</section>
+</details>
 
-<section class="card">
-  <h2>Signal activity on the die view</h2>
+<details class="card" open>
+  <summary><h2>Signal activity on the die view</h2></summary>
   <p>Pin-level activity from the run, drawn at the true pad anchors. Green
   pad = pin high, dark pad = pin low. Replay animates the recorded pin
   waveform onto the pads after the run ends.</p>
   <canvas id="sim-die" class="die"></canvas>
   <div class="controls">
-    <button id="sim-replay">Replay activity</button>
+    <button id="sim-replay" type="button">Replay activity</button>
     <input id="sim-replay-scrub" type="range" min="0" max="100" value="0">
   </div>
   <div class="readout" id="sim-replay-info"></div>
@@ -135,9 +147,9 @@
   canvas shows the die outline and the two SRAM macros at true GDS rects;
   full layer polygons are in the GDS explorer on the
   <a href="index.html#explorer">index page</a>.</p>
-</section>
+</details>
 
-<section class="card">
+<section class="card" aria-label="Semantics notes">
   <h2>Semantics notes (what this port does and does not do)</h2>
   <ul>
     <li><strong>Golden-model core, RTL divergences.</strong> Cycle timing,

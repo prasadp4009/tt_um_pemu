@@ -1,5 +1,104 @@
-/* TEMPO simulator page — theme-aware. Plain CSS, no external requests.
-   Tokens come from site.css; the editor keeps its dark code look in both themes. */
+/* TEMPO simulator playground — theme-aware. Plain CSS, no external requests.
+   All colors come from site.css tokens, so every panel reads cleanly in
+   both the light (warm paper) and dark (deep ink) themes. The editor
+   keeps its dark code look in both themes. */
+main.sim { max-width: 76rem; }
+.card-hint { font-size: .85rem; font-weight: 400; color: var(--muted); }
+
+/* ---- sticky transport bar ---- */
+.transport { position: sticky; top: 0; z-index: 20;
+  box-shadow: var(--shadow); }
+.transport-head { display: flex; flex-wrap: wrap; align-items: center;
+  gap: .75rem; justify-content: space-between; }
+.transport-head h2 { margin: 0; }
+.runstate { display: inline-flex; align-items: center; gap: .45rem;
+  font-family: var(--mono); font-size: .85rem; font-weight: 700;
+  letter-spacing: .06em; padding: .35rem .8rem; border-radius: 999px;
+  border: 1px solid var(--line-strong); color: var(--muted);
+  background: var(--bg-elev); white-space: nowrap; }
+.runstate::before { content: ""; width: .55rem; height: .55rem;
+  border-radius: 50%; background: var(--muted); flex: none; }
+.runstate.is-running { color: var(--teal); border-color: var(--teal); }
+.runstate.is-running::before { background: var(--teal);
+  animation: sim-pulse 1.2s ease-in-out infinite; }
+.runstate.is-paused { color: var(--accent-bright); border-color: var(--accent); }
+.runstate.is-paused::before { background: var(--accent-bright); }
+.runstate.is-halted { color: var(--ok); border-color: var(--ok); }
+.runstate.is-halted::before { background: var(--ok);
+  animation: sim-pulse 1.2s ease-in-out infinite; }
+@keyframes sim-pulse { 0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.8); } }
+@media (prefers-reduced-motion: reduce) {
+  .runstate.is-running::before, .runstate.is-halted::before { animation: none; }
+  .reg.changed { animation: none; } }
+.howto { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: .8rem 0;
+  padding: 0; list-style: none; color: var(--muted); font-size: .92rem; }
+.howto li { counter-increment: none; }
+.transport-row { display: flex; flex-wrap: wrap; gap: .5rem .6rem;
+  align-items: center; margin: .7rem 0; }
+.transport-row button { border-radius: 999px; padding: .6rem 1.15rem;
+  font-weight: 600; font-size: 1rem; }
+.transport-row .btn-primary { background: var(--grad); color: #1c1917;
+  border-color: transparent; padding: .7rem 1.5rem; font-size: 1.05rem; }
+.transport-row .btn-primary:hover { filter: brightness(1.06); }
+.transport-field { display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .92rem; color: var(--muted); }
+.shortcuts { font-size: .88rem; color: var(--muted); margin: .5rem 0 0; }
+.shortcuts kbd { font-family: var(--mono); font-size: .82rem;
+  background: var(--code-inline-bg); border: 1px solid var(--line-strong);
+  border-bottom-width: 2px; border-radius: 5px; padding: .05rem .4rem;
+  color: var(--ink); white-space: nowrap; }
+
+/* ---- example picker: cards, not a button strip ---- */
+.example-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: .65rem; margin: .8rem 0; }
+.ex-card { text-align: left; padding: .8rem 1rem; border-radius: 12px;
+  background: var(--bg-elev); border: 1px solid var(--line-strong);
+  cursor: pointer; transition: transform .12s ease, box-shadow .12s ease,
+  border-color .12s ease; }
+.ex-card:hover { transform: translateY(-1px); box-shadow: var(--shadow);
+  border-color: var(--accent); }
+.ex-card.active { border-color: var(--accent); outline: 2px solid var(--accent);
+  background: var(--accent-soft); }
+.ex-title { display: block; font-weight: 650; line-height: 1.35; }
+.ex-chip { display: inline-block; margin-top: .4rem; font-size: .75rem;
+  font-weight: 700; letter-spacing: .04em; padding: .1rem .55rem;
+  border-radius: 999px; }
+.chip-gold { background: var(--teal-soft); color: var(--teal); }
+.chip-teach { background: var(--warn-bg); color: var(--warn-ink); }
+.chip-zybo { background: var(--accent-soft); color: var(--accent-bright); }
+
+/* ---- live-state dashboard ---- */
+.regs { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.8rem, 1fr));
+  gap: .3rem .5rem; font-family: var(--mono); font-size: .9rem; }
+.reg { display: block; text-align: center; padding: .15rem .3rem;
+  border-radius: 6px; border: 1px solid transparent;
+  transition: background-color .25s ease, color .25s ease; }
+.reg.changed { background: var(--accent-soft); color: var(--accent-bright);
+  font-weight: 700; border-color: var(--accent); animation: sim-regflash .8s ease; }
+@keyframes sim-regflash { 0% { filter: brightness(1.25); } 100% { filter: none; } }
+.state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: .7rem; margin-top: .9rem; }
+.state-cell { border: 1px solid var(--line); border-radius: 10px;
+  padding: .7rem .9rem; background: var(--bg-elev); overflow-wrap: anywhere; }
+.state-cell.status-bits { grid-column: 1 / -1; }
+.state-label { display: block; font-size: .72rem; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: .25rem; }
+.bit { display: inline-block; padding: 0 .35rem; margin: 0 .25rem .25rem 0;
+  border: 1px solid var(--line-strong); border-radius: 4px; font-family: var(--mono);
+  font-size: .82rem; color: var(--muted); }
+.bit.on { background: var(--teal-soft); color: var(--teal); border-color: var(--teal); font-weight: 700; }
+
+/* ---- collapsible secondary panels ---- */
+details.card > summary { cursor: pointer; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary h2 { display: inline; }
+details.card > summary::after { content: "▾"; float: right; color: var(--muted);
+  font-size: 1.1rem; line-height: 1.6; }
+details.card:not([open]) > summary::after { content: "▸"; }
+
+/* ---- editor, canvases, misc (unchanged behaviour) ---- */
 #sim-editor { width: 100%; font-family: var(--mono);
   font-size: .85rem; background: #0b1120; color: #e2e8f0; border-radius: 10px;
   padding: .85rem; border: 1px solid var(--line-strong); line-height: 1.5; }
@@ -7,14 +106,6 @@
 .asm-error { border-left: 4px solid var(--bad); background: var(--warn-bg); color: var(--warn-ink);
   padding: .65rem 1rem; border-radius: 0 10px 10px 0; margin: .65rem 0;
   font-family: var(--mono); white-space: pre-wrap; }
-.regs { font-family: var(--mono); font-size: .9rem; line-height: 1.9; }
-.reg { display: inline-block; padding: 0 .3rem; border-radius: 4px; }
-.reg.changed { background: var(--accent-soft); color: var(--accent-bright); font-weight: 700;
-  outline: 1px solid var(--accent); }
-.bit { display: inline-block; padding: 0 .35rem; margin-right: .25rem;
-  border: 1px solid var(--line-strong); border-radius: 4px; font-family: var(--mono);
-  font-size: .82rem; color: var(--muted); }
-.bit.on { background: var(--teal-soft); color: var(--teal); border-color: var(--teal); font-weight: 700; }
 canvas.wave { width: 100%; height: 200px; border: 1px solid var(--line-strong);
   border-radius: 12px; background: var(--canvas-bg); display: block; box-shadow: var(--shadow); }
 canvas.die { width: 100%; border: 1px solid var(--line-strong); border-radius: 12px;
@@ -22,3 +113,10 @@ canvas.die { width: 100%; border: 1px solid var(--line-strong); border-radius: 1
 #sim-speed, #sim-ncycles { width: 7rem; }
 #sim-scroll, #sim-replay-scrub { flex: 1; min-width: 10rem; }
 .note { color: var(--muted); }
+
+/* ---- narrow widths: stack everything, keep transports tappable ---- */
+@media (max-width: 760px) {
+  .transport-row button { flex: 1 1 auto; text-align: center; }
+  .howto { flex-direction: column; gap: .3rem; }
+  .state-grid { grid-template-columns: 1fr; }
+}

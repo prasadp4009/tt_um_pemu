@@ -1,4 +1,7 @@
 // TEMPO web simulator UI — plain JS, no dependencies.
+// Playground presentation: transport bar, example cards, live-state
+// dashboard, keyboard shortcuts. Simulation behaviour lives in the
+// tempo-* modules and is untouched by this file's presentation code.
 // Wires tempo-asm.js (assembler), tempo-core.js (PE + Observer) and
 // tempo-examples.js / tempo-peers.js (firmware + device models) into the
 // docs/simulator.html page. Loaded only in the browser.
@@ -16,6 +19,7 @@
     exampleMeta = $("sim-example-meta");
 
   var current = null; // { example, words, sim, peer }
+  var exampleButtons = []; // { ex, btn } for the example-card picker
   var prevRegs = null, prevCycle = -1;
   var loopTimer = null, loopMode = null; // "run" | "free"
   var viewStart = 0, viewWindow = 2000, follow = true;
@@ -99,6 +103,11 @@
 
   function loadExample(ex) {
     stopLoop(); stopReplay();
+    exampleButtons.forEach(function (e) {
+      var on = e.ex === ex;
+      e.btn.classList.toggle("active", on);
+      e.btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
     editor.value = ex.source;
     var words = assembleCurrent();
     if (words === null) { current = null; renderAll("Assemble failed."); return; }
@@ -115,7 +124,11 @@
   }
 
   function renderState(note) {
-    if (!current) { $("sim-state").innerHTML = "<p>No program loaded.</p>"; return; }
+    if (!current) {
+      var b0 = $("sim-runstate");
+      if (b0) { b0.textContent = "NO PROGRAM"; b0.className = "runstate is-ready"; }
+      $("sim-state").innerHTML = "<p>No program loaded.</p>"; return;
+    }
     var sim = current.sim, snap = sim.snapshot();
     var regsHtml = snap.regs.map(function (v, i) {
       var changed = prevRegs && prevRegs[i] !== v;
@@ -127,21 +140,31 @@
       .map(function (b) { return "<span class=\"bit" + (bits[b] ? " on" : "") + "\">" + b + "</span>"; }).join(" ");
     var inFlight = snap.inFlight ? "Executing: <code>" + esc(snap.inFlight) + "</code>" +
       (snap.inFlightRemaining !== null && snap.inFlightRemaining > 1 ? " (" + snap.inFlightRemaining + " cycles left)" : "") + "<br>" : "";
+    // Transport-bar run badge: text + shape differ per state, never color alone.
+    var runCls = snap.halted ? "is-halted" : (loopTimer ? "is-running" :
+      (snap.cycle > 0 ? "is-paused" : "is-ready"));
+    var runTxt = snap.halted ? "HALTED" : (loopTimer ? "RUNNING" :
+      (snap.cycle > 0 ? "PAUSED" : "READY"));
+    var badge = $("sim-runstate");
+    if (badge) { badge.textContent = runTxt; badge.className = "runstate " + runCls; }
+    // Dashboard layout: same data as before, grouped into labeled cells.
     $("sim-state").innerHTML =
       "<div class=\"regs\">" + regsHtml + "</div>" +
-      "<p>PC (next fetch) <strong>" + snap.pc + "</strong> — next: <code>" + esc(snap.nextInstr) + "</code><br>" +
-      inFlight +
-      "Cycle <strong>" + snap.cycle + "</strong> (" + fmtNs(snap.cycle) + ") · Timestamp <strong>" + snap.ts + "</strong> · " +
+      "<div class=\"state-grid\">" +
+      "<div class=\"state-cell\"><span class=\"state-label\">PC · next fetch</span>PC <strong>" + snap.pc + "</strong> — next: <code>" + esc(snap.nextInstr) + "</code><br>" + inFlight + "</div>" +
+      "<div class=\"state-cell\"><span class=\"state-label\">Cycle · time</span>Cycle <strong>" + snap.cycle + "</strong> (" + fmtNs(snap.cycle) + ") · Timestamp <strong>" + snap.ts + "</strong> · " +
       (snap.halted ? "<strong class=\"ok\">HALTED</strong>" : "running") +
       " · Flags Z=" + snap.z + " N=" + snap.n + " C=" + snap.c +
-      " · STATUS " + hex(snap.status, 4) + "<br>" + bitHtml + "</p>" +
-      "<p>Pins (physical) <strong>" + hex(snap.pinsPhys, 2) + "</strong> · sync <strong>" + hex(snap.syncPins, 2) + "</strong> · " +
+      " · STATUS " + hex(snap.status, 4) + "</div>" +
+      "<div class=\"state-cell\"><span class=\"state-label\">Pins</span>Pins (physical) <strong>" + hex(snap.pinsPhys, 2) + "</strong> · sync <strong>" + hex(snap.syncPins, 2) + "</strong> · " +
       "PDIR " + hex(snap.pdir, 2) + " · PMASK " + hex(snap.pmask, 2) + " · PMODE " + hex(snap.pmode, 4) +
-      " · pin drive " + hex(snap.pinDrv, 2) + "</p>" +
-      "<p>TX FIFO (" + snap.txFifo.length + "): " + (snap.txFifo.length ? snap.txFifo.map(function (w) { return hex(w, 4); }).join(" ") : "(empty)") +
+      " · pin drive " + hex(snap.pinDrv, 2) + "</div>" +
+      "<div class=\"state-cell\"><span class=\"state-label\">FIFOs · events</span>TX FIFO (" + snap.txFifo.length + "): " + (snap.txFifo.length ? snap.txFifo.map(function (w) { return hex(w, 4); }).join(" ") : "(empty)") +
       " · RX FIFO (" + snap.rxFifo.length + "): " + (snap.rxFifo.length ? snap.rxFifo.map(function (w) { return hex(w, 4); }).join(" ") : "(empty)") +
-      " · EVTFLAG " + hex(snap.evtflag, 4) + "</p>" +
-      "<p>Observer: " + esc(snap.traceState) + " · trace entries <strong>" + snap.traceLen + " / 204</strong> · CAP events " + snap.capEvents + "</p>" +
+      " · EVTFLAG " + hex(snap.evtflag, 4) + "</div>" +
+      "<div class=\"state-cell\"><span class=\"state-label\">Observer</span>Observer: " + esc(snap.traceState) + " · trace entries <strong>" + snap.traceLen + " / 204</strong> · CAP events " + snap.capEvents + "</div>" +
+      "<div class=\"state-cell status-bits\"><span class=\"state-label\">STATUS bits</span>" + bitHtml + "</div>" +
+      "</div>" +
       (note ? "<p class=\"note\">" + esc(note) + "</p>" : "");
     prevRegs = snap.regs.slice(); prevCycle = snap.cycle;
     renderCaps(); renderTrace(); renderActivity();
@@ -372,11 +395,22 @@
   }
 
   // ------------------------------------------------------------- build example list
+  // Cards, not a button strip: title + a short status chip derived from
+  // the example's proven text (the full proven wording still shows in
+  // #sim-example-meta on load — nothing is dropped or reworded).
   Examples.EXAMPLES.forEach(function (ex) {
     var b = document.createElement("button");
-    b.textContent = ex.title;
+    b.type = "button";
+    b.className = "ex-card";
+    var chip = ex.proven.indexOf("Golden") === 0 ? ["Golden PASS", "chip-gold"]
+      : ex.proven.indexOf("Teaching") === 0 ? ["Teaching", "chip-teach"]
+      : ["Zybo proof", "chip-zybo"];
+    b.innerHTML = "<span class=\"ex-title\">" + esc(ex.title) + "</span>" +
+      "<span class=\"ex-chip " + chip[1] + "\">" + chip[0] + "</span>";
+    b.setAttribute("aria-pressed", "false");
     b.addEventListener("click", function () { loadExample(ex); });
     exampleList.appendChild(b);
+    exampleButtons.push({ ex: ex, btn: b });
   });
 
   // ------------------------------------------------------------- wire controls
@@ -484,6 +518,35 @@
     var idx = Math.floor(parseFloat($("sim-replay-scrub").value) / 100 * hist.length);
     drawDie(hist.slice(0, Math.max(1, idx)));
     $("sim-replay-info").textContent = "Scrubbed to cycle " + Math.max(1, idx) + " / " + hist.length + ".";
+  });
+  // ------------------------------------------------------------- keyboard shortcuts
+  // Ignored while typing in the editor/inputs or while a button has focus
+  // (so native button activation never double-fires with a shortcut).
+  function shortcutTargetEditable(t) {
+    if (!t) return false;
+    if (t.matches) {
+      try {
+        if (t.matches("input, textarea, select, button, [contenteditable]")) return true;
+      } catch (e) { /* fall through to the tag check */ }
+    }
+    var tag = (t.tagName || "").toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" ||
+      tag === "button" || !!t.isContentEditable;
+  }
+  document.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (shortcutTargetEditable(e.target)) return;
+    if (e.key === " ") {
+      e.preventDefault();
+      if (loopTimer) { stopLoop(); if (current) renderAll("Paused at cycle " + current.sim.cycle + "."); }
+      else if (current && !current.sim.halted) startLoop("run");
+      return;
+    }
+    if (!current) return;
+    if (e.key === "s" || e.key === "S") $("sim-step-cycle").click();
+    else if (e.key === "i" || e.key === "I") $("sim-step-instr").click();
+    else if (e.key === "n" || e.key === "N") $("sim-run-n").click();
+    else if (e.key === "r" || e.key === "R") $("sim-reset").click();
   });
   window.addEventListener("resize", function () { drawWave(); drawTracePlot(); drawDie(); });
   if (window.TempoTheme) window.TempoTheme.onChange(function () { renderAll(); });
