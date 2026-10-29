@@ -1,0 +1,94 @@
+{
+ "die": [
+  1289.28,
+  710.64
+ ],
+ "core": [
+  2.88,
+  3.78,
+  1283.52,
+  703.08
+ ],
+ "macros": {
+  "u_imem": {
+   "cell": "RM_IHPSG13_1P_512x32_c2_bm_bist",
+   "x": 205.68,
+   "y": 3.78,
+   "w": 416.64,
+   "h": 191.57,
+   "note": "512 x 32-bit instruction SRAM"
+  },
+  "u_tmem": {
+   "cell": "RM_IHPSG13_1P_1024x8_c2_bm_bist",
+   "x": 1127.36,
+   "y": 3.78,
+   "w": 146.88,
+   "h": 336.69,
+   "note": "1024 x 8-bit trace SRAM (204 entries)"
+  }
+ },
+ "regions": {
+  "PE core (u_pe)": {
+   "n": 1754,
+   "color": "#2563eb",
+   "bbox": [
+    12.48,
+    283.5,
+    782.88,
+    597.24
+   ],
+   "conc": [
+    [
+     92.16,
+     328.86
+    ],
+    [
+     661.92,
+     585.9
+    ]
+   ]
+  },
+  "Observer (u_obs)": {
+   "n": 273,
+   "color": "#059669",
+   "bbox": [
+    659.04,
+    325.08,
+    1275.84,
+    476.28
+   ],
+   "conc": [
+    [
+     695.52,
+     347.76
+    ],
+    [
+     1260.96,
+     461.16
+    ]
+   ]
+  },
+  "Host port (u_host)": {
+   "n": 2552,
+   "color": "#b45309",
+   "bbox": [
+    4.8,
+    143.64,
+    1152.48,
+    540.54
+   ],
+   "conc": [
+    [
+     60.48,
+     181.44
+    ],
+    [
+     1057.92,
+     510.3
+    ]
+   ]
+  }
+ },
+ "unattributed_nonfill_cells": 12022,
+ "method": "Final DEF (run 40699493628) components are flattened; cells attributed by hierarchy prefix of connected nets (u_pe./u_obs./u_host.). Solid = 5-95 percentile box, dashed = full bbox. Top-level-only cells have no region."
+}

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEMPO — Timing-Exact Multi-Protocol Observer</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="hero" id="top">
+  <h1>TEMPO — Timing-Exact Multi-Protocol Observer</h1>
+  <p class="tag">The debugger's chip.</p>
+  <p>A programmable protocol-emulator ASIC with an independent on-chip logic
+  analyser, for the Jane Street Protocol Emulator ASIC Competition
+  (Tiny Tapeout, IHP 130&nbsp;nm SG13G2 / CMOS5L, 6&times;4 tiles, submission
+  deadline 18 January 2027).</p>
+  <p>TEMPO does not hard-wire a protocol. It executes firmware in a 32-bit
+  <em>timed</em> instruction set (TEMPO-32 ISA v0.2 + v0.3 note): every
+  instruction carries a delay field, pin effects land on exact cycles,
+  <code>WAIT</code> returns the cycles actually elapsed, and <code>CAP</code>
+  atomically snapshots {timestamp, pins}. Change the program, change the
+  protocol — no re-spin. Next to the engine sits the Observer, an independent
+  trace block whose memory the engine cannot read, so it can characterise the
+  bus — including the engine's own output.</p>
+</header>
+<nav id="site-nav"></nav>
+<main>
+
+<section class="card" id="architecture">
+  <h2>Architecture</h2>
+  <img class="diagram" src="assets/diagram-architecture.svg" alt="TEMPO system architecture diagram">
+  <ul>
+    <li><strong>PE core (<code>u_pe</code>)</strong> — TEMPO-32 engine: 16 &times; 16-bit GPRs,
+    20 special registers, ALU + flags, CALL/RET stack, TX/RX FIFOs (16 &times; 16-bit each), 9-bit PC (v0.3).</li>
+    <li><strong>Observer (<code>u_obs</code>)</strong> — EDGE / PATTERN / PULSE triggers,
+    prescaler, watermark, 204-entry trace SRAM (<code>u_tmem</code>). Configured by firmware via MSR
+    or by the host via WR_CFG; read only by the host via RD_TRACE.</li>
+    <li><strong>Host port (<code>u_host</code>)</strong> — 2-wire framed serial, autobaud, ACK/NACK,
+    on <code>ui[0]</code> (HP_RX) / <code>uo[0]</code> (HP_TX).</li>
+    <li><strong>Pin fabric (top level)</strong> — per-pin direction (<code>PDIR</code>), open-drain +
+    pull-up (<code>PMODE</code>), masking (<code>PMASK</code>), 2-FF input synchronizer.</li>
+    <li><strong>SRAMs</strong> — <code>u_imem</code> 512 &times; 32-bit instruction memory;
+    <code>u_tmem</code> 1024 &times; 8-bit trace memory.</li>
+  </ul>
+  <h3>Instruction word</h3>
+  <img class="diagram" src="assets/diagram-isa-word.svg" alt="TEMPO-32 instruction word format">
+  <h3>Timing contract</h3>
+  <img class="diagram" src="assets/diagram-timing-contract.svg" alt="TEMPO timing contract diagram">
+  <p>Every instruction executes in <strong>1 + d cycles</strong>; <code>PGET</code> reads the
+  2-FF-synchronised pins (2-cycle architectural latency, accounted for in every firmware image);
+  <code>SLEEP</code> is exactly <strong>1 + imm13</strong> cycles; a <code>WAIT</code> whose condition
+  is true exactly at the deadline counts as satisfied (elapsed = timeout, no TIMEOUT sticky);
+  <code>HLT</code> gates PE clocks while the Observer and timestamp keep running.</p>
+  <p>Full specification: <a href="ISA_v0.2.md">ISA v0.2</a> ·
+  <a href="isa_v0.2.yaml">machine-readable encoding</a> ·
+  <a href="isa_v0.3_note.md">v0.3 note (512 words)</a> ·
+  <a href="ARCHITECTURE.md">architecture</a> ·
+  <a href="FIRMWARE.md">firmware</a>.</p>
+</section>
+
+<section class="card" id="spec">
+  <h2>Specification (IMEM-512, the submittable design)</h2>
+  <table>
+    <tr><th>Item</th><th>Value</th></tr>
+    <tr><td>Die</td><td><strong>1289.28 &times; 710.64 &micro;m</strong> (916,214 &micro;m&sup2;) — exactly 6&times;4 tiles, 0 &micro;m&sup2; overflow</td></tr>
+    <tr><td>Core</td><td>1283.52 &times; 703.08 &micro;m (902,417 &micro;m&sup2;)</td></tr>
+    <tr><td>Utilisation</td><td><strong>41.4 %</strong> instance (31.6 % stdcell); 16,635 placed stdcells + 2 SRAM macros</td></tr>
+    <tr><td>SRAMs</td><td><code>u_imem</code> 512&times;32, 416.64 &times; 191.57 &micro;m @ (205.68, 3.78), FS &middot;
+    <code>u_tmem</code> 1024&times;8, 146.88 &times; 336.69 &micro;m @ (1127.36, 3.78), FS</td></tr>
+    <tr><td>Power (typical)</td><td><strong>6.56 mW</strong> (internal 5.50 + switching 1.02 + leakage 0.034)</td></tr>
+    <tr><td>Clock</td><td>50 MHz nominal; <strong>&le; 43.8 MHz for guaranteed setup across all corners</strong></td></tr>
+    <tr><td>Timing</td><td>Typical +5.713 ns; fast +8.578 ns; slow-corner (1.08 V, 125 &deg;C) WNS <strong>&minus;2.824 ns</strong>,
+    TNS &minus;157.48 ns, <strong>112 violators</strong> (IMEM fetch path); hold clean at all corners</td></tr>
+    <tr><td>Pins</td><td><strong>24</strong> (ui 8 + uo 8 + uio 8), no analog pins; plus clk, rst_n, ena, VPWR, VGND</td></tr>
+    <tr><td>Program / trace memory</td><td>512 &times; 32-bit IMEM (v0.3) · 1024 &times; 8-bit TMEM = 204 entries &times; {timestamp[31:0], pins[7:0]}, saturating pointer</td></tr>
+    <tr><td>Sign-off</td><td>GDS &#9989; · precheck 9/9 &#9989; · LVS “Circuits match uniquely” &#9989; · KLayout DRC 0 errors &#9989; · antenna 0 &#9989; · worst IR drop 0.128 mV &#9989;</td></tr>
+  </table>
+  <div class="warn"><strong>The honest timing note.</strong> The slow-corner setup violation is the one
+  genuine silicon-risk item, and it is characterised, not hidden: at the slow corner the IMEM fetch-path
+  net cannot meet a 20 ns cycle (worst slack &minus;2.824 ns &rArr; slow-corner fmax &asymp; 43.8 MHz).
+  <strong>Run at &le; 43.8 MHz if setup must be guaranteed at the slow corner; 50 MHz is met with
+  margin at typical and fast corners only.</strong> The competition sets no clock target. A timing-closure
+  redesign is out of scope for this submission.</div>
+  <img class="diagram" src="assets/diagram-die-tiles.svg" alt="Die and 6x4 tile fit diagram">
+  <img class="diagram" src="assets/diagram-pinmap.svg" alt="24-pin functional map">
+  <p class="caption">Pin functions: <code>ui[0]</code> = HP_RX, <code>uo[0]</code> = HP_TX,
+  <code>uio[0..7]</code> = PIN0–PIN7 (protocol pins, per-pin direction via <code>PDIR</code>,
+  open-drain via <code>PMODE</code>). Other ui/uo bits are unused/tied. Example SPI map: SCLK = PIN2,
+  MOSI = PIN3, CS# = PIN5, MISO = PIN0. USB map: D+ = PIN0, D&minus; = PIN1.</p>
+</section>
+
+<section class="card" id="functionality">
+  <h2>Functionality — protocol capability matrix</h2>
+  <p>“Proven” means: firmware assembled with the project's assembler, run against the cycle-exact
+  golden model with a <em>protocol-specific wire decoder</em> (bytes, CRCs, parity, state sequences),
+  and replayed cycle-exact against the RTL where stated. It never means “tested on the ASIC” — the
+  ASIC is not fabricated yet; hardware evidence is from the Zybo FPGA port.</p>
+  <table>
+    <tr><th>Protocol</th><th>Evidence</th><th>Verdict</th></tr>
+    <tr><td>UART 115200 8N1</td><td>119 words; bit cell 434 exact; byte pitch 4349 &times;3, zero deviation</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
+    <tr><td>SPI master mode 0, 1 MHz</td><td>63 words; SCLK 50 &times;14 zero deviation; 408 cycles/byte; loopback 0xA5&rarr;0x5A</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
+    <tr><td>I&sup2;C master 100 kHz</td><td>199 words; 73 clocks at exactly 499 cycles; 2000-cycle stretch tolerated</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
+    <tr><td>1-Wire master</td><td>130 words; reset 480.02 &micro;s; scratchpad reads 25.0625 &deg;C</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
+    <tr><td>JTAG</td><td>169 words; wire-walked TAP; IDCODE 0x1BA00477 decoded from the wire</td><td class="ok">Proven</td></tr>
+    <tr><td>SWD</td><td>111 words; IDCODE 0x2BA01477, correct parity, zero contention</td><td class="ok">Proven</td></tr>
+    <tr><td>PS/2</td><td>216 words; both directions; corrupted-parity frame correctly flagged</td><td class="ok">Proven</td></tr>
+    <tr><td>CAN 2.0A @ 1 Mb/s</td><td>255 words; TX + ACK + arbitration loss; wire CRC 0x33ea recomputed</td><td class="ok">Proven, DLC &le; 2</td></tr>
+    <tr><td>USB low-speed TX</td><td>243 words; SETUP + DATA0; CRC5/CRC16 residues exact per an independent decoder</td><td class="ok">Proven</td></tr>
+    <tr><td>USB low-speed RX</td><td>63-word standalone loop decodes 7/7 packet types (golden model only)</td><td>Partial — loop proven, not integrated</td></tr>
+    <tr><td>USB merged TX+RX</td><td><strong>299-word</strong> single image on the 512 build; 301-word variant on Zybo</td><td class="ok">Proven (sim + co-sim + Zybo)</td></tr>
+    <tr><td>10BASE-T Ethernet</td><td>Manchester half-bit 2.5 cycles on the 20 ns grid; needs a 100 MHz grid and an analog PHY</td><td class="bad">Not feasible on-chip — not claimed</td></tr>
+  </table>
+  <p><strong>USB, stated carefully.</strong> Merged TX+RX in one 299-word image is proven. A complete
+  USB <em>device stack</em> (enumeration and beyond) is firmware work beyond the shipped image, not a
+  chip limitation. The RX loop alone is proven; the 256-word integration gap (291 &gt; 256) is closed
+  for the merged image by the 512-word memory.</p>
+  <h3>ISA reference (summary)</h3>
+  <p>24 opcodes: <code>PSET PSETR PGET PMASK PDIR PMODE</code> (pins),
+  <code>SLEEP WAIT CAP</code> (timing/measurement), <code>MOV LDI</code> (data),
+  <code>PUSH PULL</code> (host FIFOs), <code>MRS MSR</code> (special registers),
+  <code>ADD/SUB AND/OR/XOR SHL/SHR CMP</code> (ALU + flags), <code>JMP DJNZ CALL/RET</code>,
+  <code>HLT</code>, <code>EVT</code>. v0.3: JMP/CALL <code>target9</code> = <code>instr[20:12]</code>,
+  DJNZ <code>target9</code> = <code>instr[16:8]</code>; PC 9 bits (0–511). Defined behaviours:
+  illegal opcodes 24–63 = NOP + CONFIG_ERR; CALL on a full stack drops the call + CONFIG_ERR;
+  RET on an empty stack = NOP + CONFIG_ERR; unallocated special registers read as zero;
+  SPI mode 3 returns 0xFFFF (unsupported).</p>
+</section>
+
+<section class="card" id="waveforms">
+  <h2>Waveforms (schematic — cycle counts are measured, shapes are illustrative)</h2>
+  <img class="diagram narrow" src="assets/wave-spi.svg" alt="SPI waveform">
+  <img class="diagram narrow" src="assets/wave-uart.svg" alt="UART waveform">
+  <img class="diagram narrow" src="assets/wave-i2c.svg" alt="I2C waveform">
+  <img class="diagram narrow" src="assets/wave-usb.svg" alt="USB low-speed waveform">
+</section>
+
+<section class="card" id="code">
+  <h2>Example code — real firmware, not pseudocode</h2>
+  <h3>SPI master: init + command loop (excerpt from <code>firmware/spi/spi.asm</code>)</h3>
+<pre>; TEMPO-32 SPI master -- mode 0, 1 MHz; 50 MHz core -&gt; 50 cycles/bit.
+; Host words: 0x0001 TRANSFER (PULL N, then N data words; PUSH rx bytes,
+;   then 0x0000 status, evt 0) · 0x0003 SET MODE (unsupported -&gt; 0xFFFF)
+;   · 0x00FF HALT · other -&gt; 0xFFFF.
+; NOTE: pdir 0x01 (not 0xFF) for R_ONE -- idle levels are committed
+; BEFORE pdir enables the drivers, or CS# glitches low for ~2 cycles.
+        pdir 0x01
+        pmask 0xFF
+        pset 0x01, d=4
+        pget r15                 ; r15 = 1 (preserve forever)
+        pmask 0x2C               ; pin ops touch only pins 2,3,5
+        pset 0x20                ; idle levels first: CS#=1, SCLK=0, MOSI=0
+        pdir 0x2E                ; THEN drive SCLK(2), MOSI(3), CS#(5)
+        xor r0, r0, r0
+        ldi r9, 4
+        ldi r14, 0x0100
+        sub r14, r14, r15        ; r14 = 0xFF
+        ldi r12, 8
+; RACE FIX 2026-09-27: every PULL is preceded by an RXNE wait.
+cmd_loop:
+        jmp cmd_have, rxne
+        jmp cmd_loop
+cmd_have:
+        pull r6
+        cmp r6, r15              ; 0x0001 = transfer?
+        jmp do_xfer, z
+        cmp r6, r13              ; 0x0003 = set mode?
+        jmp do_mode, z
+        cmp r6, r14              ; 0x00FF = halt?
+        jmp do_hlt, z
+        jmp do_unk
+; bit_loop: 17 fixed insns + SLEEP16 + SLEEP3 + SLEEP14 = 50 cycles/bit.
+; Measured: SCLK 50 x14 zero deviation, 58-cycle period at byte
+; boundaries, 408 cycles/byte.</pre>
+  <p>Copyable note: the full image is 63 words in the golden model (71 words as loaded on Zybo).
+  The golden checker originally expected 57/407 cycles at byte boundaries; that was a stale checker
+  expectation, corrected 2026-10-29 (57&rarr;58, 407&rarr;408) — not a chip deviation.</p>
+  <h3>USB low-speed TX: host contract (from <code>firmware/usb/usb.asm</code>)</h3>
+<pre>; USB 1.1 LOW-SPEED device-side TRANSMIT firmware
+; LS bit = 666.67 ns = 33.333 cycles; cells dither 33,33,34 (average
+; exactly 33.333; max edge deviation &lt;= 1 cycle = 20 ns).
+; PIN MAP: pin0 = D+, pin1 = D-, push-pull. J (idle) = 0x02, K = 0x01,
+; SE0 = 0x00. NRZI: 0 = transition, 1 = hold. Stuff after six 1s.
+; Host words: 0x0001 TX (PULL N 1..8, then N payload words) -&gt;
+;   SETUP token (ADDR 5, ENDP 0) + DATA0 + CRC16, EOP; PUSH 0x0000, evt 0
+;   0x0002 RX: stub -&gt; 0xFFFF (merged TX+RX lives in usb_full.asm, 299w)
+;   0x00FF: HLT
+; Token constants: SYNC+PID stream = 0x2D80; ADDR/ENDP/CRC5 = 0xD005.
+; Independent decoder residues: CRC5 01100, CRC16 1000000000001101.</pre>
+</section>
+
+<section class="card" id="using">
+  <h2>How to use the chip</h2>
+  <ol>
+    <li><strong>Reset.</strong> Assert <code>rst_n</code> for a known state. <code>ena = 0</code> =
+    PROG mode; <code>ena = 1</code> = RUN mode.</li>
+    <li><strong>Load.</strong> Over the host port (autobaud framed serial, ACK/NACK):
+    <code>LOAD_IMEM</code> writes {addr16, data…} frames (&le; 63 words/frame);
+    <code>VERIFY_IMEM</code> reads the image back byte-identical. LOAD/VERIFY are rejected while
+    the PE runs — halt first, or load before the first GO.</li>
+    <li><strong>Configure (optional).</strong> <code>WR_CFG</code> sets pin mux, Observer trigger
+    mode/masks, prescaler, watermark. Firmware can also configure the Observer via MSR; either way,
+    the PE never touches trace memory.</li>
+    <li><strong>Run.</strong> <code>GO</code> releases PE reset with PC &larr; 0. The host pushes
+    command/data words (<code>WR_RXFIFO</code>) and pops responses/events (<code>RD_TXFIFO</code>).
+    Firmware images are command-driven and signal completion with <code>evt 0</code>.</li>
+    <li><strong>Observe.</strong> <code>RD_TRACE</code> reads trace entries {timestamp, pins} plus
+    <code>OBS_PTR</code>. <code>RD_STATUS</code> returns {PE_RUNNING, PE_HALTED, TIMEOUT, TX_EMPTY,
+    RX_FULL, TRACE_WM, TRACE_FULL, CONFIG_ERR}. <code>HALT_REQ</code> requests a clean stop;
+    re-<code>GO</code> restarts from PC 0.</li>
+    <li><strong>Reload.</strong> Program reload on reselect is supported: halt, reload via LOAD_IMEM,
+    re-verify, GO. No power cycle needed.</li>
+    <li><strong>Clock.</strong> Nominal 50 MHz; for guaranteed setup across all corners, run at
+    &le; 43.8 MHz. Timestamp resolution is one clock cycle at whatever clock you run.</li>
+  </ol>
+</section>
+
+<section class="card" id="testing">
+  <h2>How it is tested on FPGA (Zybo)</h2>
+  <p>The ASIC is not fabricated yet. “Hardware-proven” means proven on the Zybo FPGA port of the
+  same RTL + firmware, through three stages: <strong>(1)</strong> golden model (cycle-exact ISA
+  simulator) with protocol-specific checkers; <strong>(2)</strong> cycle-exact RTL co-sim replay
+  (SPI 855/855, UART 8,747 cycles, USB merged 6,297 cycles; 11/11 co-sims overall);
+  <strong>(3)</strong> Zybo hardware runs checked by milestones + a run signature. The harness loader
+  implements LOAD / VERIFY / GO / TRANSFER / RD_TXFIFO.</p>
+  <table>
+    <tr><th>Test</th><th>Milestones</th><th>Signature</th><th>Result</th></tr>
+    <tr><td>SPI @ 50 MHz</td><td>0x7fff (15/15)</td><td>0xa6b864d9</td><td class="ok">PASS</td></tr>
+    <tr><td>UART @ 50 MHz</td><td>0x03ff</td><td>0x30708354</td><td class="ok">PASS</td></tr>
+    <tr><td>I&sup2;C @ 50 MHz</td><td>0x03ff</td><td>0x6e253f7c</td><td class="ok">PASS</td></tr>
+    <tr><td>1-Wire @ 50 MHz</td><td>0x03ff</td><td>0xbd40f1c9</td><td class="ok">PASS</td></tr>
+    <tr><td>USB merged TX+RX (299w) @ 50 MHz</td><td>0x03ff</td><td>0x63063af2</td><td class="ok">PASS</td></tr>
+    <tr><td>USB merged TX+RX (301w, ahi=1 chunk-base) @ 50 MHz</td><td>0x03ff</td><td>0x1611ee4b</td><td class="ok">PASS</td></tr>
+    <tr><td>Ubproof @ 50 MHz</td><td>0x03ff</td><td>0x3896fcc5</td><td class="ok">PASS</td></tr>
+    <tr><td>SPI @ 125 MHz (&times;2 runs)</td><td>0x7fff</td><td>0xa6b864d9 (identical to 50 MHz)</td><td class="ok">PASS — but see the 125 MHz caveat</td></tr>
+    <tr><td>SPI fault-injection (fault 1)</td><td>caught at post-HALT RD_STATUS, fail_code 0xEE</td><td>0xcb6b9ef1</td><td class="ok">VACUITY-OK (no false pass)</td></tr>
+  </table>
+  <p>Overall verification depth: 643 benches, formal 32/32 on the ISA-contract subset, 11/11
+  cycle-exact co-sims, 4 base protocols on Zybo hardware plus stretch protocols in sim/co-sim.
+  The 0xEE code is the vacuity guard working: an injected fault must produce a <em>failing</em> run,
+  never a false pass.</p>
+</section>
+
+<section class="card" id="layout">
+  <h2>Labeled layout — the real 512-word die</h2>
+  <img class="diagram" src="assets/labeled-top-view.svg" alt="Labeled GDS top view, IMEM-512 layout">
+  <p class="caption">Die, core, and SRAM macros at true GDS positions (IMEM-512 run 40699493628);
+  pin ticks at true Metal4.text label anchors (all 45; group-bracketed because anchors are 3.84 &micro;m
+  apart). Logic-block outlines are placement regions from the final DEF: solid = 5–95 percentile
+  concentration of DEF-attributed cells, dashed = full min/max bbox. The final DEF's component names
+  are flattened, so cells were attributed by the hierarchy prefix of the nets they connect to
+  (<code>u_pe.</code> / <code>u_obs.</code> / <code>u_host.</code>); 12,022 non-fill cells sit on
+  top-level-only nets (clock tree, ties, pin-fabric glue) and have no region. Placement interleaves
+  blocks, so the regions overlap — that overlap is real. An interactive version follows below.</p>
+  <h3>Baseline renders (256-word design — not the 512 layout)</h3>
+  <p>The two renders below are the <strong>256-word baseline</strong> (tag
+  <code>v1.0-proven-256</code>). They show the chip's overall look; they are
+  <strong>not</strong> the 512-word layout — the 512 layout differs in the instruction SRAM
+  (416.64 &times; 191.57 &micro;m, vs 416.64 &times; 118.78 &micro;m at baseline) and in
+  standard-cell placement. For the true 512 geometry, use the labeled view above and the explorer below.</p>
+  <img class="diagram" src="assets/chip_top_view.png" alt="Chip top view render, 256-word baseline">
+  <p class="caption">Top view render, 256-word baseline. Not the 512 layout.</p>
+  <img class="diagram" src="assets/chip_3d_view.png" alt="Chip 3D view render, 256-word baseline">
+  <p class="caption">3D view render, 256-word baseline. Not the 512 layout.</p>
+</section>
+
+<section class="card" id="explorer">
+  <h2>GDS explorer — the real 512 layout, layer by layer</h2>
+  <div class="fidelity"><strong>Fidelity disclosure — read before interpreting any layer.</strong>
+  Top-metal layers (Metal3, Metal4, Metal4.pin, SRAM, DigiBnd, NWell, Recog.diode) are
+  <strong>true merged geometry</strong> (snapping only rounds vertices by &le; 0.6 &micro;m).
+  Activ, GatPoly, Metal1, Metal2, and pSD are <strong>coverage footprints / mass silhouettes</strong>
+  (morphological open/grow + merge): they show where the layer's material concentrates — individual
+  transistors, gates, and wires are <em>not</em> resolvable there. Via/contact layers (Cont, Via1,
+  Via2, Via3) are <strong>coverage rasters</strong>: a 3 &times; 3 &micro;m tile is drawn when
+  &ge; 2% of it is covered — a tile is <em>not</em> a via; via farms and via deserts are what read
+  correctly. Polygons are outer hulls only (holes are filled). Source GDS: CI run 40699493628,
+  flattened and merged with KLayout 0.30.12; per-layer shipped area matches true merged area within
+  0.95–1.01&times; for native layers.</div>
+  <div class="controls">
+    <button id="btn-all">All</button>
+    <button id="btn-none">None</button>
+    <button id="btn-metals">Metals</button>
+    <button id="btn-reset-view">Reset view</button>
+    <label><input type="checkbox" id="chk-macros" checked> Macros</label>
+    <label><input type="checkbox" id="chk-pins" checked> Pins</label>
+  </div>
+  <div class="layerlist" id="layer-list"></div>
+  <canvas class="viewer" id="explorer-canvas"></canvas>
+  <div class="readout" id="explorer-readout">Loading layers.json…</div>
+  <div class="readout" id="explorer-status"></div>
+  <div class="infopanel" id="explorer-info"></div>
+  <p class="caption">Drag to pan, scroll to zoom. Hover to probe &micro;m coordinates (GDS, y up),
+  the nearest pin label anchor, and macro hits. Click a layer name for its GDS number, polygon
+  count, and fidelity class; click a gold macro block for its facts. The toggles below are shared
+  with the 3D stack view.</p>
+</section>
+
+<section class="card" id="view3d">
+  <h2>3D exploded stack — orbit, zoom, explode</h2>
+  <div class="fidelity"><strong>Fidelity disclosure (also applies here).</strong> Via/contact layers
+  are coverage footprints, not individual vias; Z heights are schematic (the PDK tech file carries no
+  z/thickness data, so layers.json uses relative units); macro block heights in this view are
+  schematic, while macro <em>footprints</em> are true. Layer slabs are raster images of the true
+  layer polygons. The same layer toggles as the 2D explorer apply.</div>
+  <div class="controls">
+    <label>Explode: <input type="range" id="explode-slider" min="0" max="60" value="30">
+    <span id="explode-value">30 px/layer</span></label>
+    <button id="btn-3d-reset">Reset view</button>
+  </div>
+  <canvas class="viewer" id="view3d-canvas"></canvas>
+  <div class="readout" id="view3d-readout">Drag to orbit · scroll / pinch to zoom · explode slider separates layers</div>
+  <div class="infopanel" id="view3d-info"></div>
+  <p class="caption">Drag to orbit/rotate, scroll or pinch to zoom, explode slider to separate the layers.
+  Hover or click a layer slab or a gold macro block for its name, role, GDS number, polygon count,
+  and fidelity class. Per-layer visibility toggles are shared with the 2D explorer's layer state.</p>
+</section>
+
+<section class="card" id="limitations">
+  <h2>Honest limitations</h2>
+  <p>Bounded, characterised behaviours — full evidence in
+  <a href="CHARACTERIZED_LIMITS.md">CHARACTERIZED_LIMITS.md</a> and
+  <a href="OPEN_ITEMS_AUDIT.md">OPEN_ITEMS_AUDIT.md</a> (2026-10-29 audit). After that audit,
+  <strong>no unhandled chip-functionality bug remains</strong>; the functionality-affecting list is
+  exactly: the slow-corner timing guidance, the T17 decision item, and the limits below.</p>
+  <ul>
+    <li><strong>CAN DLC &le; 2.</strong> No data RAM; all 16 GPRs allocated mid-frame. DLC &gt; 2
+    arguments are consumed/discarded, PUSH 0xFFFF. IMEM-512 does not lift the cap; redesign out of scope.</li>
+    <li><strong>UART TX host starvation blocks.</strong> No timeout, no 0xFFFD abort on this path
+    (the abort is a safety net for pulls that bypass the RXNE wait, which normal operation never does).
+    Recovery: supply the missing word, or host reset/reload. Firmware-demo limitation, not a PE bug.</li>
+    <li><strong>WAIT long timeouts not implemented (T17, decision item).</strong> tsel 0 &rarr; 256,
+    tsel 1 &rarr; 4096; tsel 2/3 fall back to 256/4096 + CONFIG_ERR. Largest elapsed ever written is
+    4096 — no overflow can occur as built. Saturating at 0xFFFF is <em>not</em> implemented and not
+    claimed; the standing recommendation (rule tsel 2/3 out of the submitted ISA, chain tsel=1 waits)
+    is for the ISA lead.</li>
+    <li><strong>SPI at 125 MHz: observed, not guaranteed.</strong> Proven point is 50 MHz. Baseline
+    failed deterministically at 125 MHz (0x13); the 512 build passed twice with the identical signature,
+    but the baseline failure was never root-caused and no fix is claimed.</li>
+    <li><strong>Observer PULSE mode watches pin 0 only.</strong> Top level ties pin-select to 0.
+    EDGE/PATTERN unaffected. Trace saturates at 204, never wraps; TRACE_WM sticky, cleared only by OBS_CLR.</li>
+    <li><strong>Observer hardware capture is the remaining score item, not a chip bug.</strong>
+    Sim/co-sim only (bench <code>tb_observer</code>, 35 checks). <strong>No hardware trace-SRAM
+    capture has ever been demonstrated</strong>: the Zybo harness has no RD_TRACE path (loader: LOAD /
+    VERIFY / GO / TRANSFER / RD_TXFIFO only). The silicon path exists (host 0x07 RD_TRACE, MSR Observer
+    config) but needs a scoped harness build. No board capture is claimed anywhere on this page.</li>
+    <li><strong>USB device stack / 10BASE-T.</strong> Merged USB TX+RX proven; a full device stack is
+    firmware work beyond the shipped image. 10BASE-T is not feasible on-chip and is not claimed.</li>
+  </ul>
+  <h3>Still open (non-functional)</h3>
+  <ul>
+    <li><strong>Formal competition entry</strong> — form not yet published by Jane Street; deadline
+    18 January 2027. A perfect chip with no entry scores zero.</li>
+    <li><strong>GitHub Pages / viewer job</strong> — CI green on gds, precheck, gl_test, test, docs;
+    viewer fails only because Pages is not enabled on this private repo. That toggle is the submitter's
+    settings call and is not changed here.</li>
+    <li><strong>Phase 7 verification depth</strong> — queued, not started; adds depth, not existence.</li>
+    <li><strong>Display-name collision</strong> — another public project uses “Tempo”; repo name
+    <code>tt_um_pemu</code> is fixed by Tiny Tapeout convention. Undecided.</li>
+  </ul>
+</section>
+
+</main>
+<footer>
+  TEMPO (tt_um_pemu) — Jane Street Protocol Emulator ASIC Competition entry. Repo docs:
+  <a href="OPEN_ITEMS_AUDIT.md">open-items audit</a> ·
+  <a href="CHARACTERIZED_LIMITS.md">characterized limits</a> ·
+  <a href="FIRMWARE.md">firmware</a>. This site is fully static
+  (plain HTML/CSS/JS, no external requests) and works on GitHub Pages as-is.
+</footer>
+<script src="assets/nav.js"></script>
+<script src="assets/state.js"></script>
+<script src="assets/explorer.js"></script>
+<script src="assets/view3d.js"></script>
+</body>
+</html>

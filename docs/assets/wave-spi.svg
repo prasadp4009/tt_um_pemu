@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="300" viewBox="0 0 980 300" font-family="DejaVu Sans, Arial, sans-serif" role="img" aria-label="SPI master, mode 0 — 50 cycles/bit, 408 cycles/byte (schematic)">
+<title>SPI master, mode 0 — 50 cycles/bit, 408 cycles/byte (schematic)</title>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="490" y="30" font-size="16" fill="#0f172a" text-anchor="middle" font-weight="bold" >SPI master, mode 0 — 50 cycles/bit, 408 cycles/byte (schematic)</text>
+<text x="122" y="87" font-size="12" fill="#0f172a" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">CS#</text>
+<polyline points="130,70 198,70 198,96 810,96 810,70 878,70" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="122" y="139" font-size="12" fill="#0f172a" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">SCLK</text>
+<polyline points="130,148 198,148 198,122 266,122 266,148 334,148 334,122 402,122 402,148 470,148 470,122 538,122 538,148 606,148 606,122 674,122 674,148 742,148 742,122 810,122 810,148 878,148" fill="none" stroke="#2563eb" stroke-width="2"/>
+<text x="122" y="191" font-size="12" fill="#0f172a" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">MOSI</text>
+<polyline points="130,200 198,200 198,174 266,174 266,200 334,200 334,174 402,174 402,200 538,200 538,174 674,174 674,200 742,200 742,174 810,174 810,200 878,200" fill="none" stroke="#059669" stroke-width="2"/>
+<text x="122" y="243" font-size="12" fill="#0f172a" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">MISO</text>
+<polyline points="130,252 266,252 266,226 334,226 334,252 402,252 402,226 538,226 538,252 674,252 674,226 742,226 742,252 878,252" fill="none" stroke="#b45309" stroke-width="2"/>
+<text x="490" y="302" font-size="12" fill="#0f172a" text-anchor="middle" font-weight="normal" >SCLK period 50 cycles x14, zero deviation; byte-boundary period 58 cycles; duty 25/25.</text>
+<text x="490" y="324" font-size="12" fill="#0f172a" text-anchor="middle" font-weight="normal" >Loopback demo: MOSI 0xA5 -&gt; MISO 0x5A, 0x3C -&gt; 0xC3. CS# brackets SCLK. N=0: 3-cycle pulse, no SCLK.</text>
+</svg>

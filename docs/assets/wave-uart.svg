@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="300" viewBox="0 0 980 300" font-family="DejaVu Sans, Arial, sans-serif" role="img" aria-label="UART 115200 8N1 — 434 cycles/bit (schematic)">
+<title>UART 115200 8N1 — 434 cycles/bit (schematic)</title>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="490" y="30" font-size="16" fill="#0f172a" text-anchor="middle" font-weight="bold" >UART 115200 8N1 — 434 cycles/bit (schematic)</text>
+<text x="122" y="87" font-size="12" fill="#0f172a" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">TX</text>
+<polyline points="130,70 198,70 198,96 470,96 470,70 606,70 606,96 674,96 674,70 878,70" fill="none" stroke="#2563eb" stroke-width="2"/>
+<text x="122" y="139" font-size="12" fill="#0f172a" text-anchor="end" font-weight="normal" font-family="DejaVu Sans Mono, monospace">RX</text>
+<polyline points="130,122 198,122 198,148 470,148 470,122 606,122 606,148 674,148 674,122 878,122" fill="none" stroke="#059669" stroke-width="2"/>
+<text x="490" y="198" font-size="12" fill="#0f172a" text-anchor="middle" font-weight="normal" >TX bit cell 434 cycles exact; byte pitch 4349 cycles x3, zero deviation.</text>
+<text x="490" y="220" font-size="12" fill="#0f172a" text-anchor="middle" font-weight="normal" >RX first-sample offset +1 cycle from ideal mid-bit (CAP-calibrated); back-to-back margin +/-216 cycles.</text>
+<text x="490" y="242" font-size="12" fill="#0f172a" text-anchor="middle" font-weight="normal" >Break (&gt;= 8192 low cycles, two chained tsel=1 waits) -&gt; EVT2 + 0xFFFE.</text>
+</svg>
