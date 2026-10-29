@@ -33,10 +33,10 @@
 ;   MISO sample     = pget base cycle R+5 -> samples phys(R+3); SCLK is
 ;                     high on phys(R+1)..phys(R+25), so the sample lands
 ;                     mid-high-period, 2-cycle input sync accounted.
-;   byte time       = 407 cycles rising-edge -> rising-edge across the
-;                     byte boundary = 400 + 7 overhead. (7 = inter-byte
+;   byte time       = 408 cycles rising-edge -> rising-edge across the
+;                     byte boundary = 400 + 8 overhead. (8 = inter-byte
 ;                     gap 32c falling->rising vs 25c within a bit: the
-;                     13-insn byte prologue/epilogue costs 7c more than
+;                     13-insn byte prologue/epilogue costs 8c more than
 ;                     one 50c bit slot.)
 ;   N=0 transfer    = 13 cycles (CS# low for 3 cycles), no SCLK edges.
 ;   per-cmd decode  <= 8 cycles. init = 15 cycles.
