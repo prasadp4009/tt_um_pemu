@@ -117,11 +117,29 @@ jobs:
         id: stage
         run: |
           # Fixed served names, independent of the artifacts' internals.
+          # Layout note (verified against real runs 40699493628 and
+          # 40832411034): the tt_submission artifact is the whole
+          # submission bundle, so the flow outputs live one level down
+          # (tt_submission/tt_submission/*.gds|*.oas|pdk.json) after
+          # `gh run download -D tt_submission`. The template action's
+          # `cp tt_submission/*.gds` only works because
+          # actions/download-artifact does NOT add that extra level.
+          # Accept either layout; fail on anything but exactly one of
+          # each file, so a changed artifact layout fails loudly here
+          # instead of deploying a broken viewer.
           mkdir -p viewer-files
-          cp tt_submission/*.gds viewer-files/tinytapeout.gds
-          cp tt_submission/*.oas viewer-files/tinytapeout.oas
+          if [ -f tt_submission/tt_submission/pdk.json ]; then
+            SUB=tt_submission/tt_submission
+          else
+            SUB=tt_submission
+          fi
+          [ "$(ls "$SUB"/*.gds | wc -l)" = "1" ] || { echo "::error::Expected exactly one .gds in $SUB."; exit 1; }
+          [ "$(ls "$SUB"/*.oas | wc -l)" = "1" ] || { echo "::error::Expected exactly one .oas in $SUB."; exit 1; }
+          [ "$(ls gds_render/*.png | wc -l)" = "1" ] || { echo "::error::Expected exactly one .png in gds_render."; exit 1; }
+          cp "$SUB"/*.gds viewer-files/tinytapeout.gds
+          cp "$SUB"/*.oas viewer-files/tinytapeout.oas
           cp gds_render/*.png viewer-files/gds_render.png
-          PDK=$(jq -r '.PDK' tt_submission/pdk.json)
+          PDK=$(jq -r '.PDK' "$SUB/pdk.json")
           if [ -z "$PDK" ] || [ "$PDK" = "null" ]; then
             echo "::error::Could not read PDK from tt_submission/pdk.json."
             exit 1
@@ -166,8 +184,13 @@ jobs:
           # Inject the PDK into the viewer landing page (the committed page
           # carries a __PDK__ placeholder; never a hardcoded PDK string).
           sed -i "s/__PDK__/${{ needs.viewer.outputs.pdk }}/g" site/viewer/index.html
-          grep -F "${{ needs.viewer.outputs.pdk }}" site/viewer/index.html > /dev/null \
-            || { echo "::error::PDK injection into viewer landing page failed."; exit 1; }
+          sed -i "s/__VIEWER_CONFIGURED__/yes/g" site/viewer/index.html
+          # Fail if any placeholder survived injection (a half-injected
+          # page would silently disable its own buttons via the guard).
+          if grep -q "__PDK__\|__VIEWER_CONFIGURED__" site/viewer/index.html; then
+            echo "::error::Viewer landing page still contains placeholders after injection."
+            exit 1
+          fi
           echo "Assembled site contents:"
           ls site | head -30
           echo "Viewer contents:"

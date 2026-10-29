@@ -60,11 +60,16 @@
 </main>
 <script>
 (function () {
-  // PDK is injected at deploy time by the Pages deploy workflow, which
-  // replaces __PDK__ with the value from the gds run's pdk.json. It is
-  // deliberately NOT hardcoded here: the committed page must not pin a
-  // PDK the workflow did not produce.
+  // PDK and the configured flag are injected at deploy time by the
+  // Pages deploy workflow, which replaces __PDK__ with the value from
+  // the gds run's pdk.json and __VIEWER_CONFIGURED__ with "yes". The
+  // PDK is deliberately NOT hardcoded here: the committed page must not
+  // pin a PDK the workflow did not produce. The guard below compares
+  // against the INJECTED value ("yes"), never the placeholder: comparing
+  // against the placeholder would self-trigger after injection, because
+  // sed rewrites the placeholder inside the comparison too.
   var PDK = "__PDK__";
+  var VIEWER_CONFIGURED = "__VIEWER_CONFIGURED__";
   var btn3d = document.getElementById("tt-3d");
   var btnEx = document.getElementById("tt-explorer");
   var note = document.getElementById("viewer-missing");
@@ -75,7 +80,7 @@
     });
     note.hidden = false;
   }
-  if (!PDK || PDK.indexOf("__PDK__") !== -1) { disable(); return; }
+  if (VIEWER_CONFIGURED !== "yes" || !PDK) { disable(); return; }
   var model = new URL("tinytapeout.oas", window.location.href).href;
   btn3d.href = "https://gds-viewer.tinytapeout.com/?pdk=" + encodeURIComponent(PDK)
     + "&model=" + encodeURIComponent(model);
