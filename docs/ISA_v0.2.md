@@ -5,7 +5,7 @@
 | Version | v0.2 |
 | Date | 2026-09-26 |
 | Status | **Encoding frozen.** Implementation-ready. No RTL written yet. |
-| Machine source | [`isa_v0.2.yaml`](sandbox://workspace/janestreet-pemu/isa_v0.2.yaml) — the single source of truth (ARCHITECTURE.md §7.1). This document is generated prose *about* that file; on any disagreement, the YAML wins. |
+| Machine source | [`isa_v0.2.yaml`](isa_v0.2.yaml) — the single source of truth (ARCHITECTURE.md §7.1). This document is generated prose *about* that file; on any disagreement, the YAML wins. |
 | Semantics source | `ARCHITECTURE.md` §2 (v0.1 proposal) — **no instruction semantics or mnemonics were changed in v0.2.** |
 | Workers | Encoding map (A) · Timing contract formalization (B) · Observer ISA interface (C), merged by the Phase-1 coordinator. |
 

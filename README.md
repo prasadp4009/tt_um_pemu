@@ -1,4 +1,4 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
+![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/gds.yaml/badge.svg) ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/docs.yaml/badge.svg) ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/test.yaml/badge.svg) ![](https://github.com/prasadp4009/tt_um_pemu/actions/workflows/fpga.yaml/badge.svg)
 
 # TEMPO — Timing-Exact Multi-Protocol Observer
 

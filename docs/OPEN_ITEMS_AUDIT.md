@@ -10,7 +10,7 @@ Evidence base: `SUBMISSION_READINESS_2026-10-27.md`, `PUSH_PREP_AUDIT_2026-10-26
 §15–§18, `FINAL_STATS.md` §5/§8, `ISA_v0.2.md`, `ISA_v0.3_NOTE.md`,
 `STRETCH_PROTOCOL_TESTS_2026-10-27.md` + `stretch_results/`, plus fresh
 re-runs done for this audit (see §4). All file paths below are repo paths
-unless prefixed `masters:` (local masters in `~/workspace/janestreet-pemu/`).
+unless prefixed `masters:` (local masters in the author's local working copy, not committed to this repo).
 
 ## 1. Classification key
 
