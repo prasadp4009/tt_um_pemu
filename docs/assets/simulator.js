@@ -1,0 +1,479 @@
+// TEMPO web simulator UI — plain JS, no dependencies.
+// Wires tempo-asm.js (assembler), tempo-core.js (PE + Observer) and
+// tempo-examples.js / tempo-peers.js (firmware + device models) into the
+// docs/simulator.html page. Loaded only in the browser.
+(function () {
+  if (typeof document === "undefined") return;
+  var Asm = window.TempoAsm, Core = window.TempoCore,
+    Examples = window.TempoExamples, Peers = window.TempoPeers;
+  if (!Asm || !Core || !Examples || !Peers) {
+    document.body.innerHTML = "<p>Simulator scripts failed to load.</p>";
+    return;
+  }
+  var $ = function (id) { return document.getElementById(id); };
+  var editor = $("sim-editor"), asmErr = $("sim-asm-error"),
+    listingEl = $("sim-listing"), exampleList = $("sim-examples"),
+    exampleMeta = $("sim-example-meta");
+
+  var current = null; // { example, words, sim, peer }
+  var prevRegs = null, prevCycle = -1;
+  var loopTimer = null, loopMode = null; // "run" | "free"
+  var viewStart = 0, viewWindow = 2000, follow = true;
+  var replayTimer = null, replayIdx = 0, replayPlaying = false;
+
+  // Die geometry (docs/assets/layers.json, IMEM-512 GDS run 40699493628):
+  // die 1289.28 x 710.64 um, u_imem/u_tmem rects at true GDS positions.
+  // Pad markers use the uio_in[i] Metal4.text label anchors (north edge,
+  // y = 710.14 um) -- the documented PIN0..PIN7 anchors. uio_in/out/oe
+  // are three views of the same 8 uio pins, so one marker per logical pin
+  // is the honest representation; these are label anchors, not pad cells.
+  var DIE_W = 1289.28, DIE_H = 710.64;
+  var MACROS = [{ name: "u_imem", x: 205.68, y: 3.78, w: 416.64, h: 191.57 },
+    { name: "u_tmem", x: 1127.36, y: 3.78, w: 146.88, h: 336.69 }];
+  var PAD_X = [148.8, 144.96, 141.12, 137.28, 133.44, 129.6, 125.76, 121.92];
+  var PAD_Y = 710.14;
+
+  function fmtNs(cycles) {
+    var ns = cycles * 20;
+    if (ns < 1000) return ns + " ns";
+    var us = ns / 1000;
+    return (Math.round(us * 100) / 100) + " µs";
+  }
+  function hex(v, n) { return "0x" + (v >>> 0).toString(16).toUpperCase().padStart(n, "0"); }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function makePeer(ex) {
+    switch (ex.peer) {
+      case "spi": return Peers.spiSlave(ex.peerArg || [0xA5, 0x3C]);
+      case "uart": return Peers.uartPeer();
+      case "usbFull": return Peers.usbFullPeer();
+      case "i2c": return Peers.i2cSlave();
+      case "onewire": return Peers.onewirePeer(true);
+      case "jtag": return Peers.jtagTarget();
+      case "swd": return Peers.swdTarget();
+      case "ps2": return Peers.ps2Keyboard();
+      case "can": return Peers.canBus();
+      default: return null;
+    }
+  }
+
+  function buildSim(ex, words) {
+    var sim = new Core.Sim(words);
+    var peer = makePeer(ex);
+    if (peer) sim.peer = peer;
+    if (ex.preload && ex.preload.length) sim.hostPushRxWords(ex.preload);
+    return { example: ex, words: words, sim: sim, peer: peer };
+  }
+
+  function showAsmError(msg) {
+    asmErr.textContent = msg;
+    asmErr.style.display = msg ? "block" : "none";
+  }
+
+  function assembleCurrent() {
+    var src = editor.value;
+    try {
+      var res = Asm.assemble(src);
+      showAsmError("");
+      listingEl.textContent = res.listing.map(function (l) {
+        return (l.pc === null ? "      " : String(l.pc).padStart(4, " ") + ": ") + l.text;
+      }).join("\n");
+      return res.words;
+    } catch (e) {
+      showAsmError("Assemble error: " + e.message);
+      return null;
+    }
+  }
+
+  function loadExample(ex) {
+    stopLoop(); stopReplay();
+    editor.value = ex.source;
+    var words = assembleCurrent();
+    if (words === null) { current = null; renderAll("Assemble failed."); return; }
+    current = buildSim(ex, words);
+    prevRegs = null; prevCycle = -1; viewStart = 0; follow = true;
+    $("sim-follow").checked = true;
+    exampleMeta.innerHTML =
+      "<strong>" + esc(ex.title) + "</strong> — " + esc(ex.desc) +
+      "<br>Pins: <code>" + esc(ex.pins) + "</code>" +
+      "<br>Host preload (RX FIFO): " + (ex.preload.length ? ex.preload.map(function (w) { return hex(w, 4); }).join(" ") : "(none)") +
+      "<br>Peer model: " + esc(ex.peer === "none" ? "none (firmware drives the pins; no device attached)" : ex.peer) +
+      "<br>Proven status: " + esc(ex.proven);
+    renderAll("Loaded " + ex.title + " (" + words.length + " words). Press Run, Step, or Free-run.");
+  }
+
+  function renderState(note) {
+    if (!current) { $("sim-state").innerHTML = "<p>No program loaded.</p>"; return; }
+    var sim = current.sim, snap = sim.snapshot();
+    var regsHtml = snap.regs.map(function (v, i) {
+      var changed = prevRegs && prevRegs[i] !== v;
+      return "<span class=\"reg" + (changed ? " changed" : "") + "\">r" + i + " " + hex(v, 4) + "</span>";
+    }).join(" ");
+    var bits = snap.statusBits;
+    var bitHtml = ["TIMEOUT", "TX_OVERRUN", "RX_UNDERRUN", "TRACE_FULL", "CONFIG_ERR",
+      "PE_RUNNING", "PE_HALTED", "TX_EMPTY", "RX_FULL", "TRACE_WM", "CFG_DIRTY"]
+      .map(function (b) { return "<span class=\"bit" + (bits[b] ? " on" : "") + "\">" + b + "</span>"; }).join(" ");
+    var inFlight = snap.inFlight ? "Executing: <code>" + esc(snap.inFlight) + "</code>" +
+      (snap.inFlightRemaining !== null && snap.inFlightRemaining > 1 ? " (" + snap.inFlightRemaining + " cycles left)" : "") + "<br>" : "";
+    $("sim-state").innerHTML =
+      "<div class=\"regs\">" + regsHtml + "</div>" +
+      "<p>PC (next fetch) <strong>" + snap.pc + "</strong> — next: <code>" + esc(snap.nextInstr) + "</code><br>" +
+      inFlight +
+      "Cycle <strong>" + snap.cycle + "</strong> (" + fmtNs(snap.cycle) + ") · Timestamp <strong>" + snap.ts + "</strong> · " +
+      (snap.halted ? "<strong class=\"ok\">HALTED</strong>" : "running") +
+      " · Flags Z=" + snap.z + " N=" + snap.n + " C=" + snap.c +
+      " · STATUS " + hex(snap.status, 4) + "<br>" + bitHtml + "</p>" +
+      "<p>Pins (physical) <strong>" + hex(snap.pinsPhys, 2) + "</strong> · sync <strong>" + hex(snap.syncPins, 2) + "</strong> · " +
+      "PDIR " + hex(snap.pdir, 2) + " · PMASK " + hex(snap.pmask, 2) + " · PMODE " + hex(snap.pmode, 4) +
+      " · pin drive " + hex(snap.pinDrv, 2) + "</p>" +
+      "<p>TX FIFO (" + snap.txFifo.length + "): " + (snap.txFifo.length ? snap.txFifo.map(function (w) { return hex(w, 4); }).join(" ") : "(empty)") +
+      " · RX FIFO (" + snap.rxFifo.length + "): " + (snap.rxFifo.length ? snap.rxFifo.map(function (w) { return hex(w, 4); }).join(" ") : "(empty)") +
+      " · EVTFLAG " + hex(snap.evtflag, 4) + "</p>" +
+      "<p>Observer: " + esc(snap.traceState) + " · trace entries <strong>" + snap.traceLen + " / 204</strong> · CAP events " + snap.capEvents + "</p>" +
+      (note ? "<p class=\"note\">" + esc(note) + "</p>" : "");
+    prevRegs = snap.regs.slice(); prevCycle = snap.cycle;
+    renderCaps(); renderTrace(); renderActivity();
+  }
+
+  // ------------------------------------------------------------- waveform
+  function drawWave() {
+    var cv = $("sim-wave"), ctx = cv.getContext("2d");
+    var w = cv.clientWidth || 800, h = 200;
+    if (cv.width !== w) cv.width = w;
+    cv.height = h;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+    if (!current) { ctx.fillStyle = "#475569"; ctx.fillText("No program loaded.", 10, 20); return; }
+    var sim = current.sim, hist = sim.history;
+    var win = viewWindow === 0 ? Math.max(hist.length, 1) : viewWindow;
+    var start = Math.min(viewStart, Math.max(0, hist.length - 1));
+    var rowH = h / 8;
+    ctx.font = "11px monospace";
+    for (var pin = 0; pin < 8; pin++) {
+      var y0 = pin * rowH, mid = y0 + rowH / 2;
+      ctx.strokeStyle = "#e2e8f0"; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke();
+      ctx.fillStyle = "#475569"; ctx.fillText("PIN" + pin, 4, y0 + 12);
+      ctx.strokeStyle = pin % 2 ? "#059669" : "#2563eb"; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      var prev = null;
+      for (var px = 40; px < w; px++) {
+        var cyc = start + Math.floor((px - 40) / (w - 40) * win) + 1;
+        var v = cyc >= 1 && cyc <= hist.length ? (hist[cyc - 1] >> pin) & 1 : 0;
+        var y = v ? y0 + 4 : y0 + rowH - 4;
+        if (prev === null) ctx.moveTo(px, y);
+        else { ctx.lineTo(px, prev); ctx.lineTo(px, y); }
+        prev = y;
+      }
+      ctx.stroke();
+    }
+    // current-cycle cursor
+    if (sim.cycle >= start && sim.cycle <= start + win) {
+      var cx = 40 + (sim.cycle - start) / win * (w - 40);
+      ctx.strokeStyle = "#dc2626"; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+    }
+    // time axis labels
+    ctx.fillStyle = "#475569";
+    for (var g = 0; g <= 4; g++) {
+      var cycG = Math.round(start + win * g / 4);
+      var gx = 40 + (w - 40) * g / 4;
+      ctx.fillText("c" + cycG + " (" + fmtNs(cycG) + ")", gx + 2, h - 2);
+    }
+    $("sim-wave-info").textContent = "Window: cycles " + start + "–" + (start + win) +
+      " (" + fmtNs(start) + "–" + fmtNs(start + win) + ") · current cycle " + sim.cycle +
+      " · 20 ns/cycle" + (follow ? " · auto-follow ON" : " · auto-follow OFF (manual view)");
+  }
+  function autoFollow() {
+    if (!follow || !current) return;
+    var win = viewWindow === 0 ? Math.max(current.sim.history.length, 1) : viewWindow;
+    viewStart = Math.max(0, current.sim.cycle - Math.floor(win * 0.85));
+    $("sim-scroll").max = Math.max(0, current.sim.history.length - win);
+    $("sim-scroll").value = viewStart;
+  }
+  function renderAll(note) {
+    renderState(note);
+    drawWave(); drawTracePlot(); drawDie();
+  }
+
+  // ------------------------------------------------------------- CAP table
+  function renderCaps() {
+    if (!current) return;
+    var evs = current.sim.capEvents;
+    if (!evs.length) { $("sim-caps").innerHTML = "<p>No CAP executed yet.</p>"; return; }
+    var rows = evs.map(function (e, i) {
+      return "<tr><td>" + i + "</td><td>" + e.cycle + "</td><td>" + e.ts + "</td><td>" +
+        hex(e.pins, 2) + "</td><td>r" + e.rd + "</td></tr>";
+    }).join("");
+    $("sim-caps").innerHTML = "<table><tr><th>#</th><th>cycle (instr. start)</th><th>timestamp</th><th>pins (sync)</th><th>Rd</th></tr>" + rows + "</table>";
+  }
+
+  // ------------------------------------------------------------- trace plot
+  function drawTracePlot() {
+    var cv = $("sim-trace-plot"), ctx = cv.getContext("2d");
+    var w = cv.clientWidth || 800, h = 180;
+    if (cv.width !== w) cv.width = w;
+    cv.height = h;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+    if (!current) return;
+    var tr = current.sim.trace;
+    $("sim-trace-info").textContent = "Observer state: " + current.sim.traceState() +
+      " · entries " + tr.length + " / 204" +
+      (tr.length >= 204 ? " · FULL: capture stopped, no wrap, no overwrite (TRACE_FULL sticky set)" :
+        tr.length ? "" : " · no entries yet (arm the Observer with MSR: TRIG_MODE, then OBS_CTL OBS_EN)") +
+      " · PULSE mode watches PIN 0 only (top-level tie; see note below).";
+    if (tr.length < 2) {
+      ctx.fillStyle = "#475569"; ctx.fillText(tr.length ? "One entry captured; need 2+ to draw a stepped plot." : "No trace entries yet.", 10, 20);
+      return;
+    }
+    var t0 = tr[0][0], t1 = tr[tr.length - 1][0], span = Math.max(t1 - t0, 1);
+    var rowH = h / 8;
+    ctx.font = "11px monospace";
+    for (var pin = 0; pin < 8; pin++) {
+      var y0 = pin * rowH;
+      ctx.strokeStyle = "#e2e8f0"; ctx.beginPath(); ctx.moveTo(0, y0); ctx.lineTo(w, y0); ctx.stroke();
+      ctx.fillStyle = "#475569"; ctx.fillText("PIN" + pin, 4, y0 + 12);
+      ctx.strokeStyle = "#b45309"; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (var i = 0; i < tr.length; i++) {
+        var x = 40 + (tr[i][0] - t0) / span * (w - 40);
+        var y = ((tr[i][1] >> pin) & 1) ? y0 + 4 : y0 + rowH - 4;
+        if (i === 0) ctx.moveTo(x, y); else { ctx.lineTo(x, ctx._ly || y); ctx.lineTo(x, y); }
+        ctx._ly = y;
+      }
+      ctx.stroke(); delete ctx._ly;
+    }
+    ctx.fillStyle = "#475569";
+    ctx.fillText("ts " + t0, 42, h - 2);
+    ctx.fillText("ts " + t1 + " (" + fmtNs(t1 - t0) + " span)", w - 160, h - 2);
+  }
+  function renderTrace() {
+    if (!current) return;
+    var tr = current.sim.trace;
+    var rows = tr.map(function (e, i) {
+      return "<tr><td>" + i + "</td><td>" + e[0] + "</td><td>" + hex(e[1], 2) + "</td></tr>";
+    }).join("");
+    $("sim-trace-list").innerHTML = tr.length ?
+      "<table><tr><th>index</th><th>timestamp</th><th>pins</th></tr>" + rows + "</table>" :
+      "<p>No trace entries yet.</p>";
+    drawTracePlot();
+  }
+
+  // ------------------------------------------------------------- die activity
+  function toggleCounts(hist) {
+    var counts = [0, 0, 0, 0, 0, 0, 0, 0], prev = null;
+    hist.forEach(function (v) {
+      if (prev !== null) for (var p = 0; p < 8; p++)
+        if (((v >> p) & 1) !== ((prev >> p) & 1)) counts[p] += 1;
+      prev = v;
+    });
+    return counts;
+  }
+  function drawDie(histOverride) {
+    var cv = $("sim-die"), ctx = cv.getContext("2d");
+    var w = cv.clientWidth || 800, h = Math.round(w * DIE_H / DIE_W);
+    if (cv.width !== w) cv.width = w;
+    cv.height = h;
+    var s = w / DIE_W;
+    function X(x) { return x * s; }
+    function Y(y) { return (DIE_H - y) * s; } // GDS y-up -> screen y-down
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, DIE_W * s, DIE_H * s);
+    ctx.setLineDash([6, 4]); ctx.strokeStyle = "#2563eb";
+    ctx.strokeRect(2.88 * s, Y(3.78 + 703.08), 1283.52 * s, 703.08 * s);
+    ctx.setLineDash([]);
+    MACROS.forEach(function (m) {
+      ctx.fillStyle = "rgba(254,243,199,0.7)"; ctx.fillRect(X(m.x), Y(m.y + m.h), m.w * s, m.h * s);
+      ctx.strokeStyle = "#92400e"; ctx.strokeRect(X(m.x), Y(m.y + m.h), m.w * s, m.h * s);
+      ctx.fillStyle = "#92400e"; ctx.font = "bold 12px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(m.name, X(m.x + m.w / 2), Y(m.y + m.h) + 16);
+    });
+    var hist = histOverride !== undefined ? histOverride :
+      (current ? current.sim.history : []);
+    var cur = hist.length ? hist[hist.length - 1] : 0;
+    ctx.textAlign = "center";
+    for (var p = 0; p < 8; p++) {
+      var cx = X(PAD_X[p]), cy = Y(PAD_Y);
+      var lvl = (cur >> p) & 1;
+      ctx.beginPath(); ctx.arc(cx, cy + 12, 11, 0, 7);
+      ctx.fillStyle = lvl ? "#22c55e" : "#334155"; ctx.fill();
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = "#0f172a"; ctx.font = "11px monospace";
+      ctx.fillText("PIN" + p, cx, cy + 32);
+    }
+  }
+  function renderActivity() {
+    if (!current) return;
+    var sim = current.sim, hist = sim.history;
+    var counts = toggleCounts(hist);
+    var cur = hist.length ? hist[hist.length - 1] : 0;
+    var rows = counts.map(function (c, p) {
+      var rate = sim.cycle ? (c / sim.cycle) : 0;
+      return "<tr><td>PIN" + p + "</td><td>uio_in[" + p + "] @ (" + PAD_X[p] + ", " + PAD_Y + ") µm</td><td>" +
+        ((cur >> p) & 1) + "</td><td>" + c + "</td><td>" + rate.toFixed(4) + " /cycle</td></tr>";
+    }).join("");
+    $("sim-activity").innerHTML = "<table><tr><th>logical pin</th><th>pad anchor (layers.json)</th><th>level</th><th>toggles</th><th>activity rate</th></tr>" + rows + "</table>" +
+      "<p class=\"caption\">Pad markers are the uio_in[i] Metal4.text label anchors on the die's north edge " +
+      "(layers.json, 45 anchors; uio_in/out/oe are three views of the same 8 uio pins). " +
+      "This is pin-level activity at true pad anchors only — NOT a per-net heatmap: net-level activity " +
+      "would need DEF net data plus a VCD and is deliberately not synthesized. The die canvas shows the " +
+      "die outline and the two SRAM macros at true GDS rects; full layer polygons live in the " +
+      "GDS explorer on the index page.</p>";
+    drawDie();
+  }
+
+  // ------------------------------------------------------------- run control
+  function stopLoop() {
+    if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
+    loopMode = null;
+    $("sim-pause").textContent = "Pause";
+  }
+  function loopTick() {
+    if (!current) { stopLoop(); return; }
+    try {
+      var cps = parseInt($("sim-speed").value, 10) || 5000;
+      var chunk = loopMode === "run" ? 50000 : Math.max(1, Math.round(cps * 0.05));
+      var done = current.sim.runCycles(chunk);
+      if (follow) autoFollow();
+      renderAll(current.sim.halted ? "Halted." : null);
+      if (current.sim.halted) { stopLoop(); renderAll("Halted after " + current.sim.cycle + " cycles."); }
+      if (done === 0 && !current.sim.halted) stopLoop();
+    } catch (e) {
+      stopLoop();
+      renderAll("Run stopped: " + e.message);
+    }
+  }
+  function startLoop(mode) {
+    if (!current) return;
+    if (current.sim.halted) { renderAll("Program already halted — press Reset to run again."); return; }
+    stopLoop(); loopMode = mode;
+    loopTimer = setInterval(loopTick, 50);
+    $("sim-pause").textContent = "Pause";
+  }
+  function stopReplay() {
+    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; }
+    replayPlaying = false;
+    var b = $("sim-replay"); if (b) b.textContent = "Replay activity";
+  }
+
+  // ------------------------------------------------------------- build example list
+  Examples.EXAMPLES.forEach(function (ex) {
+    var b = document.createElement("button");
+    b.textContent = ex.title;
+    b.addEventListener("click", function () { loadExample(ex); });
+    exampleList.appendChild(b);
+  });
+
+  // ------------------------------------------------------------- wire controls
+  $("sim-load").addEventListener("click", function () {
+    var words = assembleCurrent();
+    if (words === null) return;
+    var ex = current ? current.example : Examples.EXAMPLES[0];
+    stopLoop(); stopReplay();
+    current = buildSim(ex, words);
+    prevRegs = null; viewStart = 0; follow = true; $("sim-follow").checked = true;
+    renderAll("Assembled " + words.length + " words (peer + host preload follow the loaded example).");
+  });
+  $("sim-reset").addEventListener("click", function () {
+    if (!current) return;
+    stopLoop(); stopReplay();
+    current = buildSim(current.example, current.words);
+    prevRegs = null; viewStart = 0; follow = true; $("sim-follow").checked = true;
+    renderAll("Reset to cycle 0 with a fresh peer model.");
+  });
+  $("sim-run").addEventListener("click", function () { startLoop("run"); });
+  $("sim-free").addEventListener("click", function () { startLoop("free"); });
+  $("sim-pause").addEventListener("click", function () {
+    if (loopTimer) { stopLoop(); renderAll("Paused at cycle " + current.sim.cycle + "."); }
+    else if (current && !current.sim.halted) startLoop(loopMode || "free");
+  });
+  $("sim-step-cycle").addEventListener("click", function () {
+    if (!current) return;
+    stopLoop();
+    try {
+      var ticked = current.sim.tick();
+      if (follow) autoFollow();
+      renderAll(ticked ? "Stepped exactly 1 cycle." :
+        (current.sim.halted ? "HALTED: the HLT base cycle performs no tick (clocks gated) — cycle unchanged, as in the golden model." : "No tick."));
+    } catch (e) { renderAll("Step failed: " + e.message); }
+  });
+  $("sim-step-instr").addEventListener("click", function () {
+    if (!current) return;
+    stopLoop();
+    try {
+      var n = current.sim.stepInstruction();
+      if (follow) autoFollow();
+      renderAll("Step Instruction completed in " + n + " cycle(s)" +
+        (current.sim.halted ? " — HALTED." : "."));
+    } catch (e) { renderAll("Step failed: " + e.message); }
+  });
+  $("sim-run-n").addEventListener("click", function () {
+    if (!current) return;
+    stopLoop();
+    var n = parseInt($("sim-ncycles").value, 10);
+    if (!(n >= 0)) { renderAll("Run-N needs a non-negative cycle count."); return; }
+    try {
+      var done = current.sim.runCycles(n);
+      if (follow) autoFollow();
+      renderAll("Run-N: executed " + done + " of " + n + " requested cycles" +
+        (current.sim.halted ? " — HALTED before N (a halted PE cannot advance)." : " — paused at exactly cycle " + current.sim.cycle + "."));
+    } catch (e) { renderAll("Run-N failed: " + e.message); }
+  });
+  $("sim-zoom").addEventListener("change", function () {
+    viewWindow = parseInt($("sim-zoom").value, 10);
+    follow = $("sim-follow").checked;
+    if (follow && current) autoFollow();
+    drawWave();
+  });
+  $("sim-follow").addEventListener("change", function () {
+    follow = $("sim-follow").checked;
+    if (follow && current) { autoFollow(); drawWave(); }
+  });
+  $("sim-scroll").addEventListener("input", function () {
+    follow = false; $("sim-follow").checked = false;
+    viewStart = parseInt($("sim-scroll").value, 10) || 0;
+    drawWave();
+  });
+  $("sim-wave").addEventListener("wheel", function (e) {
+    e.preventDefault();
+    follow = false; $("sim-follow").checked = false;
+    var win = viewWindow === 0 ? Math.max(current ? current.sim.history.length : 1, 1) : viewWindow;
+    viewStart = Math.max(0, viewStart + (e.deltaY > 0 ? Math.floor(win / 4) : -Math.floor(win / 4)));
+    drawWave();
+  }, { passive: false });
+  $("sim-scroll-start").addEventListener("click", function () {
+    follow = false; $("sim-follow").checked = false; viewStart = 0; drawWave();
+  });
+  $("sim-scroll-end").addEventListener("click", function () {
+    follow = true; $("sim-follow").checked = true;
+    if (current) autoFollow(); drawWave();
+  });
+  $("sim-replay").addEventListener("click", function () {
+    if (!current) return;
+    if (replayPlaying) { stopReplay(); drawDie(); return; }
+    var hist = current.sim.history;
+    if (!hist.length) { renderAll("Nothing to replay — run a program first."); return; }
+    replayPlaying = true; replayIdx = 0;
+    $("sim-replay").textContent = "Stop replay";
+    replayTimer = setInterval(function () {
+      replayIdx += Math.max(1, Math.floor(hist.length / 200));
+      if (replayIdx >= hist.length) { stopReplay(); drawDie(hist); $("sim-replay-info").textContent = "Replay finished at cycle " + hist.length + "."; return; }
+      drawDie(hist.slice(0, replayIdx + 1));
+      $("sim-replay-info").textContent = "Replaying cycle " + (replayIdx + 1) + " / " + hist.length + ".";
+    }, 50);
+  });
+  $("sim-replay-scrub").addEventListener("input", function () {
+    if (!current) return;
+    stopReplay();
+    var hist = current.sim.history;
+    var idx = Math.floor(parseFloat($("sim-replay-scrub").value) / 100 * hist.length);
+    drawDie(hist.slice(0, Math.max(1, idx)));
+    $("sim-replay-info").textContent = "Scrubbed to cycle " + Math.max(1, idx) + " / " + hist.length + ".";
+  });
+  window.addEventListener("resize", function () { drawWave(); drawTracePlot(); drawDie(); });
+
+  // Boot: load SPI first (the golden-validated example).
+  loadExample(Examples.EXAMPLES[0]);
+})();

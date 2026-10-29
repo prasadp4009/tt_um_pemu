@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEMPO simulator — Timing-Exact Multi-Protocol Observer</title>
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/simulator.css">
+</head>
+<body>
+<header class="hero">
+  <h1>TEMPO simulator</h1>
+  <p class="tag">Run the chip's firmware in your browser.</p>
+  <p>A cycle-exact port of the TEMPO-32 golden model (ISA v0.2 + v0.3 9-bit
+  activation) with the as-built RTL divergences: WAIT tsel 2/3 fall back to
+  256/4096 cycles + CONFIG_ERR (no 65536/1048576 presets, no saturation);
+  illegal opcodes, CALL overflow, RET underflow and AND fn=11 are NOP +
+  CONFIG_ERR; Observer PULSE watches PIN 0 only; trace SRAM saturates at
+  204 entries and never wraps. Plain HTML/CSS/JS — no external requests,
+  no CDN. The peer models are ports of the golden test peers, so each
+  example runs against the same device behaviour the golden model used.</p>
+</header>
+<nav id="site-nav"></nav>
+<main>
+<section class="card">
+  <h2>Example programs</h2>
+  <p>One click loads the project's actual firmware (verbatim source),
+  its golden-test host preload, and its golden-test peer model. Teaching
+  programs are labelled as such. The SPI example loads first.</p>
+  <div class="controls" id="sim-examples"></div>
+  <div class="infopanel" id="sim-example-meta"></div>
+</section>
+
+<section class="card">
+  <h2>Editor + assembler</h2>
+  <p>Write in the project's assembler syntax (same mnemonics and
+  <code>, d=N</code> delay suffix as <code>firmware/tools/asm.py</code>;
+  SLEEP/WAIT/HLT reject a nonzero delay). Errors report line numbers.
+  Peer model and host preload follow the loaded example, even after edits.</p>
+  <textarea id="sim-editor" rows="22" spellcheck="false"></textarea>
+  <div class="controls">
+    <button id="sim-load">Assemble editor</button>
+    <button id="sim-reset">Reset</button>
+  </div>
+  <div id="sim-asm-error" class="asm-error" style="display:none"></div>
+  <h3>Assembly listing</h3>
+  <pre id="sim-listing"></pre>
+</section>
+
+<section class="card">
+  <h2>Execution</h2>
+  <div class="controls">
+    <button id="sim-run">Run (until HALT)</button>
+    <button id="sim-free">Free-run</button>
+    <button id="sim-pause">Pause</button>
+    <button id="sim-step-cycle">Step Cycle</button>
+    <button id="sim-step-instr">Step Instruction</button>
+    <label>Speed <input id="sim-speed" type="number" value="5000" min="1" max="1000000"> cycles/sec (free-run)</label>
+    <label>Run-N <input id="sim-ncycles" type="number" value="100" min="0"> cycles</label>
+    <button id="sim-run-n">Run N cycles</button>
+  </div>
+  <p class="caption">Step Cycle advances exactly one clock cycle. Step Instruction
+  completes the in-flight instruction (a multi-cycle WAIT runs to its exit
+  instead of looking frozen). Run-N executes exactly N cycles, then pauses
+  with registers, PC, waveform and CAP trace at that exact point — unless
+  the program halts first, in which case it stops at HALT. HLT itself
+  performs no tick (clocks gated), exactly as in the golden model, so
+  Step Cycle on HLT leaves the cycle counter unchanged.</p>
+  <h3>Live state (updates during free-run)</h3>
+  <div class="infopanel" id="sim-state"></div>
+</section>
+
+<section class="card">
+  <h2>Waveform — 8 logical pins vs cycle</h2>
+  <p>20 ns per cycle. The time axis is labelled in ns/µs. The red cursor is
+  the current cycle.</p>
+  <canvas id="sim-wave" class="wave"></canvas>
+  <div class="readout" id="sim-wave-info"></div>
+  <div class="controls">
+    <label>Window <select id="sim-zoom">
+      <option value="200">200 cycles</option>
+      <option value="1000">1,000 cycles</option>
+      <option value="2000" selected>2,000 cycles</option>
+      <option value="20000">20,000 cycles</option>
+      <option value="100000">100,000 cycles</option>
+      <option value="0">All cycles</option>
+    </select></label>
+    <label><input id="sim-follow" type="checkbox" checked> Auto-follow current cycle</label>
+    <button id="sim-scroll-start">⏮ Start</button>
+    <input id="sim-scroll" type="range" min="0" max="0" value="0">
+    <button id="sim-scroll-end">Follow ⏭</button>
+  </div>
+  <p class="caption">Scrolling, zooming, or mouse-wheeling the waveform pauses
+  auto-follow until you re-enable it (checkbox or Follow button).</p>
+  <h3>CAP trace (timestamped events from CAP instructions)</h3>
+  <div id="sim-caps"></div>
+</section>
+
+<section class="card">
+  <h2>Trace RAM — Observer capture (separate from the live waveform)</h2>
+  <p>This plot shows <em>only</em> what the Observer captured: one stepped
+  trace per pin, plotted against the CAP timestamps of the trace entries
+  themselves — not a resampling of the live waveform. The live waveform
+  above and this plot share the same time conventions (20 ns/cycle,
+  timestamps in the same prescaled time base), so a capture can be
+  compared against the live run.</p>
+  <p class="caption">Trace semantics (ISA v0.2 §6, as built): 204 entries of
+  {32-bit timestamp, 8-bit pins} in the 1024×8 trace SRAM; the pointer
+  <strong>saturates at 204 and never wraps</strong>; on full, capture stops,
+  triggers are ignored, and TRACE_FULL sticky is set. TRACE_WM is sticky
+  and clears only via OBS_CLR. Try the “Observer PATTERN capture to full”
+  teaching example to see the full state. PULSE mode watches PIN 0 only
+  (the top level ties pin_sel to 0), regardless of PIN_SEL.</p>
+  <canvas id="sim-trace-plot" class="wave"></canvas>
+  <div class="readout" id="sim-trace-info"></div>
+  <div id="sim-trace-list"></div>
+</section>
+
+<section class="card">
+  <h2>Signal activity on the die view</h2>
+  <p>Pin-level activity from the run, drawn at the true pad anchors. Green
+  pad = pin high, dark pad = pin low. Replay animates the recorded pin
+  waveform onto the pads after the run ends.</p>
+  <canvas id="sim-die" class="die"></canvas>
+  <div class="controls">
+    <button id="sim-replay">Replay activity</button>
+    <input id="sim-replay-scrub" type="range" min="0" max="100" value="0">
+  </div>
+  <div class="readout" id="sim-replay-info"></div>
+  <div id="sim-activity"></div>
+  <p class="caption">Honesty guardrail: this is pin-level activity only. A
+  per-net heatmap across the die would need DEF net data plus a VCD and
+  is deliberately not synthesized — no such overlay is shown. The die
+  canvas shows the die outline and the two SRAM macros at true GDS rects;
+  full layer polygons are in the GDS explorer on the
+  <a href="index.html#explorer">index page</a>.</p>
+</section>
+
+<section class="card">
+  <h2>Semantics notes (what this port does and does not do)</h2>
+  <ul>
+    <li><strong>Golden-model core, RTL divergences.</strong> Cycle timing,
+    2-FF synchronizer, open-drain + pull-up resolution, FIFOs, flags,
+    branches, CALL/RET stack (4 deep), Observer trigger modes, prescaler
+    and CAP snapshots follow firmware/tools/sim.py and ISA v0.2/v0.3.
+    Where the RTL differs from sim.py, the RTL wins (see the header
+    above and tempo-core.js).</li>
+    <li><strong>No host port model.</strong> The web simulator loads the
+    program directly into IMEM and preloads the RX FIFO from the golden
+    test's host stream. Host commands (LOAD_IMEM, RD_TRACE, GO/HALT_REQ)
+    are not modelled; the Observer trace is shown from the PE side
+    (OBS_PTR + entries), which the real PE cannot read (Q4) — the web
+    view is a debugger's view, not a PE-visible register.</li>
+    <li><strong>Observer commit timing.</strong> The golden model commits
+    trace entries in the same cycle as the trigger; the RTL bound is
+    trigger→commit ≤ 6 cycles with 1 trigger / 5 cycles sustained
+    (bursts coalesce latest-wins). The web simulator follows the golden
+    model (same-cycle commit); entry timestamps may therefore sit up to
+    a few cycles earlier than the RTL would stamp them.</li>
+    <li><strong>STATUS[12] TRACE_WM</strong> is shown in the MRS STATUS
+    read (RTL/ISA behaviour); sim.py's sreg_read masks it out, a sim
+    quirk that does not affect the SPI/USB validation (neither example
+    arms the Observer).</li>
+  </ul>
+</section>
+</main>
+<footer>
+  TEMPO (tt_um_pemu) — interactive simulator. Sources: docs/assets/tempo-asm.js,
+  tempo-core.js, tempo-peers.js, tempo-examples.js, simulator.js.
+</footer>
+<script src="assets/nav.js"></script>
+<script src="assets/tempo-asm.js"></script>
+<script src="assets/tempo-core.js"></script>
+<script src="assets/tempo-peers.js"></script>
+<script src="assets/tempo-examples.js"></script>
+<script src="assets/simulator.js"></script>
+</body>
+</html>
