@@ -368,3 +368,17 @@ parked for the ISA owner; adopting any one forces a v0.3 bump.
 | P6 | RET on empty return stack: trap to defined PC (e.g. 0) + CONFIG_ERR (not silent no-op) | v0.1 silent on RET-underflow; needs ruling before CALL/RET proofs (T10) |
 | P7 | New STATUS sticky TRACE_OVERRUN for trigger-burst coalescing visibility (bursts faster than 1/5 cycles coalesce latest-wins invisibly today) | New observable flag; needs a bit assignment |
 | P8 | ARCHITECTURE.md §2.2.2: name PDIR and PMODE in the pin-effect-point list (the instruction table already applies the rule) | Doc-level; touches normative contract text, so recorded here rather than silently adopted |
+---
+
+## Addendum (post-v0.2 — NOT part of the v0.2 text)
+
+*Added 2026-10-28 as a pointer only; per §10 the v0.2 text above stays
+clean (errata only) and is not edited by this addendum.*
+
+The §3 `target9` (M3) reservation — `target9[8]` must-be-zero, "reserved
+for a future IMEM-512 extension" (see also resolution R-7 in §7) — has
+been **activated** by the ISA v0.3 note (`docs/isa_v0.3_note.md`),
+merged into main (formerly branch `dev/imem-512`): IMEM depth is now 512
+words and JMP/CALL/DJNZ targets are fully 9-bit. Readers who need the
+current target/IMEM rules should read the v0.3 note alongside §3; all
+other v0.2 semantics are unchanged.
