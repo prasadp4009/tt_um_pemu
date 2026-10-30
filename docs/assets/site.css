@@ -92,6 +92,7 @@ nav#site-nav { background: var(--nav-bg); padding: .55rem 1.2rem; position: stic
   box-shadow: 0 1px 0 rgba(0,0,0,.25); }
 nav#site-nav a { color: var(--nav-ink); text-decoration: none; font-size: .94rem; font-weight: 500; }
 nav#site-nav a:hover { color: var(--nav-ink-hover); text-decoration: underline; }
+nav#site-nav .nav-links { display: flex; flex-wrap: wrap; gap: .2rem 1.1rem; align-items: center; }
 button.theme-toggle { margin-left: auto; background: transparent; color: var(--nav-ink);
   border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: .3rem .8rem;
   font-size: .88rem; cursor: pointer; white-space: nowrap; }
